@@ -12,7 +12,6 @@ import 'dart:io';
 
 import 'package:archlence_mobile/crypto/field_crypto.dart';
 import 'package:archlence_mobile/data/database.dart';
-import 'package:drift/drift.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Collapses whitespace so that indentation and line breaks — which SQLite
