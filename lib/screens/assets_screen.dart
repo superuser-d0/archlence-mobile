@@ -1,11 +1,24 @@
+import 'package:decimal/decimal.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
+import '../app_services.dart';
+import '../money/financial_decimal.dart';
+import '../services/asset_service.dart';
+import '../services/savings_service.dart';
+import '../services/transaction_service.dart';
 import '../theme/obsidian_prime.dart';
+import '../ui/async_data.dart';
+import '../ui/money_format.dart';
 import '../widgets/summary_row.dart';
 import '../widgets/surfaces.dart';
 
-/// Portfolio: distribution, income/expense trend, savings goals and holdings.
+/// Portfolio: cash-flow distribution, savings goals and holdings.
+///
+/// HOLDINGS ARE SHOWN AT COST. There is no price source yet (roadmap open
+/// question 3), so every figure here is what was paid, labelled as such. A
+/// cost basis presented as a market value is a lie the user cannot see
+/// through, and the mockup's "Current" column is exactly that.
 class AssetsScreen extends StatefulWidget {
   const AssetsScreen({super.key});
 
@@ -13,109 +26,209 @@ class AssetsScreen extends StatefulWidget {
   State<AssetsScreen> createState() => _AssetsScreenState();
 }
 
+/// Everything the page draws, read in one pass so the summary, the chart and
+/// the list cannot disagree with each other mid-load.
+class _AssetsData {
+  const _AssetsData({
+    required this.entries,
+    required this.openingTotal,
+    required this.holdings,
+    required this.goals,
+  });
+
+  final List<PeriodEntry> entries;
+
+  /// Opening balances inside the window. They never reach `transactions`, so
+  /// without this a user who has just opened a funded account sees an empty
+  /// chart beside a full balance.
+  final Decimal openingTotal;
+
+  final List<Asset> holdings;
+  final List<SavingsGoal> goals;
+
+  Decimal get income {
+    var total = Decimal.zero;
+    for (final entry in entries) {
+      if (entry.isIncome) total += entry.amount;
+    }
+    return fiat(total);
+  }
+
+  Decimal get expense {
+    var total = Decimal.zero;
+    for (final entry in entries) {
+      if (entry.isExpense) total += entry.amount;
+    }
+    return fiat(total);
+  }
+
+  Decimal get net => fiat(income - expense);
+
+  /// What the holdings cost, never what they are worth.
+  Decimal get holdingsCost {
+    var total = Decimal.zero;
+    for (final holding in holdings) {
+      total += holding.purchasePrice * holding.quantity;
+    }
+    return fiat(total);
+  }
+}
+
 class _AssetsScreenState extends State<AssetsScreen> {
-  static const _periods = ['Today', '1 Week', '1 Month', '1 Year', 'All Time'];
+  static const _periods = <(String, DashboardPeriod)>[
+    ('Today', DashboardPeriod.today),
+    ('1 Week', DashboardPeriod.week),
+    ('1 Month', DashboardPeriod.month),
+    ('1 Year', DashboardPeriod.year),
+    ('All Time', DashboardPeriod.allTime),
+  ];
   int _period = 3;
+  Future<_AssetsData>? _data;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _data ??= _load();
+  }
+
+  Future<_AssetsData> _load() async {
+    final services = ServicesScope.of(context);
+    final period = _periods[_period].$2;
+    return _AssetsData(
+      entries: await services.transactions.getTransactionsByPeriod(period),
+      openingTotal: await services.transactions.getOpeningBaselineByPeriod(
+        period,
+      ),
+      holdings: await services.assets.getAllAssets(),
+      goals: await services.savings.getGoals(),
+    );
+  }
+
+  void _reload() {
+    setState(() {
+      _data = _load();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final inset = MediaQuery.paddingOf(context);
+    const horizontal = EdgeInsets.symmetric(
+      horizontal: Spacing.containerMargin,
+    );
 
-    return ListView(
-      key: const PageStorageKey('assets'),
-      padding: EdgeInsets.only(
-        top: inset.top + Spacing.stackMd,
-        bottom: inset.bottom + Spacing.stackLg,
+    return RefreshIndicator(
+      onRefresh: () async => _reload(),
+      child: ListView(
+        key: const PageStorageKey('assets'),
+        padding: EdgeInsets.only(
+          top: inset.top + Spacing.stackMd,
+          bottom: inset.bottom + Spacing.stackLg,
+        ),
+        children: [
+          Padding(
+            padding: horizontal,
+            child: Text('Details', style: text.titleLarge),
+          ),
+          const SizedBox(height: Spacing.stackMd),
+
+          // Five period chips genuinely do not fit at 412dp, so this row
+          // really does scroll — unlike the summary figures below, no single
+          // chip is information the user must not miss.
+          SizedBox(
+            height: 40,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: horizontal,
+              itemCount: _periods.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 8),
+              itemBuilder: (context, i) => _PeriodChip(
+                label: _periods[i].$1,
+                selected: i == _period,
+                onTap: () {
+                  setState(() {
+                    _period = i;
+                    _data = _load();
+                  });
+                },
+              ),
+            ),
+          ),
+          const SizedBox(height: Spacing.stackLg),
+
+          AsyncData<_AssetsData>(
+            future: _data!,
+            placeholderHeight: 420,
+            builder: (context, data) => _AssetsBody(data: data),
+          ),
+        ],
       ),
+    );
+  }
+}
+
+class _AssetsBody extends StatelessWidget {
+  const _AssetsBody({required this.data});
+
+  final _AssetsData data;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    const horizontal = EdgeInsets.symmetric(
+      horizontal: Spacing.containerMargin,
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: Spacing.containerMargin,
-          ),
-          child: const SummaryRow(
+          padding: horizontal,
+          child: SummaryRow(
             stats: [
               SummaryStat(
                 label: 'Income',
-                value: '₺1.634.902,60',
+                value: formatLira(data.income),
                 tone: SummaryTone.positive,
               ),
               SummaryStat(
                 label: 'Expense',
-                value: '₺1.397.034,10',
+                value: formatLira(data.expense),
                 tone: SummaryTone.negative,
               ),
-              SummaryStat(label: 'Net Balance', value: '+₺237.868,50'),
+              SummaryStat(
+                label: 'Net Balance',
+                value: formatSignedLira(data.net),
+              ),
             ],
           ),
         ),
         const SizedBox(height: Spacing.stackLg),
 
         Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: Spacing.containerMargin,
-          ),
-          child: Text('Details', style: text.titleLarge),
+          padding: horizontal,
+          child: _DistributionCard(data: data),
         ),
         const SizedBox(height: Spacing.stackMd),
 
-        // Five period chips genuinely do not fit at 412dp, so this row really
-        // does scroll — unlike the summary figures above, no single chip is
-        // information the user must not miss.
-        SizedBox(
-          height: 40,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(
-              horizontal: Spacing.containerMargin,
-            ),
-            itemCount: _periods.length,
-            separatorBuilder: (_, _) => const SizedBox(width: 8),
-            itemBuilder: (context, i) => _PeriodChip(
-              label: _periods[i],
-              selected: i == _period,
-              onTap: () => setState(() => _period = i),
-            ),
-          ),
-        ),
-        const SizedBox(height: Spacing.stackLg),
+        const Padding(padding: horizontal, child: _TrendCard()),
+        const SizedBox(height: Spacing.stackMd),
 
         Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: Spacing.containerMargin,
-          ),
-          child: const _DistributionCard(),
+          padding: horizontal,
+          child: _TotalHoldingsCard(data: data),
         ),
         const SizedBox(height: Spacing.stackMd),
 
         Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: Spacing.containerMargin,
-          ),
-          child: const _TrendCard(),
-        ),
-        const SizedBox(height: Spacing.stackMd),
-
-        Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: Spacing.containerMargin,
-          ),
-          child: const _TotalAssetsCard(),
-        ),
-        const SizedBox(height: Spacing.stackMd),
-
-        Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: Spacing.containerMargin,
-          ),
-          child: const _EmergencyFundCard(),
+          padding: horizontal,
+          child: _SavingsGoals(goals: data.goals),
         ),
         const SizedBox(height: Spacing.sectionGap),
 
         Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: Spacing.containerMargin,
-          ),
+          padding: horizontal,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -136,29 +249,28 @@ class _AssetsScreenState extends State<AssetsScreen> {
                   ),
                 ],
               ),
+              // The mockup says "Last updated: 23:00" beside a live price.
+              // There is no price feed, so the honest line is what these
+              // figures actually are.
               Text(
-                'Last updated: 23:00',
+                'Valued at purchase cost — no price source yet',
                 style: text.labelMedium?.copyWith(
                   letterSpacing: 0,
                   color: ObsidianPalette.onSurfaceVariant,
                 ),
               ),
               const SizedBox(height: Spacing.stackMd),
-              const _HoldingTile(
-                symbol: '€',
-                name: 'Euro (EURTRY=X)',
-                purchase: 'Purchase: 37.8000 ₺ × 400',
-                current: '47.3000 ₺',
-                up: true,
-              ),
-              const SizedBox(height: Spacing.stackMd),
-              const _HoldingTile(
-                symbol: '\$',
-                name: 'US Dollar (USDTRY=X)',
-                purchase: 'Purchase: 40.1000 ₺ × 250',
-                current: '39.6000 ₺',
-                up: false,
-              ),
+              if (data.holdings.isEmpty)
+                const NothingYet(
+                  message:
+                      'No holdings yet. Anything you buy shows here with '
+                      'what it cost.',
+                )
+              else
+                for (final holding in data.holdings) ...[
+                  _HoldingTile(holding: holding),
+                  const SizedBox(height: Spacing.stackMd),
+                ],
             ],
           ),
         ),
@@ -207,26 +319,117 @@ class _PeriodChip extends StatelessWidget {
 }
 
 class _Slice {
-  const _Slice(this.label, this.percent, this.color);
+  const _Slice(this.label, this.amount, this.share, this.color);
+
   final String label;
-  final double percent;
+  final Decimal amount;
+
+  /// 0..100.
+  final Decimal share;
   final Color color;
 }
 
+/// Where the period's money came from and went, by category.
+///
+/// Income and expense are shown TOGETHER, as the desktop does: the chart is a
+/// distribution of everything that moved, not of spending alone. Opening
+/// balances get their own slice because they never reach `transactions` and a
+/// user who has just funded an account would otherwise see an empty chart.
 class _DistributionCard extends StatelessWidget {
-  const _DistributionCard();
+  const _DistributionCard({required this.data});
 
-  static const _slices = <_Slice>[
-    _Slice('Primary Income', 45.1, Color(0xFF4EDEA3)),
-    _Slice('Additional Income', 3.2, Color(0xFF00885D)),
-    _Slice('Opening Balance', 10.5, Color(0xFFC0C1FF)),
-    _Slice('Essential Expenses', 29.2, Color(0xFFFFB4AB)),
-    _Slice('Discretionary Expenses', 12.1, Color(0xFFD0BCFF)),
+  final _AssetsData data;
+
+  /// Enough hues to tell slices apart, cycled if a user has more categories
+  /// than colours. Green reads as income and red as expense in this palette,
+  /// so those two lead their own groups.
+  static const _incomeColors = [
+    Color(0xFF4EDEA3),
+    Color(0xFF00885D),
+    Color(0xFFC0C1FF),
   ];
+  static const _expenseColors = [
+    Color(0xFFFFB4AB),
+    Color(0xFFD0BCFF),
+    Color(0xFF93000A),
+  ];
+
+  List<_Slice> _slices() {
+    final incomeByCategory = <String, Decimal>{};
+    final expenseByCategory = <String, Decimal>{};
+    for (final entry in data.entries) {
+      if (entry.isIncome) {
+        incomeByCategory[entry.category] =
+            (incomeByCategory[entry.category] ?? Decimal.zero) + entry.amount;
+      } else if (entry.isExpense) {
+        expenseByCategory[entry.category] =
+            (expenseByCategory[entry.category] ?? Decimal.zero) + entry.amount;
+      }
+    }
+
+    var total = data.openingTotal;
+    for (final amount in incomeByCategory.values) {
+      total += amount;
+    }
+    for (final amount in expenseByCategory.values) {
+      total += amount;
+    }
+    if (total <= Decimal.zero) return const [];
+
+    Decimal shareOf(Decimal amount) => percentage(
+      (amount / total).toDecimal(scaleOnInfinitePrecision: 20) *
+          Decimal.fromInt(100),
+    );
+
+    final slices = <_Slice>[];
+    var index = 0;
+    for (final entry in incomeByCategory.entries) {
+      slices.add(
+        _Slice(
+          entry.key,
+          entry.value,
+          shareOf(entry.value),
+          _incomeColors[index++ % _incomeColors.length],
+        ),
+      );
+    }
+    if (data.openingTotal > Decimal.zero) {
+      slices.add(
+        _Slice(
+          'Opening Balance',
+          data.openingTotal,
+          shareOf(data.openingTotal),
+          _incomeColors[index++ % _incomeColors.length],
+        ),
+      );
+    }
+    index = 0;
+    for (final entry in expenseByCategory.entries) {
+      slices.add(
+        _Slice(
+          entry.key,
+          entry.value,
+          shareOf(entry.value),
+          _expenseColors[index++ % _expenseColors.length],
+        ),
+      );
+    }
+    return slices;
+  }
 
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final slices = _slices();
+
+    if (slices.isEmpty) {
+      return const NothingYet(
+        message:
+            'Nothing moved in this period, so there is no distribution '
+            'to draw.',
+      );
+    }
+
     return AppCard(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -242,9 +445,9 @@ class _DistributionCard extends StatelessWidget {
                     centerSpaceRadius: 58,
                     startDegreeOffset: -90,
                     sections: [
-                      for (final slice in _slices)
+                      for (final slice in slices)
                         PieChartSectionData(
-                          value: slice.percent,
+                          value: slice.share.toDouble(),
                           color: slice.color,
                           radius: 26,
                           showTitle: false,
@@ -269,7 +472,7 @@ class _DistributionCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: Spacing.stackMd),
-          for (final slice in _slices)
+          for (final slice in slices)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 5),
               child: Row(
@@ -292,7 +495,7 @@ class _DistributionCard extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    '%${slice.percent.toStringAsFixed(1)}',
+                    formatPercent(slice.share),
                     style: text.bodySmall?.copyWith(
                       color: ObsidianPalette.onSurfaceVariant,
                     ),
@@ -306,58 +509,150 @@ class _DistributionCard extends StatelessWidget {
   }
 }
 
-class _TrendCard extends StatelessWidget {
+/// Income against expense, month by month, over the last twelve months.
+///
+/// Bucketed here rather than in SQL because `transactions.amount` is
+/// encrypted — a `SUM() GROUP BY month` would add up ciphertext. The window
+/// is fixed at a year regardless of the period chips above: a trend line over
+/// "Today" would be a single point, and the chips select what the summary and
+/// the distribution report on, not the shape of history.
+class _TrendCard extends StatefulWidget {
   const _TrendCard();
 
-  static const _income = <double>[
-    95,
-    88,
-    92,
-    80,
-    60,
-    55,
-    65,
-    70,
-    58,
-    62,
-    60,
-    60,
-  ];
-  static const _expense = <double>[
-    70,
-    65,
-    90,
-    95,
-    78,
-    100,
-    105,
-    85,
-    60,
-    95,
-    110,
-    60,
-  ];
-  static const _months = ['Sep\'25', 'Jan\'26', 'May\'26', 'Aug\'26'];
+  @override
+  State<_TrendCard> createState() => _TrendCardState();
+}
 
-  List<FlSpot> _spots(List<double> values) => [
-    // The source series is "distance below the top", so invert it into
-    // a value that rises with the figure it represents.
-    for (var i = 0; i < values.length; i++)
-      FlSpot(i.toDouble(), 120 - values[i]),
-  ];
+/// One month's totals.
+class _MonthlyTotals {
+  const _MonthlyTotals({
+    required this.year,
+    required this.month,
+    required this.income,
+    required this.expense,
+  });
+
+  final int year;
+  final int month;
+  final Decimal income;
+  final Decimal expense;
+
+  /// `Sep'25` — the mockup's axis form.
+  String get label {
+    const names = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return "${names[month - 1]}'${year.toString().substring(2)}";
+  }
+}
+
+class _TrendCardState extends State<_TrendCard> {
+  Future<List<_MonthlyTotals>>? _series;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _series ??= _load();
+  }
+
+  Future<List<_MonthlyTotals>> _load() async {
+    final entries = await ServicesScope.of(context).transactions
+        .getTransactionsByPeriod(DashboardPeriod.year);
+
+    final income = <String, Decimal>{};
+    final expense = <String, Decimal>{};
+    for (final entry in entries) {
+      // A stored stamp is always `YYYY-MM-DD...`; anything shorter is not a
+      // date this app wrote and is left out rather than guessed at.
+      if (entry.transactionDate.length < 7) continue;
+      final key = entry.transactionDate.substring(0, 7);
+      if (entry.isIncome) {
+        income[key] = (income[key] ?? Decimal.zero) + entry.amount;
+      } else if (entry.isExpense) {
+        expense[key] = (expense[key] ?? Decimal.zero) + entry.amount;
+      }
+    }
+
+    // Every month in the window appears, including the empty ones: a gap
+    // silently closed would make a quiet month look like it never happened.
+    final now = DateTime.now();
+    return [
+      for (var back = 11; back >= 0; back--)
+        () {
+          final month = DateTime(now.year, now.month - back, 1);
+          final key =
+              '${month.year.toString().padLeft(4, '0')}-'
+              '${month.month.toString().padLeft(2, '0')}';
+          return _MonthlyTotals(
+            year: month.year,
+            month: month.month,
+            income: income[key] ?? Decimal.zero,
+            expense: expense[key] ?? Decimal.zero,
+          );
+        }(),
+    ];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AsyncData<List<_MonthlyTotals>>(
+      future: _series!,
+      placeholderHeight: 220,
+      builder: (context, series) => _TrendChart(series: series),
+    );
+  }
+}
+
+class _TrendChart extends StatelessWidget {
+  const _TrendChart({required this.series});
+
+  final List<_MonthlyTotals> series;
 
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+
+    // A shared scale for both lines, so income and expense can be compared
+    // against each other rather than each filling the card on its own.
+    var peak = Decimal.zero;
+    for (final month in series) {
+      if (month.income > peak) peak = month.income;
+      if (month.expense > peak) peak = month.expense;
+    }
+    if (peak <= Decimal.zero) {
+      return const NothingYet(
+        message:
+            'No income or spending in the last year, so there is no '
+            'trend to draw yet.',
+      );
+    }
+    final maxY = peak.toDouble();
+
+    List<FlSpot> spots(Decimal Function(_MonthlyTotals) pick) => [
+      for (var i = 0; i < series.length; i++)
+        FlSpot(i.toDouble(), pick(series[i]).toDouble()),
+    ];
+
     return AppCard(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
       child: Column(
         children: [
-          Row(
+          const Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               _LegendDot(color: ObsidianPalette.tertiary, label: 'Income'),
-              const SizedBox(width: Spacing.stackMd),
+              SizedBox(width: Spacing.stackMd),
               _LegendDot(color: ObsidianPalette.error, label: 'Expense'),
             ],
           ),
@@ -367,11 +662,11 @@ class _TrendCard extends StatelessWidget {
             child: LineChart(
               LineChartData(
                 minY: 0,
-                maxY: 120,
+                maxY: maxY,
                 gridData: FlGridData(
                   show: true,
                   drawVerticalLine: false,
-                  horizontalInterval: 30,
+                  horizontalInterval: maxY / 4,
                   getDrawingHorizontalLine: (_) => const FlLine(
                     color: ObsidianPalette.surfaceContainerHigh,
                     strokeWidth: 1,
@@ -382,7 +677,7 @@ class _TrendCard extends StatelessWidget {
                 lineTouchData: const LineTouchData(enabled: false),
                 lineBarsData: [
                   LineChartBarData(
-                    spots: _spots(_income),
+                    spots: spots((month) => month.income),
                     color: ObsidianPalette.tertiary,
                     barWidth: 2,
                     isCurved: true,
@@ -394,7 +689,7 @@ class _TrendCard extends StatelessWidget {
                     ),
                   ),
                   LineChartBarData(
-                    spots: _spots(_expense),
+                    spots: spots((month) => month.expense),
                     color: ObsidianPalette.error,
                     barWidth: 2,
                     isCurved: true,
@@ -409,9 +704,10 @@ class _TrendCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              for (final month in _months)
+              // Four labels across twelve months: every month would not fit.
+              for (final index in [0, 4, 8, 11])
                 Text(
-                  month,
+                  series[index].label,
                   style: text.labelMedium?.copyWith(
                     fontSize: 10,
                     letterSpacing: 0,
@@ -451,8 +747,16 @@ class _LegendDot extends StatelessWidget {
   }
 }
 
-class _TotalAssetsCard extends StatelessWidget {
-  const _TotalAssetsCard();
+/// What the portfolio cost, said plainly.
+///
+/// The mockup shows a total with a "+₺7.858,53 (+1.52%) Today" chip beside
+/// it. Both need a price feed; without one the total is a cost basis and the
+/// change does not exist, so the chip is gone rather than filled with a
+/// figure that would look like a gain.
+class _TotalHoldingsCard extends StatelessWidget {
+  const _TotalHoldingsCard({required this.data});
+
+  final _AssetsData data;
 
   @override
   Widget build(BuildContext context) {
@@ -462,43 +766,84 @@ class _TotalAssetsCard extends StatelessWidget {
       child: Column(
         children: [
           Text(
-            'Total Assets',
+            'Holdings at Cost',
             style: text.bodySmall?.copyWith(
               color: ObsidianPalette.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: 6),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Flexible(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    '₺526.011,80',
-                    maxLines: 1,
-                    style: text.headlineLarge,
-                  ),
-                ),
-              ),
-              const SizedBox(width: Spacing.stackSm),
-              const Icon(Icons.visibility_outlined, size: 18),
-            ],
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              formatLira(data.holdingsCost),
+              maxLines: 1,
+              style: text.headlineLarge,
+            ),
           ),
           const SizedBox(height: Spacing.stackSm),
-          const TrendChip(label: '+₺7.858,53 (+1.52%) Today', positive: true),
+          Text(
+            data.holdings.isEmpty
+                ? 'Nothing bought yet'
+                : '${data.holdings.length} holdings',
+            style: text.labelMedium?.copyWith(
+              letterSpacing: 0,
+              color: ObsidianPalette.onSurfaceVariant,
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-class _EmergencyFundCard extends StatelessWidget {
-  const _EmergencyFundCard();
+/// The savings goals, in place of the mockup's single "Emergency Fund".
+///
+/// The mockup hard-codes one fund with a fixed target; the data model has
+/// however many goals the user opened, each with its own target and status.
+/// Showing only the first would hide the rest.
+class _SavingsGoals extends StatelessWidget {
+  const _SavingsGoals({required this.goals});
+
+  final List<SavingsGoal> goals;
+
+  @override
+  Widget build(BuildContext context) {
+    if (goals.isEmpty) {
+      return const NothingYet(
+        message:
+            'No savings goals yet. A goal holds money aside from your '
+            'balance without counting as spending.',
+      );
+    }
+    return Column(
+      children: [
+        for (final goal in goals) ...[
+          _SavingsGoalCard(goal: goal),
+          if (goal != goals.last) const SizedBox(height: Spacing.stackMd),
+        ],
+      ],
+    );
+  }
+}
+
+class _SavingsGoalCard extends StatelessWidget {
+  const _SavingsGoalCard({required this.goal});
+
+  final SavingsGoal goal;
 
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    // The service already guarantees a positive target, so this divides
+    // safely; the clamp is for a goal deliberately overfunded past it.
+    final ratio = (goal.currentAmount / goal.targetAmount).toDouble().clamp(
+      0.0,
+      1.0,
+    );
+    final tone = goal.isCompleted
+        ? ObsidianPalette.tertiary
+        : ObsidianPalette.primary;
+
     return AppCard(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -506,18 +851,33 @@ class _EmergencyFundCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(
-                Icons.savings_outlined,
-                size: 20,
-                color: ObsidianPalette.tertiary,
-              ),
+              Icon(Icons.savings_outlined, size: 20, color: tone),
               const SizedBox(width: Spacing.stackSm),
-              Expanded(child: Text('Emergency Fund', style: text.titleLarge)),
+              Expanded(
+                child: Text(
+                  // A name that will not decrypt says so rather than being
+                  // replaced with something that reads like a real goal.
+                  goal.goalName ?? 'Unreadable goal',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: text.titleLarge?.copyWith(
+                    fontStyle: goal.goalName == null ? FontStyle.italic : null,
+                    color: goal.goalName == null ? ObsidianPalette.error : null,
+                  ),
+                ),
+              ),
               Text(
-                '%74',
+                formatPercent(
+                  percentage(
+                    (goal.currentAmount / goal.targetAmount).toDecimal(
+                          scaleOnInfinitePrecision: 20,
+                        ) *
+                        Decimal.fromInt(100),
+                  ),
+                ),
                 style: text.bodyMedium?.copyWith(
                   fontWeight: FontWeight.w700,
-                  color: ObsidianPalette.tertiary,
+                  color: tone,
                 ),
               ),
             ],
@@ -525,32 +885,27 @@ class _EmergencyFundCard extends StatelessWidget {
           const SizedBox(height: Spacing.stackMd),
           ClipRRect(
             borderRadius: BorderRadius.circular(Radii.full),
-            child: const LinearProgressIndicator(
-              value: 0.74,
+            child: LinearProgressIndicator(
+              value: ratio,
               minHeight: 6,
               backgroundColor: ObsidianPalette.surfaceContainerHigh,
-              valueColor: AlwaysStoppedAnimation(ObsidianPalette.tertiary),
-            ),
-          ),
-          const SizedBox(height: Spacing.stackSm),
-          Text(
-            'At the current pace, ~4 months left',
-            style: text.labelMedium?.copyWith(
-              letterSpacing: 0,
-              color: ObsidianPalette.onSurfaceVariant,
+              valueColor: AlwaysStoppedAnimation(tone),
             ),
           ),
           const SizedBox(height: Spacing.stackMd),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Expanded(
-                child: _Amount(label: 'Saved', value: '₺260.000,00'),
+              Expanded(
+                child: _Amount(
+                  label: 'Saved',
+                  value: formatLira(goal.currentAmount),
+                ),
               ),
-              const Expanded(
+              Expanded(
                 child: _Amount(
                   label: 'Target',
-                  value: '₺350.000,00',
+                  value: formatLira(goal.targetAmount),
                   alignEnd: true,
                 ),
               ),
@@ -605,25 +960,22 @@ class _Amount extends StatelessWidget {
   }
 }
 
+/// One holding, shown at what it cost.
+///
+/// The mockup's right-hand column is "Current" with a live price and a
+/// green/red tone. Without a price feed there is no current value and no
+/// direction, so the column shows the cost of the position and carries no
+/// colour that would imply a gain or a loss.
 class _HoldingTile extends StatelessWidget {
-  const _HoldingTile({
-    required this.symbol,
-    required this.name,
-    required this.purchase,
-    required this.current,
-    required this.up,
-  });
+  const _HoldingTile({required this.holding});
 
-  final String symbol;
-  final String name;
-  final String purchase;
-  final String current;
-  final bool up;
+  final Asset holding;
 
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    final tone = up ? ObsidianPalette.tertiary : ObsidianPalette.error;
+    final cost = fiat(holding.purchasePrice * holding.quantity);
+
     return AppCard(
       onTap: () {},
       child: Row(
@@ -632,15 +984,19 @@ class _HoldingTile extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: tone.withValues(alpha: 0.12),
+              color: ObsidianPalette.primary.withValues(alpha: 0.12),
               shape: BoxShape.circle,
             ),
             alignment: Alignment.center,
             child: Text(
-              symbol,
+              // The code's first character, upper-cased — enough to tell
+              // holdings apart at a glance without inventing an icon set.
+              holding.assetCode.isEmpty
+                  ? '?'
+                  : holding.assetCode.substring(0, 1),
               style: text.bodyLarge?.copyWith(
                 fontWeight: FontWeight.w700,
-                color: tone,
+                color: ObsidianPalette.primary,
               ),
             ),
           ),
@@ -650,14 +1006,15 @@ class _HoldingTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  name,
+                  '${holding.assetName} (${holding.assetCode})',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  purchase,
+                  'Purchase: ${formatLira(holding.purchasePrice)} × '
+                  '${holding.quantity}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: text.labelMedium?.copyWith(
@@ -673,7 +1030,7 @@ class _HoldingTile extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                'Current',
+                'Cost',
                 style: text.labelMedium?.copyWith(
                   letterSpacing: 0,
                   color: ObsidianPalette.onSurfaceVariant,
@@ -681,11 +1038,8 @@ class _HoldingTile extends StatelessWidget {
               ),
               const SizedBox(height: 2),
               Text(
-                current,
-                style: text.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: tone,
-                ),
+                formatLira(cost),
+                style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
               ),
             ],
           ),

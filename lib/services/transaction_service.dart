@@ -30,10 +30,8 @@
 ///    category, then the word "İşlem", for a blank description; that choice
 ///    belongs to whatever renders the row.
 ///
-/// The dashboard's period queries (`get_transactions_by_period` and the two
-/// opening-balance readers) are deliberately not in this port. They exist to
-/// feed charts, and no screen reads real data yet; porting them now would be
-/// guessing at what those screens need.
+/// Subscription detection is still absent — the hook `add_transaction` calls
+/// after a card expense. It belongs here now that `recurring_service` exists.
 library;
 
 import 'dart:developer' as developer;
@@ -47,6 +45,91 @@ import '../data/balance_events.dart';
 import '../data/database.dart';
 import '../money/financial_decimal.dart';
 import 'account_service.dart';
+
+/// A window the dashboard reports over.
+///
+/// The desktop passes its Turkish UI labels ('1 Hafta', 'Hayat Boyu') as the
+/// filter value, which makes the interface's wording part of the query. An
+/// enum keeps the period a decision and leaves the wording to whatever draws
+/// the chips.
+enum DashboardPeriod {
+  today,
+  week,
+  month,
+  year,
+  allTime;
+
+  /// The SQL predicate for this window over [column].
+  ///
+  /// `localtime` matters: without it SQLite compares against UTC, and for the
+  /// several hours a day when Türkiye is ahead of it, "today" would silently
+  /// start yesterday.
+  ///
+  /// [column] is interpolated, so it must be a column name this file chooses —
+  /// never anything a caller supplies.
+  String condition(String column) => switch (this) {
+    DashboardPeriod.today => "date($column) = date('now', 'localtime')",
+    DashboardPeriod.week =>
+      "date($column) >= date('now', '-7 days', 'localtime')",
+    DashboardPeriod.month =>
+      "date($column) >= date('now', '-1 month', 'localtime')",
+    DashboardPeriod.year =>
+      "date($column) >= date('now', '-1 year', 'localtime')",
+    DashboardPeriod.allTime => 'date($column) IS NOT NULL',
+  };
+}
+
+/// One completed transaction, as the dashboard reads it.
+class PeriodEntry {
+  const PeriodEntry({
+    required this.amount,
+    required this.type,
+    required this.category,
+    required this.transactionDate,
+    required this.importance,
+  });
+
+  final Decimal amount;
+  final String type;
+
+  /// Never blank: an uncategorised row is filed under 'Diğer', matching the
+  /// desktop, so a chart does not grow a nameless slice.
+  final String category;
+  final String transactionDate;
+
+  /// 'essential' or 'extra' — from the `categories` table, defaulting to
+  /// 'extra' for a category that has no row there.
+  final String importance;
+
+  bool get isIncome => incomeTransactionTypes.contains(type);
+  bool get isExpense => expenseTransactionTypes.contains(type);
+}
+
+/// An account's opening balance, with the moment it was recorded.
+///
+/// An opening balance NEVER reaches the `transactions` table — only
+/// `accounts.balance` and a `balance_events` row. That is deliberate: a
+/// savings rate or a cash-flow chart fed from the ledger must not be inflated
+/// by money that was simply already there. The dashboard's distribution is
+/// the one place it is shown, as its own slice, because a user with a single
+/// newly opened account would otherwise see an empty chart beside a full
+/// balance.
+class OpeningEntry {
+  const OpeningEntry({required this.amount, required this.recordedAt});
+
+  final Decimal amount;
+  final String recordedAt;
+}
+
+/// Stored `type` values that count as income.
+const Set<String> incomeTransactionTypes = {'income', 'Gelir'};
+
+/// Stored `type` values that count as an expense.
+///
+/// 'payment' is NOT here: a card debt payment moves money between the user's
+/// own accounts, and counting it as spending would double-count the original
+/// purchase.
+const Set<String> expenseTransactionTypes = {'expense', 'Gider'};
 
 /// Only rows in this state have been applied to a balance.
 ///
@@ -85,6 +168,19 @@ class TransactionError implements Exception {
 
   @override
   String toString() => 'TransactionError(${code.name}): $message';
+}
+
+/// A ledger row whose amount could not be read, on a path where skipping it
+/// would falsify a total rather than mark one row.
+class TransactionDataIntegrityError implements Exception {
+  const TransactionDataIntegrityError(this.transactionId, this.message);
+
+  final int transactionId;
+  final String message;
+
+  @override
+  String toString() =>
+      'TransactionDataIntegrityError(transactions#$transactionId): $message';
 }
 
 enum TransactionErrorCode {
@@ -584,6 +680,86 @@ class TransactionService {
       );
     }
     return items;
+  }
+
+  /// Completed transactions inside [period].
+  ///
+  /// An amount that cannot be read RAISES rather than being skipped: this
+  /// feeds totals and a distribution chart, and a slice quietly missing from
+  /// a pie is a wrong picture presented as a right one. That is the same
+  /// choice `BudgetService` makes, and the opposite of
+  /// [getRecentForAccount] — a statement row can honestly say "unreadable"
+  /// beside its neighbours, a percentage cannot.
+  Future<List<PeriodEntry>> getTransactionsByPeriod(
+    DashboardPeriod period,
+  ) async {
+    final rows = await _db
+        .customSelect(
+          'SELECT t.id, t.amount, t.type, t.category, t.transaction_date, '
+          'c.importance FROM transactions t '
+          'LEFT JOIN categories c ON t.category = c.name '
+          'WHERE ${period.condition('t.transaction_date')} '
+          "AND COALESCE(t.status, 'completed') = 'completed'",
+        )
+        .get();
+
+    final entries = <PeriodEntry>[];
+    for (final row in rows) {
+      final Decimal amount;
+      try {
+        amount = fiat(await _crypto.decryptField(row.read<String>('amount')));
+      } on KeyUnavailableError {
+        rethrow;
+      } on Exception catch (error) {
+        throw TransactionDataIntegrityError(row.read<int>('id'), '$error');
+      }
+      final category = row.data['category'] as String?;
+      entries.add(
+        PeriodEntry(
+          amount: amount,
+          type: row.read<String>('type'),
+          category: category == null || category.isEmpty ? 'Diğer' : category,
+          transactionDate: row.data['transaction_date'] as String? ?? '',
+          importance: row.data['importance'] as String? ?? 'extra',
+        ),
+      );
+    }
+    return entries;
+  }
+
+  /// The opening balances recorded inside [period].
+  ///
+  /// A credit card's opening DEBT is excluded — it arrives as a negative
+  /// delta, and a debt appearing in an income breakdown would make no sense.
+  Future<List<OpeningEntry>> getOpeningEventsByPeriod(
+    DashboardPeriod period,
+  ) async {
+    final rows = await _db
+        .customSelect(
+          'SELECT ts, delta FROM balance_events '
+          "WHERE entity_type = ? AND source = 'account_opened' "
+          'AND ${period.condition('ts')} ORDER BY ts',
+          variables: [Variable<String>(accountEntity)],
+        )
+        .get();
+
+    return [
+      for (final row in rows)
+        if (row.read<double>('delta') > 0)
+          OpeningEntry(
+            amount: fiat(row.read<double>('delta')),
+            recordedAt: row.read<String>('ts'),
+          ),
+    ];
+  }
+
+  /// The total of the opening balances inside [period].
+  Future<Decimal> getOpeningBaselineByPeriod(DashboardPeriod period) async {
+    var total = Decimal.zero;
+    for (final entry in await getOpeningEventsByPeriod(period)) {
+      total += entry.amount;
+    }
+    return fiat(total);
   }
 
   /// Decrypts a stored amount, or returns null if the row cannot be read.

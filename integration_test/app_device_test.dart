@@ -172,6 +172,43 @@ void main() {
     expect(find.text('5.000,00 ₺'), findsWidgets);
   });
 
+  testWidgets('the assets tab draws holdings and a distribution', (
+    tester,
+  ) async {
+    final accountId = await services.accounts.createAccount(
+      name: 'Maaş Hesabı',
+      accountType: AccountType.checking,
+      initialBalance: 100000,
+    );
+    await services.assets.insertAsset(
+      assetName: 'Euro',
+      assetCode: 'EURTRY=X',
+      assetType: 'Döviz',
+      purchasePrice: '37.80',
+      quantity: 400,
+    );
+    await services.transactions.addTransaction(
+      accountId: accountId,
+      amount: 250,
+      transactionType: 'expense',
+      category: 'Süpermarket',
+    );
+
+    await pumpApp(tester);
+    await tester.tap(find.text('Assets'));
+    await tester.pumpAndSettle();
+
+    // The purchase price and quantity are AES-GCM values from the real key
+    // store; the cost is derived from both.
+    await scrollTo(
+      tester,
+      find.text('Euro (EURTRY=X)'),
+      const PageStorageKey('assets'),
+    );
+    expect(find.text('15.120,00 ₺'), findsWidgets);
+    expect(find.text('Süpermarket'), findsOneWidget);
+  });
+
   testWidgets('the cards tab reads the same account the dashboard did', (
     tester,
   ) async {

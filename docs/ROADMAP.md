@@ -15,10 +15,10 @@ and the whole service layer on top: accounts, the ledger, holdings (portfolio
 CRUD, buying, selling), recurring payments, the monthly budget and savings
 goals. Live price fetching is the one piece left out — see open question 3.
 
-**Wired so far:** Home and Cards read real data. Assets, Tools and Settings
+**Wired so far:** Home, Cards and Assets read real data. Tools and Settings
 still render literals.
 
-340 unit tests and 7 device tests pass. `flutter analyze` is clean, and the
+363 unit tests and 8 device tests pass. `flutter analyze` is clean, and the
 app runs on the emulator.
 
 ## Settled decisions
@@ -546,14 +546,16 @@ projection services (they feed charts nothing reads yet), backup and restore
 (open work 5), price fetching (open question 3), and the migration engines a
 fresh mobile install has nothing to migrate from.
 
-Two pieces of `transaction_service.py` were deliberately left out and are
-worth picking up with whatever needs them:
+The dashboard's period queries were held back until a screen actually needed
+them, and the Assets tab brought that need — they are ported now, as
+`DashboardPeriod` plus `getTransactionsByPeriod` and the two opening-balance
+readers. The desktop passes its Turkish UI labels ('1 Hafta', 'Hayat Boyu') as
+the filter value, which makes the interface's wording part of the query; an
+enum keeps the period a decision and leaves the wording to the chips.
 
-- The dashboard's period queries (`get_transactions_by_period` and the two
-  opening-balance readers). They exist to feed charts, and porting them before
-  a screen reads real data would be guessing at what those charts want.
-- Subscription detection, the hook `add_transaction` calls after a card
-  expense. It belongs here once `recurring_service` exists.
+One piece of `transaction_service.py` is still out: subscription detection,
+the hook `add_transaction` calls after a card expense. `recurring_service`
+exists now, so it can be connected whenever the transaction form lands.
 
 Port the desktop's precision and integrity tests alongside each — they are the
 specification. `test_money_decisions_precision`, `test_portfolio_total_precision`,
@@ -567,11 +569,23 @@ Home and Cards are done, and so is the infrastructure the rest needs:
 `AppServices`, `ServicesScope`, `AsyncData` and the money formatter. Start-up
 settles what has fallen due.
 
+**Assets** reads the ledger for its period summary, its distribution and a
+twelve-month trend, and `AssetService`/`SavingsService` for holdings and
+goals. Three things there depart from the mockup on purpose:
+
+- Holdings are shown AT COST and say so. There is no price feed, so the
+  mockup's "Current" column, its `+7.858,53 ₺ (+1.52%) Today` chip and its
+  "Last updated: 23:00" line are all figures that do not exist. A cost basis
+  presented as a market value is a lie the user cannot see through.
+- The single hard-coded "Emergency Fund" became the savings goals, however
+  many there are. Showing only the first would hide the rest.
+- The trend is bucketed in Dart, not in SQL: `transactions.amount` is
+  encrypted, so a `SUM() GROUP BY month` would add up ciphertext. Every month
+  in the window is emitted, including empty ones — a gap silently closed makes
+  a quiet month look like it never happened.
+
 **Still literals:**
 
-- **Assets.** Holdings, cost basis and quantity are all available through
-  `AssetService`; what it cannot show is a live P/L, which waits on open
-  question 3. The tab should show cost until then, labelled as cost.
 - **Tools.** The budget and savings screens both have their whole service
   behind them — `BudgetService` and `SavingsService` — and nothing blocks
   them.

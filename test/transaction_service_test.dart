@@ -856,6 +856,251 @@ void main() {
     );
   });
 
+  group('the dashboard period queries', () {
+    Future<void> spendOn(String date, Object amount, String category) async {
+      final id = await newChecking(balance: 1000000);
+      await ledger.addTransaction(
+        accountId: id,
+        amount: amount,
+        transactionType: 'expense',
+        category: category,
+        transactionDate: DateTime.parse(date),
+      );
+    }
+
+    test('a row dated today is in the today window', () async {
+      final id = await newChecking();
+      await ledger.addTransaction(
+        accountId: id,
+        amount: 100,
+        transactionType: 'expense',
+        category: 'Süpermarket',
+      );
+
+      final today = await ledger.getTransactionsByPeriod(DashboardPeriod.today);
+      expect(today, hasLength(1));
+      expect(today.single.amount, money('100'));
+    });
+
+    test('every window that asks SQLite for "now" asks in local time', () {
+      // Deliberately structural rather than behavioural. Without 'localtime'
+      // SQLite compares against UTC, and the two only disagree during the
+      // hours a timezone runs across a UTC date boundary — in Türkiye,
+      // between local midnight and 03:00. A behavioural test would therefore
+      // pass on most runs and fail on some, which is worse than no test: it
+      // would look like flakiness rather than the defect it is.
+      for (final period in DashboardPeriod.values) {
+        final condition = period.condition('t.transaction_date');
+        if (!condition.contains("'now'")) continue;
+        expect(
+          condition,
+          contains("'localtime'"),
+          reason: '${period.name} would compare against UTC',
+        );
+      }
+    });
+
+    test('each window reaches back as far as it says', () async {
+      final now = DateTime.now();
+      await spendOn(sqliteDate(now), 10, 'Bugün');
+      await spendOn(
+        sqliteDate(now.subtract(const Duration(days: 3))),
+        20,
+        'Hafta',
+      );
+      await spendOn(
+        sqliteDate(now.subtract(const Duration(days: 20))),
+        30,
+        'Ay',
+      );
+      await spendOn(
+        sqliteDate(now.subtract(const Duration(days: 200))),
+        40,
+        'Yıl',
+      );
+      await spendOn('2019-01-05', 50, 'Eski');
+
+      Future<Set<String>> categoriesIn(DashboardPeriod period) async => {
+        for (final entry in await ledger.getTransactionsByPeriod(period))
+          entry.category,
+      };
+
+      expect(await categoriesIn(DashboardPeriod.today), {'Bugün'});
+      expect(await categoriesIn(DashboardPeriod.week), {'Bugün', 'Hafta'});
+      expect(await categoriesIn(DashboardPeriod.month), {
+        'Bugün',
+        'Hafta',
+        'Ay',
+      });
+      expect(await categoriesIn(DashboardPeriod.year), {
+        'Bugün',
+        'Hafta',
+        'Ay',
+        'Yıl',
+      });
+      expect(await categoriesIn(DashboardPeriod.allTime), {
+        'Bugün',
+        'Hafta',
+        'Ay',
+        'Yıl',
+        'Eski',
+      });
+    });
+
+    test('a pending row is not in any period', () async {
+      final id = await newChecking();
+      await ledger.addTransaction(
+        accountId: id,
+        amount: 999,
+        transactionType: 'expense',
+        transactionDate: dayOffset(5),
+      );
+      expect(
+        await ledger.getTransactionsByPeriod(DashboardPeriod.allTime),
+        isEmpty,
+      );
+    });
+
+    test(
+      'an uncategorised row is filed under Diğer, not left nameless',
+      () async {
+        final id = await newChecking();
+        await ledger.addTransaction(
+          accountId: id,
+          amount: 50,
+          transactionType: 'expense',
+        );
+        expect(
+          (await ledger.getTransactionsByPeriod(DashboardPeriod.allTime))
+              .single
+              .category,
+          'Diğer',
+        );
+      },
+    );
+
+    test(
+      'importance comes from the categories table, defaulting to extra',
+      () async {
+        await db.customInsert(
+          "INSERT INTO categories (name, type, importance) "
+          "VALUES ('Kira', 'expense', 'essential')",
+        );
+        await spendOn(sqliteDate(DateTime.now()), 5000, 'Kira');
+        await spendOn(sqliteDate(DateTime.now()), 200, 'Eğlence');
+
+        final byCategory = {
+          for (final entry in await ledger.getTransactionsByPeriod(
+            DashboardPeriod.allTime,
+          ))
+            entry.category: entry.importance,
+        };
+        expect(byCategory['Kira'], 'essential');
+        expect(byCategory['Eğlence'], 'extra');
+      },
+    );
+
+    test('a debt payment is neither income nor an expense', () async {
+      // Counting it as spending would double-count the purchase it settles.
+      final id = await newChecking();
+      await db.customInsert(
+        'INSERT INTO transactions (account_id, amount, type, category, '
+        "description, transaction_date, status) "
+        "VALUES (?, ?, 'payment', 'Borç Ödeme', ?, ?, 'completed')",
+        variables: [
+          Variable<int>(id),
+          Variable<String>((await crypto.encryptField('900'))!),
+          Variable<String>((await crypto.encryptField('Kart ödemesi'))!),
+          Variable<String>(sqliteTimestamp(DateTime.now())),
+        ],
+      );
+
+      final entry = (await ledger.getTransactionsByPeriod(
+        DashboardPeriod.allTime,
+      )).single;
+      expect(entry.isIncome, isFalse);
+      expect(entry.isExpense, isFalse);
+    });
+
+    test(
+      'an unreadable amount fails the whole period, never a silent gap',
+      () async {
+        // A slice quietly missing from a pie is a wrong picture presented as a
+        // right one — the opposite call from getRecentForAccount, where a row
+        // can honestly say "unreadable" beside its neighbours.
+        final id = await newChecking();
+        await db.customInsert(
+          'INSERT INTO transactions (account_id, amount, type, category, '
+          "description, transaction_date, status) "
+          "VALUES (?, 'AEADv1:broken', 'expense', 'Test', 'x', ?, 'completed')",
+          variables: [
+            Variable<int>(id),
+            Variable<String>(sqliteTimestamp(DateTime.now())),
+          ],
+        );
+
+        await expectLater(
+          ledger.getTransactionsByPeriod(DashboardPeriod.allTime),
+          throwsA(isA<TransactionDataIntegrityError>()),
+        );
+      },
+    );
+
+    test(
+      'opening balances are read from the ledger, not from transactions',
+      () async {
+        // An opening balance never reaches the transactions table, so a chart
+        // fed only from there shows nothing for a user who has just opened an
+        // account with money in it.
+        await newChecking(balance: 17300);
+
+        expect(
+          await ledger.getTransactionsByPeriod(DashboardPeriod.allTime),
+          isEmpty,
+        );
+        final openings = await ledger.getOpeningEventsByPeriod(
+          DashboardPeriod.allTime,
+        );
+        expect(openings.single.amount, money('17300'));
+        expect(
+          await ledger.getOpeningBaselineByPeriod(DashboardPeriod.allTime),
+          money('17300'),
+        );
+      },
+    );
+
+    test('an opening card DEBT is left out of the baseline', () async {
+      // It arrives as a negative delta; a debt in an income breakdown would
+      // make no sense.
+      await accounts.createAccount(
+        name: 'Kart',
+        accountType: AccountType.creditCard,
+        initialBalance: 3500,
+        creditLimit: 20000,
+      );
+      expect(
+        await ledger.getOpeningBaselineByPeriod(DashboardPeriod.allTime),
+        Decimal.zero,
+      );
+    });
+
+    test('an opening balance outside the window is left out', () async {
+      await newChecking(balance: 500);
+      await db.customUpdate(
+        "UPDATE balance_events SET ts = '2019-01-05 10:00:00'",
+        updates: const {},
+      );
+      expect(
+        await ledger.getOpeningBaselineByPeriod(DashboardPeriod.today),
+        Decimal.zero,
+      );
+      expect(
+        await ledger.getOpeningBaselineByPeriod(DashboardPeriod.allTime),
+        money('500'),
+      );
+    });
+  });
+
   group('an account statement', () {
     test('shows completed rows newest first and honours the limit', () async {
       final id = await newChecking();
