@@ -11,34 +11,20 @@ void main() {
   runApp(const ArchlenceApp());
 }
 
-class ArchlenceApp extends StatelessWidget {
-  const ArchlenceApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Archlence',
-      debugShowCheckedModeBanner: false,
-      theme: obsidianPrimeTheme(),
-      home: const _Bootstrap(),
-    );
-  }
-}
-
 /// Opens the database and key store, settles what has fallen due, and only
 /// then shows the shell.
 ///
 /// Settling BEFORE the first draw is deliberate: a future-dated transaction is
 /// recorded as `pending` and touches no balance until this runs, so drawing
 /// first would show a balance that is about to change on its own.
-class _Bootstrap extends StatefulWidget {
-  const _Bootstrap();
+class ArchlenceApp extends StatefulWidget {
+  const ArchlenceApp({super.key});
 
   @override
-  State<_Bootstrap> createState() => _BootstrapState();
+  State<ArchlenceApp> createState() => _ArchlenceAppState();
 }
 
-class _BootstrapState extends State<_Bootstrap> {
+class _ArchlenceAppState extends State<ArchlenceApp> {
   late final Future<AppServices> _startUp = _start();
 
   Future<AppServices> _start() async {
@@ -52,13 +38,16 @@ class _BootstrapState extends State<_Bootstrap> {
     return FutureBuilder<AppServices>(
       future: _startUp,
       builder: (context, snapshot) {
-        if (snapshot.hasError) {
-          return _StartUpFailed(error: snapshot.error!);
-        }
-        if (!snapshot.hasData) {
-          return const _Splash();
-        }
-        return ServicesScope(services: snapshot.data!, child: const AppShell());
+        final services = snapshot.data;
+        return ArchlenceRoot(
+          services: services,
+          theme: obsidianPrimeTheme(),
+          home: switch ((snapshot.error, services)) {
+            (final Object error, _) => _StartUpFailed(error: error),
+            (_, null) => const _Splash(),
+            (_, _) => const AppShell(),
+          },
+        );
       },
     );
   }

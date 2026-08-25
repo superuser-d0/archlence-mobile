@@ -15,10 +15,10 @@ and the whole service layer on top: accounts, the ledger, holdings (portfolio
 CRUD, buying, selling), recurring payments, the monthly budget and savings
 goals. Live price fetching is the one piece left out — see open question 3.
 
-**Wired so far:** Home, Cards and Assets read real data. Tools and Settings
-still render literals.
+**Wired so far:** Home, Cards, Assets and Tools read real data. Settings
+still renders literals.
 
-363 unit tests and 8 device tests pass. `flutter analyze` is clean, and the
+376 unit tests and 8 device tests pass. `flutter analyze` is clean, and the
 app runs on the emulator.
 
 ## Settled decisions
@@ -584,11 +584,28 @@ goals. Three things there depart from the mockup on purpose:
   in the window is emitted, including empty ones — a gap silently closed makes
   a quiet month look like it never happened.
 
+**Tools** launches two real screens — a monthly budget reading
+`BudgetService` and a savings-goal list reading `SavingsService`. The other
+seven cards are drawn dimmed with a `NOT YET` chip and are NOT tappable: a
+card that looks live and does nothing on tap is a defect the user cannot tell
+from a slow one, and a guard inside the handler is not enough — it leaves the
+ripple and the pointer affordance in place.
+
+Wiring Tools found a real defect in the previous commit: `ServicesScope` sat
+in `MaterialApp.home`, which is BELOW the Navigator, so a pushed route is a
+sibling of home rather than a descendant and every tool screen would have
+found no scope at all. It now lives in `builder`, above the Navigator, inside
+a shared `ArchlenceRoot` that `main.dart`, the widget tests and the device
+test all use — a copy of that placement in the test would have let the real
+one drift without anything noticing.
+
+**Known gap:** the pushed-route path is covered by widget tests but NOT yet on
+device. A device test that opens the savings tool from the Tools grid finds
+the screen but not the seeded goal, and the cause is not yet diagnosed. Do not
+assume the widget-test coverage settles it.
+
 **Still literals:**
 
-- **Tools.** The budget and savings screens both have their whole service
-  behind them — `BudgetService` and `SavingsService` — and nothing blocks
-  them.
 - **Settings.** Key-protection status is available from `KeyProvider`; the
   rest of that screen is backup/restore and i18n, which are open work 5.
 

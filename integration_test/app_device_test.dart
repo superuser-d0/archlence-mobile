@@ -18,8 +18,8 @@ import 'package:archlence_mobile/services/account_service.dart';
 import 'package:archlence_mobile/services/recurring_service.dart';
 import 'package:archlence_mobile/theme/obsidian_prime.dart';
 import 'package:decimal/decimal.dart';
+import 'package:flutter/widgets.dart';
 import 'package:drift/drift.dart' show Variable;
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 
@@ -73,10 +73,15 @@ void main() {
   }
 
   Future<void> pumpApp(WidgetTester tester) async {
+    // ArchlenceRoot, not a hand-built MaterialApp: the services scope has to
+    // sit above the Navigator for a pushed route to reach it, and a copy of
+    // that placement here would let the real one drift without a test
+    // noticing.
     await tester.pumpWidget(
-      MaterialApp(
+      ArchlenceRoot(
+        services: services,
         theme: obsidianPrimeTheme(),
-        home: ServicesScope(services: services, child: const AppShell()),
+        home: const AppShell(),
       ),
     );
     await tester.pumpAndSettle();

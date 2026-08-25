@@ -5,7 +5,7 @@
 /// either would defeat both.
 library;
 
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 
 import 'crypto/field_crypto.dart';
 import 'crypto/key_provider.dart';
@@ -98,4 +98,42 @@ class ServicesScope extends InheritedWidget {
   @override
   bool updateShouldNotify(ServicesScope oldWidget) =>
       services != oldWidget.services;
+}
+
+/// The app's `MaterialApp`, with the services scope placed correctly.
+///
+/// THE PLACEMENT IS THE POINT. `builder` sits ABOVE the Navigator; `home`
+/// sits below it. With the scope in `home`, a pushed route is a SIBLING of
+/// home rather than a descendant, and every screen opened from the Tools grid
+/// finds no scope at all — an assertion in production, and a blank screen if
+/// assertions are off.
+///
+/// It lives here, shared by `main.dart` and the device test, so that the test
+/// exercises the real placement instead of a copy of it that could drift.
+class ArchlenceRoot extends StatelessWidget {
+  const ArchlenceRoot({
+    required this.services,
+    required this.home,
+    required this.theme,
+    super.key,
+  });
+
+  final AppServices? services;
+  final Widget home;
+  final ThemeData theme;
+
+  @override
+  Widget build(BuildContext context) {
+    final resolved = services;
+    return MaterialApp(
+      title: 'Archlence',
+      debugShowCheckedModeBanner: false,
+      theme: theme,
+      builder: resolved == null
+          ? null
+          : (context, child) =>
+                ServicesScope(services: resolved, child: child!),
+      home: home,
+    );
+  }
 }

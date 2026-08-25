@@ -24,12 +24,12 @@ AppServices testServices(ArchlenceDatabase db) =>
 /// inset back through `MediaQuery.paddingOf` and would otherwise lay out
 /// against a zero inset that never occurs in the app.
 Widget testApp(AppServices services, Widget child) {
-  return MaterialApp(
+  // The real root, so the scope's placement above the Navigator is the one
+  // production uses rather than a copy of it that could drift.
+  return ArchlenceRoot(
+    services: services,
     theme: obsidianPrimeTheme(),
-    home: ServicesScope(
-      services: services,
-      child: Scaffold(body: child),
-    ),
+    home: Scaffold(body: child),
   );
 }
 
