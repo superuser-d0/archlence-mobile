@@ -13,13 +13,51 @@ Every claim here was verified against the code on `main` before being written.
 that are hardest to get right — money, encryption, and the database schema —
 and the whole service layer on top: accounts, the ledger, holdings (portfolio
 CRUD, buying, selling), recurring payments, the monthly budget and savings
-goals. Live price fetching is the one piece left out — see open question 3.
+goals. Live price fetching is the one piece left out — see open work 5.
 
-**Wired so far:** Home, Cards, Assets and Tools read real data. Settings
-still renders literals.
+**Wired so far:** Home, Cards and Assets read real data, and the Tools grid
+launches a budget screen and a savings screen that do too. Settings still
+renders literals, and nothing in the app WRITES except the two card switches
+on the Cards tab.
 
 376 unit tests and 8 device tests pass. `flutter analyze` is clean, and the
 app runs on the emulator.
+
+## Pick up here
+
+In priority order. Each of these is a self-contained next session.
+
+**1. Diagnose the device-test gap.** A device test that opened the savings
+tool from the Tools grid found the screen but NOT the seeded goal, and the
+cause was never worked out. It was deleted rather than committed green, so
+nothing in the suite is red — and nothing proves the pushed-route path works
+on a real device either. The widget tests cover the same path and pass, which
+is exactly why this is worth an hour: two layers disagree and only one of them
+is being believed. Start by re-adding the test (the commit message of
+`af8a632` describes it) and reading what the screen actually renders.
+
+**2. Make every control honest.** There are 19 `onTap: () {}` /
+`onPressed: () {}` left — the "+ ADD" button on Cards, "+" on Assets, EDIT and
+REMOVE on a subscription, "Save" on a savings goal, the wallet selector, the
+search field, the notification bell, and every row of Settings. Each looks
+live and does nothing. The Tools grid shows the pattern to follow: a control
+with no destination is drawn as unavailable, and the guard goes on the
+affordance rather than inside the handler, or the ripple still invites the
+tap. This is cheap, and it stops the app lying about what it can do.
+
+**3. Write flows — the thing that makes the app usable rather than readable.**
+Every service call is ready and no form calls it. In dependency order: add an
+account (nothing works without one), add a transaction, add a holding, add a
+budget line, open and fund a savings goal. `TransactionService.addTransaction`
+is also where subscription detection gets connected — the one piece of
+`transaction_service.py` still unported.
+
+**4. Settings, then onboarding.** Settings has one real thing available today:
+key-protection status from `KeyProvider`. Onboarding gates the whole app and
+depends on nothing but that same provider.
+
+Open questions 5 and 6 below (price fetching, backup/i18n/release) are larger
+and none of the above waits on them.
 
 ## Settled decisions
 
@@ -200,6 +238,15 @@ key, and a second of either defeats both. `ServicesScope` carries it down the
 tree; screens read it in `didChangeDependencies` and keep a `Future` they can
 replace to reload.
 
+**WHERE THE SCOPE SITS IS LOAD-BEARING.** It goes in `MaterialApp.builder`,
+which is ABOVE the Navigator — not in `home`, which is below it. With the
+scope in `home`, a pushed route is a SIBLING of home rather than a descendant
+and finds no scope at all. That was a real defect, shipped in the commit that
+wired Home and Cards and caught only when the Tools grid first pushed a route.
+The placement now lives in a shared `ArchlenceRoot` used by `main.dart`, the
+widget tests and the device test, so a copy of it in a test cannot let the
+real one drift.
+
 Start-up opens the database and key store, then calls `settleDueTransactions`
 BEFORE the first draw. Nothing else posts a future-dated transaction, so
 without that call a scheduled rent or salary is recorded and never arrives —
@@ -252,6 +299,43 @@ point:
 - The device test's own first draft flipped a completed transaction to
   `pending` after the fact, leaving the balance already applied — settling then
   added it twice and the test would have passed on a doubled figure.
+
+### The wired tabs — what departs from the mockup, and why
+
+**Home** shows net worth, cash and card debt from `AccountService`, and the
+subscriptions from `RecurringService`. The balance ring's change chip is
+omitted when there is nothing to report; an empty chip still drew a green pill
+with an upward arrow, which reads as a gain.
+
+**Cards** shows accounts, a card's limit and debt, its statement, and writes
+the two card switches — the only writes in the app so far.
+
+**Assets** reads the ledger for its period summary, its distribution and a
+twelve-month trend, and `AssetService`/`SavingsService` for holdings and
+goals. Three deliberate departures:
+
+- Holdings are shown AT COST and say so. There is no price feed, so the
+  mockup's "Current" column, its `+7.858,53 ₺ (+1.52%) Today` chip and its
+  "Last updated: 23:00" line are all figures that do not exist. A cost basis
+  presented as a market value is a lie the user cannot see through.
+- The single hard-coded "Emergency Fund" became the savings goals, however
+  many there are. Showing only the first would hide the rest.
+- The trend is bucketed in Dart, not in SQL: `transactions.amount` is
+  encrypted, so a `SUM() GROUP BY month` would add up ciphertext. Every month
+  in the window is emitted, including the empty ones — a gap silently closed
+  makes a quiet month look like it never happened.
+
+**Tools** launches a monthly budget (`BudgetService`) and a savings-goal list
+(`SavingsService`). The other seven cards are dimmed with a `NOT YET` chip and
+are NOT tappable. The guard is on the affordance, not inside the handler: a
+handler that returns early leaves the ripple and the pointer behaviour in
+place, and a card that looks live and does nothing is a defect the user cannot
+tell from a slow one.
+
+The savings goal card is shared between Assets and the savings tool rather
+than duplicated. The desktop has already paid for that kind of duplication:
+its goal dictionary was built in two places, and a field added to one and not
+the other made goal cards lose their colour after an operation.
 
 ### Savings goals — `lib/services/savings_service.dart`
 
@@ -406,7 +490,7 @@ when a mutation comes back green: check that it actually mutated something.
 Port of the CRUD-and-arithmetic half of `services/asset_service.py` plus
 `services/asset_purchase_service.py` and `services/asset_sale_service.py`.
 The other half — `fetch_current_price`, the portfolio cache, the BIST100
-batch fetch, the warm-up thread — is NOT ported; see open question 3, which
+batch fetch, the warm-up thread — is NOT ported; see open work 5, which
 this doesn't need to be resolved to build.
 
 `calculatePnl` is arithmetic only: Decimal throughout, quantized only on the
@@ -469,6 +553,18 @@ balance — money does not appear in an account before its date — which means
 `settleDueTransactions` is the only thing that posts one, and a build that
 never calls it never posts a future-dated row at all.
 
+The dashboard's period queries were held back until a screen actually needed
+them; the Assets tab brought that need. They are here as a `DashboardPeriod`
+enum plus `getTransactionsByPeriod` and the two opening-balance readers. The
+desktop passes its Turkish UI labels ('1 Hafta', 'Hayat Boyu') as the filter
+value, which makes the interface's wording part of the query; an enum keeps
+the period a decision and leaves the wording to the chips. Two details worth
+not re-deriving: every window that asks SQLite for `'now'` also asks for
+`'localtime'`, or the comparison runs against UTC and "today" silently starts
+yesterday for the hours a timezone runs across the date boundary; and an
+opening balance never reaches `transactions` at all, which is why the
+distribution chart reads it from `balance_events` instead.
+
 **Proof:** `test/transaction_service_test.dart`, 43 tests, including the
 acceptance scenario the desktop was originally asked for: a 10,000-limit card,
 a 500 supermarket spend, net worth down exactly 500 and cash untouched.
@@ -510,8 +606,10 @@ place for drift to hide.
 
 ### Screens — `lib/screens/`
 
-All five tabs are built and were verified by running them on the emulator, not
-by reading the code. Three defects surfaced only that way:
+The five tabs as first BUILT, before any of them read data — the wiring that
+came later is under "The screen–service join" above. All five were verified by
+running them on the emulator, not by reading the code, and three defects
+surfaced only that way:
 
 - Every tab's list attached to the same `PrimaryScrollController`, so
   switching tabs carried the previous tab's scroll offset across — Assets and
@@ -525,115 +623,93 @@ by reading the code. Three defects surfaced only that way:
 
 ## Open work
 
-### 1. Services — the layer that connects screens to the database
+### 1. The device-test gap — unresolved
 
-The desktop's `services/` is the reference; port in this order, since each
-depends on the one before:
+A device test that opens the savings tool from the Tools grid finds the screen
+but not the seeded goal. The widget tests cover the same path and pass. The
+test was removed rather than committed green, so the suite is honest, but the
+pushed-route path is UNPROVEN on device and should not be assumed to work
+because the widget tests are happy. See "Pick up here" for where to start.
 
-1. ~~`account_service` — accounts and balances.~~ **Done.**
-2. ~~`transaction_service` — the ledger, and the balance invariants that
-   guard it.~~ **Done.**
-3. ~~`asset_service` / `asset_purchase_service` / `asset_sale_service`.~~
-   **Done** — the CRUD-and-arithmetic half; live price fetching stayed out,
-   see open question 3.
-4. `recurring_service`. ~~Done.~~
-5. `budget_service`. ~~Done.~~
-6. `savings_service`. ~~Done.~~
+### 2. Controls that do nothing
 
-**The service layer is finished.** What is left of the desktop's `services/`
-is reporting and infrastructure, not the ledger: the dashboard/insight/
-projection services (they feed charts nothing reads yet), backup and restore
-(open work 5), price fetching (open question 3), and the migration engines a
-fresh mobile install has nothing to migrate from.
+Nineteen `onTap: () {}` / `onPressed: () {}` remain across the app. The Tools
+grid was fixed to mark unavailable cards and remove the tap affordance
+entirely; everything else still invites a tap and swallows it. Listed in
+"Pick up here".
 
-The dashboard's period queries were held back until a screen actually needed
-them, and the Assets tab brought that need — they are ported now, as
-`DashboardPeriod` plus `getTransactionsByPeriod` and the two opening-balance
-readers. The desktop passes its Turkish UI labels ('1 Hafta', 'Hayat Boyu') as
-the filter value, which makes the interface's wording part of the query; an
-enum keeps the period a decision and leaves the wording to the chips.
+### 3. Write flows
 
-One piece of `transaction_service.py` is still out: subscription detection,
-the hook `add_transaction` calls after a card expense. `recurring_service`
-exists now, so it can be connected whenever the transaction form lands.
+No screen writes anything except the two card switches on the Cards tab. Every
+service call exists and is tested:
 
-Port the desktop's precision and integrity tests alongside each — they are the
-specification. `test_money_decisions_precision`, `test_portfolio_total_precision`,
-`test_monetary_boundary_invariants`, `test_real_balance_invariants` and
-`test_debt_total_matches_ledger` are the ones that encode rules not visible in
-the code itself.
+| Action | Service call |
+| --- | --- |
+| Add an account or card | `AccountService.createAccount` |
+| Record a transaction | `TransactionService.addTransaction` |
+| Pay card debt | `AccountService.payCreditCardDebt` |
+| Buy / sell a holding | `AssetPurchaseService.createPurchase`, `AssetSaleService.sell` |
+| Add or edit a budget line | `BudgetService.savePlanItem` |
+| Open, fund or close a goal | `SavingsService.createGoal` / `depositToGoal` / `withdrawFromGoal` / `deleteGoal` |
+| Edit, skip or cancel a subscription | `RecurringService.updateSubscriptionAmount` / `skipNextOccurrence` / `cancelSubscription` |
 
-### 2. Wire the screens to real data
+Adding an account comes first: on a fresh install there is no account, and
+almost every other flow needs one to move money into or out of.
 
-Home and Cards are done, and so is the infrastructure the rest needs:
-`AppServices`, `ServicesScope`, `AsyncData` and the money formatter. Start-up
-settles what has fallen due.
+Connect subscription detection when the transaction form lands — it is the one
+piece of `transaction_service.py` still unported, the hook `add_transaction`
+calls after a card expense.
 
-**Assets** reads the ledger for its period summary, its distribution and a
-twelve-month trend, and `AssetService`/`SavingsService` for holdings and
-goals. Three things there depart from the mockup on purpose:
+### 4. Settings and onboarding
 
-- Holdings are shown AT COST and say so. There is no price feed, so the
-  mockup's "Current" column, its `+7.858,53 ₺ (+1.52%) Today` chip and its
-  "Last updated: 23:00" line are all figures that do not exist. A cost basis
-  presented as a market value is a lie the user cannot see through.
-- The single hard-coded "Emergency Fund" became the savings goals, however
-  many there are. Showing only the first would hide the rest.
-- The trend is bucketed in Dart, not in SQL: `transactions.amount` is
-  encrypted, so a `SUM() GROUP BY month` would add up ciphertext. Every month
-  in the window is emitted, including empty ones — a gap silently closed makes
-  a quiet month look like it never happened.
+**Settings** still renders literals. The one thing available today is
+key-protection status from `KeyProvider` (`KeyProtectionStatus` reports which
+store is in use and whether it is hardware-backed). The rest of that screen is
+backup/restore and i18n, in item 6.
 
-**Tools** launches two real screens — a monthly budget reading
-`BudgetService` and a savings-goal list reading `SavingsService`. The other
-seven cards are drawn dimmed with a `NOT YET` chip and are NOT tappable: a
-card that looks live and does nothing on tap is a defect the user cannot tell
-from a slow one, and a guard inside the handler is not enough — it leaves the
-ripple and the pointer affordance in place.
+**Onboarding and sign-in** are designed in the published mockup canvas and not
+built. They gate everything else in the app, and depend on nothing but the key
+provider, which is done.
 
-Wiring Tools found a real defect in the previous commit: `ServicesScope` sat
-in `MaterialApp.home`, which is BELOW the Navigator, so a pushed route is a
-sibling of home rather than a descendant and every tool screen would have
-found no scope at all. It now lives in `builder`, above the Navigator, inside
-a shared `ArchlenceRoot` that `main.dart`, the widget tests and the device
-test all use — a copy of that placement in the test would have let the real
-one drift without anything noticing.
-
-**Known gap:** the pushed-route path is covered by widget tests but NOT yet on
-device. A device test that opens the savings tool from the Tools grid finds
-the screen but not the seeded goal, and the cause is not yet diagnosed. Do not
-assume the widget-test coverage settles it.
-
-**Still literals:**
-
-- **Settings.** Key-protection status is available from `KeyProvider`; the
-  rest of that screen is backup/restore and i18n, which are open work 5.
-
-**No screen WRITES yet** beyond the two card switches. Adding an account, a
-transaction, a holding, a budget line or a savings goal all have their service
-call ready and no form to call it from — which is the next thing that makes
-the app usable rather than merely readable.
-
-### 3. Price fetching — needs a decision
+### 5. Price fetching — needs a decision
 
 The desktop runs `services/asset_price_worker.py` as a **subprocess**
-(`asset_service.py:700`). That architecture does not work on Android: there is no
-second Python interpreter to spawn. It has to become an in-process background
-task, and the price source itself needs deciding — `yfinance` has no Dart
-equivalent, so this is either a direct HTTP call to a chosen provider or a
-backend of your own.
+(`asset_service.py:700`). That architecture does not work on Android: there is
+no second Python interpreter to spawn. It has to become an in-process
+background task, and the price source itself needs deciding — `yfinance` has
+no Dart equivalent, so this is either a direct HTTP call to a chosen provider
+or a backend of your own.
 
-### 4. Onboarding and sign-in screens
+Until it is settled, the Assets tab shows holdings AT COST and says so. That
+is a deliberate holding position, not an oversight: `AssetService.calculatePnl`
+already takes a current price as a plain argument, so wiring a feed in is a
+small change once the source exists.
 
-Designed (in the published mockup canvas) but not built. They gate everything
-else in the app, so they are needed before the app is usable end to end, but
-they depend on nothing but the key provider, which is done.
-
-### 5. Not yet considered
+### 6. Not yet considered
 
 Backup and restore, i18n (the desktop has `ui/i18n.py` with a full Turkish/
-English map; the mobile screens are currently English-only strings in the
-widgets), app icon and launch screen, release signing, Play Store listing.
+English map; the mobile screens are English-only strings in the widgets, while
+the NUMBERS are already Turkish-formatted — see `lib/ui/money_format.dart`),
+app icon and launch screen, release signing, Play Store listing.
+
+### What is NOT coming from the desktop
+
+For the avoidance of re-deriving this each session — the desktop's `services/`
+is fully accounted for. What has not been ported is not forgotten:
+
+- **Dashboard, insight, projection and metrics services.** They compute the
+  Home tab's forecast and health score. Those cards are drawn with a `NOT YET`
+  chip rather than invented figures.
+- **Migration engines** (`migration_service`, `savings_migration`,
+  `crypto_migration_service`, `startup_recovery`). A fresh mobile install has
+  nothing to migrate from; these matter only if restoring a desktop backup
+  becomes a feature, which is item 6.
+- **Price machinery** (`price_service`, `price_providers`, `price_guard`,
+  `asset_price_worker`, `crypto_top100`, `brand_icon_service`, `logo_service`).
+  Item 5.
+- **Backup service.** Item 6.
+- **`background_task_manager`.** Flutter has its own answer; the desktop's
+  thread pool does not port.
 
 ## Environment
 
@@ -657,11 +733,43 @@ system-wide. A venv was used:
 
 ## Working agreement
 
-Two habits are worth keeping, because both caught real defects that review
-would not have:
+Three habits, kept because each has repeatedly caught defects that review did
+not.
 
-- **Run it, don't just read it.** All three screen defects above were invisible
-  in the source and obvious on the first screenshot.
-- **Prove parity against the real thing.** Testing a port against expectations
-  derived by hand tests the derivation, not the port. Every parity claim in
-  this file rests on output generated by the desktop's own modules.
+**Run it, don't just read it.** Every screen defect in this file was invisible
+in the source: the tab scroll offsets, the clipped card name, the floating
+button covering a switch, `setState` handed a closure returning a `Future`, a
+change chip drawn empty so a green pill with an upward arrow read as a gain,
+and `ServicesScope` placed below the Navigator where no pushed route could
+reach it.
+
+**Prove parity against the real thing.** Testing a port against expectations
+derived by hand tests the derivation, not the port. Every parity claim here
+rests on output generated by the desktop's own modules — its
+`quantize_financial`, its `aead_crypto`, its `initialize_database()`.
+
+**Check the tests for teeth.** Break the rule deliberately and require the
+suite to fail. This is the habit that has paid the most, because a green suite
+says nothing on its own. What it has caught, all of it in tests that looked
+thorough:
+
+- an assertion that re-quantized a stored amount before comparing it, so it
+  passed even with the quantizing removed entirely;
+- a `ref_id` cross-check where the account and the goal both happened to be
+  id 1, because each table starts its own `AUTOINCREMENT` at 1;
+- a completion rule whose rounding was never exercised, because in the
+  sequence used the raw value sat safely above the target at the moment the
+  decision was made;
+- an instalment-rounding test using `100 / 3`, which does not separate
+  truncation from half-even from half-up — all three give 33.33;
+- a timezone rule only exercised for the few hours a day when UTC and local
+  dates differ, so it would have passed on most runs and failed on some;
+- `findsWidgets` on a figure that also appeared in a total above it, so the
+  tile could show the wrong number and the assertion still held.
+
+Two related notes. A mutation that comes back GREEN is not automatically an
+uncaught defect — check first that it actually changed behaviour (twice it had
+only added a comment or a dead branch), and second whether it is genuinely
+EQUIVALENT (`applyPlanToYearEnd`'s `+ 1` is, and says so at the line). And a
+test that cannot be made deterministic should say why in place, rather than
+being left to look like flakiness.
