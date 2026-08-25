@@ -46,3 +46,6 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# drift codegen output is checked in; build_runner scratch is not
+.dart_tool/build/
