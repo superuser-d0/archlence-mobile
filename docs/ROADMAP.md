@@ -11,16 +11,16 @@ Every claim here was verified against the code on `main` before being written.
 
 **Done:** the toolchain, all five screens, the three layers underneath them
 that are hardest to get right — money, encryption, and the database schema —
-and five services on top: accounts, the ledger, holdings (portfolio CRUD,
-buying, selling), and recurring payments. Live price fetching is the one piece
-of that layer left out — see open question 3.
+and six services on top: accounts, the ledger, holdings (portfolio CRUD,
+buying, selling), recurring payments, and the monthly budget. Live price
+fetching is the one piece of that layer left out — see open question 3.
 
 **Not done:** the wiring. Every screen still renders hard-coded figures; no
 screen reads the database yet. The data to fill Home, Cards and Assets now
 exists behind a service call — Assets minus a current price, which nothing
 supplies yet.
 
-237 unit tests and 4 device tests pass. `flutter analyze` is clean.
+280 unit tests and 4 device tests pass. `flutter analyze` is clean.
 
 ## Settled decisions
 
@@ -192,6 +192,51 @@ file, which a unit test cannot stage.
 
 The acceptance scenario the desktop encodes — a card spend lowering net worth
 by exactly its amount — needs the transaction service and is not written yet.
+
+### The monthly budget — `lib/services/budget_service.dart`
+
+Port of `services/budget_service.py`: plan items, the subscription
+reservation, category progress, rollover, suggestions and the trend series.
+
+NO MONEY IS AGGREGATED IN SQL. `transactions.amount` is encrypted, so a
+`SUM()` over it would add up ciphertext; every total is decrypted and summed
+in Dart. `monthly_budget_plan.amount` is a plain REAL but goes through the
+same reader, which tries the plain value first and decryption second, so one
+rule covers both.
+
+An amount that cannot be read invalidates the WHOLE derived result rather than
+counting as zero — different from `LedgerEntry.isCorrupt`, and for a reason: a
+statement row that says "unreadable" is honest, but a budget silently short by
+one category is a wrong number presented as a right one.
+
+The plan model is templates plus overrides. A template applies to every month
+until a CONCRETE item of the same identity overrides it in one; identity is
+the category if there is one, else the name, both compared case-insensitively
+so "Market" and "market" do not become two lines. Among templates of one
+identity, the LATEST wins.
+
+Rollover carries the previous month's own `planned - actual` and DOES NOT
+chain — one frugal January must not inflate every month after it.
+
+**Proof:** `test/budget_service_test.dart`, 43 tests. Broken to check for
+teeth: identity made case-sensitive or left untrimmed, templates not
+overridden, earlier templates winning, the target year ignored, subscriptions
+not reserved, an unusable subscription amount skipped instead of raised,
+occurrences counted as one per month regardless of frequency, pending
+transactions counted as spending, an unreadable amount zeroed, rollover
+applied with the flag off or chained through the year, the suggestion
+including the current month or summing instead of averaging, an existing
+identity overwritten, templates copied by `applyPlanToYearEnd`, the positivity
+/ blank-name / threshold checks dropped, the copy list validated inside the
+transaction instead of before it, a derived item left as a template,
+propagated copies written as templates, the source month copied onto itself,
+the trend series run forwards, and the planner offering months already gone.
+
+One mutant turned out to be genuinely EQUIVALENT rather than uncaught:
+`applyPlanToYearEnd` starting at the source month instead of the one after it
+changes nothing, because the identity skip eliminates the source month's own
+rows anyway. It is documented at that line rather than papered over with a
+test that would only have restated the deduplication.
 
 ### Recurring payments — `lib/services/recurring_service.dart`
 
@@ -383,9 +428,8 @@ depends on the one before:
    **Done** — the CRUD-and-arithmetic half; live price fetching stayed out,
    see open question 3.
 4. `recurring_service`. ~~Done.~~
-5. `budget_service`, `savings_service`. **Next.** `budget_service` depends on
-   recurring (it reserves the month's subscriptions against the plan) and is
-   ready to port; `savings_service` stands alone.
+5. `budget_service`. ~~Done.~~
+6. `savings_service`. **Next.** It stands alone — nothing else waits on it.
 
 Two pieces of `transaction_service.py` were deliberately left out and are
 worth picking up with whatever needs them:
