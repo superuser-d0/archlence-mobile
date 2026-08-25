@@ -11,16 +11,16 @@ Every claim here was verified against the code on `main` before being written.
 
 **Done:** the toolchain, all five screens, the three layers underneath them
 that are hardest to get right — money, encryption, and the database schema —
-and six services on top: accounts, the ledger, holdings (portfolio CRUD,
-buying, selling), recurring payments, and the monthly budget. Live price
-fetching is the one piece of that layer left out — see open question 3.
+and the whole service layer on top: accounts, the ledger, holdings (portfolio
+CRUD, buying, selling), recurring payments, the monthly budget and savings
+goals. Live price fetching is the one piece left out — see open question 3.
 
 **Not done:** the wiring. Every screen still renders hard-coded figures; no
 screen reads the database yet. The data to fill Home, Cards and Assets now
 exists behind a service call — Assets minus a current price, which nothing
 supplies yet.
 
-280 unit tests and 4 device tests pass. `flutter analyze` is clean.
+314 unit tests and 4 device tests pass. `flutter analyze` is clean.
 
 ## Settled decisions
 
@@ -192,6 +192,55 @@ file, which a unit test cannot stage.
 
 The acceptance scenario the desktop encodes — a card spend lowering net worth
 by exactly its amount — needs the transaction service and is not written yet.
+
+### Savings goals — `lib/services/savings_service.dart`
+
+Port of `services/savings_service.py`. A deposit ISOLATES money rather than
+spending it: `accounts.balance` falls and the goal's `current_amount` rises in
+one commit, and NOTHING is written to `transactions` — setting money aside
+must not show up as spending in any chart. Withdrawal is the exact inverse.
+
+**The status comparisons round in SQL, and that is the whole point.**
+`current_amount` is a REAL updated with `current_amount + ?`, so it drifts:
+nine deposits of 0.60 against a 5.40 target leave the raw column at
+5.3999999999999994. Comparing raw values would leave a goal the user can see
+is finished marked "active" — and on the withdrawal side would refuse them
+their own money by a fraction of a kurus. The complementary rule matters as
+much: a withdrawal that REALLY drops below the target reopens the goal, so
+"completed" never becomes sticky.
+
+Identity is checked fail-closed BEFORE any money moves. A numeric `id` can be
+reused after a restore — delete a goal, restore a backup taken before it, and
+the id is free for the next goal to take — so a screen still holding the old
+card would otherwise fund a goal the user never meant. `goalUid` is the
+durable identity; passing null skips the check, a deliberate door for tests
+and maintenance that no screen may use.
+
+`accountId` is required rather than defaulting to `DEFAULT_ACCOUNT_ID`: the
+desktop removed its seeded default account, so that constant matches no row on
+a fresh install and the default only ever produced ownerless writes.
+
+**Proof:** `test/savings_service_test.dart`, 34 tests. Broken to check for
+teeth: the identity check skipped or moved after the money moves, a deposit
+also written as an expense, depositing to a completed goal, a missing account
+undetected, the completion and reopening comparisons made raw, overdrawing
+allowed, the ledger pointing both events at the wrong counterpart, the goal
+side of a deposit dropped, a discarded goal recorded as refunded, a refund
+reaching a credit card or silently skipped, deleting refunding when asked not
+to, opening at the target not completing, a negative opening amount accepted,
+the opening ledger line skipped at zero, every goal sharing one identity, and
+`onlyActive` ignored.
+
+Two of those came back green first time and both were real test weaknesses,
+not equivalent mutants:
+
+- The ledger's `ref_id` cross-check passed with the wrong counterpart because
+  the account and the goal both had id 1 — each table starts its own
+  AUTOINCREMENT at 1. The test now forces them apart and says why.
+- The COMPLETION rule's rounding was never exercised: in the desktop's own
+  drift sequence the raw value sits comfortably ABOVE the target at the moment
+  completion is decided, so a raw comparison passes too. It needed its own
+  scenario that lands the raw column just below.
 
 ### The monthly budget — `lib/services/budget_service.dart`
 
@@ -429,7 +478,13 @@ depends on the one before:
    see open question 3.
 4. `recurring_service`. ~~Done.~~
 5. `budget_service`. ~~Done.~~
-6. `savings_service`. **Next.** It stands alone — nothing else waits on it.
+6. `savings_service`. ~~Done.~~
+
+**The service layer is finished.** What is left of the desktop's `services/`
+is reporting and infrastructure, not the ledger: the dashboard/insight/
+projection services (they feed charts nothing reads yet), backup and restore
+(open work 5), price fetching (open question 3), and the migration engines a
+fresh mobile install has nothing to migrate from.
 
 Two pieces of `transaction_service.py` were deliberately left out and are
 worth picking up with whatever needs them:
@@ -448,11 +503,15 @@ the code itself.
 
 ### 2. Wire the screens to real data
 
+**This is now the critical path** — nothing else blocks it, and nothing the
+service layer produces reaches a user until it is done.
+
 Every figure on every screen is currently a literal. Home, Cards and the card
 statement no longer wait on anything: `AccountService` and `TransactionService`
 already return what they need. The Assets tab can show holdings, cost basis
 and quantity now too — what it cannot show is a live P/L, which needs open
-question 3 settled first.
+question 3 settled first. Tools covers the budget and savings screens, both of
+which have their whole service behind them.
 
 Note that nothing calls `settleDueTransactions` yet. Until something does — on
 app start is the desktop's answer — a future-dated transaction is recorded and
