@@ -13,7 +13,7 @@ Every claim here was verified against the code on `main` before being written.
 that are hardest to get right — money, encryption, and the database schema —
 and the whole service layer on top: accounts, the ledger, holdings (portfolio
 CRUD, buying, selling), recurring payments, the monthly budget and savings
-goals. Live price fetching is the one piece left out — see open work 5.
+goals. Live price fetching is the one piece left out — see open work 4.
 
 **Wired so far:** Home, Cards and Assets read real data, and the Tools grid
 launches a budget screen and a savings screen that do too. Settings still
@@ -27,16 +27,7 @@ app runs on the emulator.
 
 In priority order. Each of these is a self-contained next session.
 
-**1. Diagnose the device-test gap.** A device test that opened the savings
-tool from the Tools grid found the screen but NOT the seeded goal, and the
-cause was never worked out. It was deleted rather than committed green, so
-nothing in the suite is red — and nothing proves the pushed-route path works
-on a real device either. The widget tests cover the same path and pass, which
-is exactly why this is worth an hour: two layers disagree and only one of them
-is being believed. Start by re-adding the test (the commit message of
-`af8a632` describes it) and reading what the screen actually renders.
-
-**2. Make every control honest.** There are 19 `onTap: () {}` /
+**1. Make every control honest.** There are 19 `onTap: () {}` /
 `onPressed: () {}` left — the "+ ADD" button on Cards, "+" on Assets, EDIT and
 REMOVE on a subscription, "Save" on a savings goal, the wallet selector, the
 search field, the notification bell, and every row of Settings. Each looks
@@ -45,19 +36,19 @@ with no destination is drawn as unavailable, and the guard goes on the
 affordance rather than inside the handler, or the ripple still invites the
 tap. This is cheap, and it stops the app lying about what it can do.
 
-**3. Write flows — the thing that makes the app usable rather than readable.**
+**2. Write flows — the thing that makes the app usable rather than readable.**
 Every service call is ready and no form calls it. In dependency order: add an
 account (nothing works without one), add a transaction, add a holding, add a
 budget line, open and fund a savings goal. `TransactionService.addTransaction`
 is also where subscription detection gets connected — the one piece of
 `transaction_service.py` still unported.
 
-**4. Settings, then onboarding.** Settings has one real thing available today:
+**3. Settings, then onboarding.** Settings has one real thing available today:
 key-protection status from `KeyProvider`. Onboarding gates the whole app and
 depends on nothing but that same provider.
 
-Open questions 5 and 6 below (price fetching, backup/i18n/release) are larger
-and none of the above waits on them.
+Open work 4 and 5 below (price fetching, backup/i18n/release) are larger and
+none of the above waits on them.
 
 ## Settled decisions
 
@@ -490,7 +481,7 @@ when a mutation comes back green: check that it actually mutated something.
 Port of the CRUD-and-arithmetic half of `services/asset_service.py` plus
 `services/asset_purchase_service.py` and `services/asset_sale_service.py`.
 The other half — `fetch_current_price`, the portfolio cache, the BIST100
-batch fetch, the warm-up thread — is NOT ported; see open work 5, which
+batch fetch, the warm-up thread — is NOT ported; see open work 4, which
 this doesn't need to be resolved to build.
 
 `calculatePnl` is arithmetic only: Decimal throughout, quantized only on the
@@ -623,22 +614,14 @@ surfaced only that way:
 
 ## Open work
 
-### 1. The device-test gap — unresolved
-
-A device test that opens the savings tool from the Tools grid finds the screen
-but not the seeded goal. The widget tests cover the same path and pass. The
-test was removed rather than committed green, so the suite is honest, but the
-pushed-route path is UNPROVEN on device and should not be assumed to work
-because the widget tests are happy. See "Pick up here" for where to start.
-
-### 2. Controls that do nothing
+### 1. Controls that do nothing
 
 Nineteen `onTap: () {}` / `onPressed: () {}` remain across the app. The Tools
 grid was fixed to mark unavailable cards and remove the tap affordance
 entirely; everything else still invites a tap and swallows it. Listed in
 "Pick up here".
 
-### 3. Write flows
+### 2. Write flows
 
 No screen writes anything except the two card switches on the Cards tab. Every
 service call exists and is tested:
@@ -660,18 +643,18 @@ Connect subscription detection when the transaction form lands — it is the one
 piece of `transaction_service.py` still unported, the hook `add_transaction`
 calls after a card expense.
 
-### 4. Settings and onboarding
+### 3. Settings and onboarding
 
 **Settings** still renders literals. The one thing available today is
 key-protection status from `KeyProvider` (`KeyProtectionStatus` reports which
 store is in use and whether it is hardware-backed). The rest of that screen is
-backup/restore and i18n, in item 6.
+backup/restore and i18n, in item 5.
 
 **Onboarding and sign-in** are designed in the published mockup canvas and not
 built. They gate everything else in the app, and depend on nothing but the key
 provider, which is done.
 
-### 5. Price fetching — needs a decision
+### 4. Price fetching — needs a decision
 
 The desktop runs `services/asset_price_worker.py` as a **subprocess**
 (`asset_service.py:700`). That architecture does not work on Android: there is
@@ -685,7 +668,7 @@ is a deliberate holding position, not an oversight: `AssetService.calculatePnl`
 already takes a current price as a plain argument, so wiring a feed in is a
 small change once the source exists.
 
-### 6. Not yet considered
+### 5. Not yet considered
 
 Backup and restore, i18n (the desktop has `ui/i18n.py` with a full Turkish/
 English map; the mobile screens are English-only strings in the widgets, while
@@ -703,11 +686,11 @@ is fully accounted for. What has not been ported is not forgotten:
 - **Migration engines** (`migration_service`, `savings_migration`,
   `crypto_migration_service`, `startup_recovery`). A fresh mobile install has
   nothing to migrate from; these matter only if restoring a desktop backup
-  becomes a feature, which is item 6.
+  becomes a feature, which is item 5.
 - **Price machinery** (`price_service`, `price_providers`, `price_guard`,
   `asset_price_worker`, `crypto_top100`, `brand_icon_service`, `logo_service`).
-  Item 5.
-- **Backup service.** Item 6.
+  Item 4.
+- **Backup service.** Item 5.
 - **`background_task_manager`.** Flutter has its own answer; the desktop's
   thread pool does not port.
 
@@ -742,6 +725,16 @@ button covering a switch, `setState` handed a closure returning a `Future`, a
 change chip drawn empty so a green pill with an upward arrow read as a gain,
 and `ServicesScope` placed below the Navigator where no pushed route could
 reach it.
+
+**A finder matching is not a user reaching.** A lazy list builds a cache
+extent beyond the viewport, so a widget can be in the tree and still off
+screen — and `tester.tap` on one computes a point outside the viewport and
+lands nowhere. That cost a whole session's wrong diagnosis: it looked like a
+screen opening without its data, when the screen had never opened. The device
+tests scroll with `ensureVisible`; the widget tests sidestep it entirely by
+laying out on a 2400px surface, which is fine for testing the screen–service
+join and proves NOTHING about reachability. Only the device tests speak for
+that.
 
 **Prove parity against the real thing.** Testing a port against expectations
 derived by hand tests the derivation, not the port. Every parity claim here

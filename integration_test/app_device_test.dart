@@ -48,25 +48,31 @@ void main() {
 
   tearDown(() => services.close());
 
-  /// Scrolls the current tab until [target] is on screen.
+  /// Scrolls the current tab until [target] is on screen AND reachable.
   ///
   /// A real phone shows a fraction of these pages at once, so anything below
   /// the fold is not merely invisible but absent from the tree. Scrolling to
   /// it — rather than pretending the surface is 2400px tall, as the widget
   /// tests do — also proves the content is reachable the way a user reaches
   /// it, past the translucent bars that overlay the list.
+  ///
+  /// BEING IN THE TREE IS NOT BEING ON SCREEN. A lazy list builds a cache
+  /// extent beyond the viewport, so a finder can match a widget that is still
+  /// off-screen; `tester.tap` on one computes a point outside the viewport and
+  /// the tap lands nowhere. That cost a session's worth of wrong diagnosis —
+  /// it looked like a screen opening without its data, when the screen had
+  /// never opened. `ensureVisible` is what closes the gap.
   Future<void> scrollTo(WidgetTester tester, Finder target, Key list) async {
-    // Explicit drags rather than `dragUntilVisible`: that helper gives up
-    // silently when the target never enters the tree, which turns a wiring
-    // failure into an unexplained "0 widgets found" at the assertion instead
-    // of an error where the scrolling actually stopped.
     for (var attempt = 0; attempt < 12; attempt++) {
-      if (target.evaluate().isNotEmpty) return;
+      if (target.evaluate().isNotEmpty) {
+        // `.first`: a figure can legitimately appear twice on one page — the
+        // ring and the stat beside it both show net worth — and
+        // `ensureVisible` insists on a single match.
+        await tester.ensureVisible(target.first);
+        await tester.pumpAndSettle();
+        return;
+      }
       await tester.drag(find.byKey(list), const Offset(0, -400));
-      // Settle BEFORE looking, and do not pump again after finding it: a
-      // further settle can carry the list past the target and back out of
-      // the tree, which reads at the assertion as if the data were never
-      // there.
       await tester.pumpAndSettle();
     }
     fail('Could not scroll to $target: it never entered the widget tree.');
@@ -212,6 +218,33 @@ void main() {
     );
     expect(find.text('15.120,00 ₺'), findsWidgets);
     expect(find.text('Süpermarket'), findsOneWidget);
+  });
+
+  testWidgets('a tool opens as a pushed route and still sees the services', (
+    tester,
+  ) async {
+    // The scope lives in MaterialApp's `builder`, above the Navigator. In
+    // `home` it would sit BELOW: a pushed route is a sibling of home, not a
+    // descendant, and every tool screen would find no services at all.
+    await services.savings.createGoal(
+      goalName: 'Acil Durum Fonu',
+      targetAmount: 350000,
+    );
+
+    await pumpApp(tester);
+    await tester.tap(find.text('Tools'));
+    await tester.pumpAndSettle();
+    // Seventh in the grid, below the fold on a phone.
+    await scrollTo(
+      tester,
+      find.text('Savings\nGoal'),
+      const PageStorageKey('tools'),
+    );
+    await tester.tap(find.text('Savings\nGoal'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Acil Durum Fonu'), findsOneWidget);
+    expect(find.text('350.000,00 ₺'), findsOneWidget);
   });
 
   testWidgets('the cards tab reads the same account the dashboard did', (
