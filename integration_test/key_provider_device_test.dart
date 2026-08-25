@@ -6,7 +6,7 @@
 /// Only a test on the device answers that — and it is the one part of the
 /// key layer that, if broken, makes every encrypted record unreadable.
 ///
-/// Run: flutter test integration_test/key_provider_device_test.dart -d <id>
+/// Run: `flutter test integration_test/key_provider_device_test.dart -d DEVICE`
 library;
 
 import 'package:archlence_mobile/crypto/aead_crypto.dart' as aead;
