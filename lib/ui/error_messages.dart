@@ -13,6 +13,7 @@ library;
 import '../services/account_service.dart';
 import '../services/asset_service.dart';
 import '../services/budget_service.dart';
+import '../services/recurring_service.dart';
 import '../services/savings_service.dart';
 import '../services/transaction_service.dart';
 
@@ -85,4 +86,17 @@ String budgetErrorMessage(BudgetError error) => switch (error.code) {
   BudgetErrorCode.invalidMonth => 'Pick a month between January and December.',
   BudgetErrorCode.invalidAlertThreshold =>
     'The alert threshold has to be between 1 and 100 per cent.',
+};
+
+String recurringErrorMessage(RecurringError error) => switch (error.code) {
+  RecurringErrorCode.unknownFrequency =>
+    'This subscription repeats on a schedule Archlence does not recognise.',
+  RecurringErrorCode.invalidRecurrenceDay =>
+    'The day of the month has to be between 1 and 31.',
+  RecurringErrorCode.invalidAmount => 'That is not an amount.',
+  RecurringErrorCode.amountNotPositive => 'Enter an amount above zero.',
+  RecurringErrorCode.invalidTransactionType =>
+    'A subscription has to be income or expense.',
+  RecurringErrorCode.unreadablePayment =>
+    'This subscription could not be read.',
 };

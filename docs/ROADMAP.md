@@ -20,17 +20,16 @@ launches a budget screen and a savings screen that do too. Settings still
 renders literals, and nothing in the app WRITES except the two card switches
 on the Cards tab.
 
-459 unit tests and 12 device tests pass. `flutter analyze` is clean, and the
+468 unit tests and 12 device tests pass. `flutter analyze` is clean, and the
 app runs on the emulator.
 
 ## Pick up here
 
 In priority order. Each of these is a self-contained next session.
 
-**1. The remaining write flows.** Accounts, transactions, holdings, savings
-goals and budget lines are done, and the pattern is settled — see the sections
-under what is proven. What is left is the small stuff: paying card debt, and
-editing or cancelling a subscription.
+**1. Paying card debt** — the last write flow. `AccountService.payCreditCardDebt`
+is ready and tested; the "Pay Debt" button on the card detail is the only
+control in the app still disabled for want of a form.
 
 **2. Onboarding and sign-in.** Designed and not built. They gate the whole
 app and depend on nothing but the key provider, which is done.
@@ -308,6 +307,22 @@ quietly opening an empty account and telling the user their typo was ignored.
 The debt field on a card is labelled "Current debt", not "balance": the user
 enters what they OWE as a positive number and the service stores it negative.
 A "balance" label would invite a minus sign and double the debt.
+
+### Managing a subscription — `lib/screens/subscription_sheet.dart`
+
+Three actions with three meanings, and the pair a user is most likely to
+confuse is SKIP against STOP. Skip moves the due date on one period and leaves
+the subscription running — "not this month", not "no more". Stop deactivates
+it for good, and stopping is the only irreversible thing on the sheet, so it
+asks first.
+
+**Stopping does not delete the row.** Past transactions and the radar's
+"already tracked" check both rely on it existing, and a physical delete would
+turn settled history back into a fresh candidate to rediscover.
+
+Changing the price leaves the schedule where it is, which is why this is not
+"delete and re-add" — that would reset the due history and the alignment of
+the next charge.
 
 ### A budget line — `lib/screens/budget_line_sheet.dart`
 
@@ -756,7 +771,6 @@ tested service call and no form:
 | --- | --- |
 | Pay card debt | `AccountService.payCreditCardDebt` |
 | Close a goal | `SavingsService.deleteGoal` |
-| Edit, skip or cancel a subscription | `RecurringService.updateSubscriptionAmount` / `skipNextOccurrence` / `cancelSubscription` |
 
 ### 2. Onboarding
 

@@ -9,6 +9,7 @@ import '../ui/async_data.dart';
 import '../ui/money_format.dart';
 import '../widgets/balance_ring.dart';
 import '../widgets/not_yet.dart';
+import 'subscription_sheet.dart';
 import '../widgets/surfaces.dart';
 
 /// Dashboard.
@@ -32,6 +33,12 @@ class _HomeScreenState extends State<HomeScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     _data ??= _load();
+  }
+
+  void _reload() {
+    setState(() {
+      _data = _load();
+    });
   }
 
   Future<_HomeData> _load() async {
@@ -98,7 +105,8 @@ class _HomeScreenState extends State<HomeScreen> {
           AsyncData<_HomeData>(
             future: _data!,
             placeholderHeight: 96,
-            builder: (context, data) => _Subscriptions(data.subscriptions),
+            builder: (context, data) =>
+                _Subscriptions(data.subscriptions, onChanged: _reload),
           ),
         ],
       ),
@@ -164,9 +172,10 @@ class _HomeBody extends StatelessWidget {
 }
 
 class _Subscriptions extends StatelessWidget {
-  const _Subscriptions(this.payments);
+  const _Subscriptions(this.payments, {required this.onChanged});
 
   final List<RecurringPayment> payments;
+  final VoidCallback onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -180,7 +189,7 @@ class _Subscriptions extends StatelessWidget {
     return Column(
       children: [
         for (final payment in payments) ...[
-          _SubscriptionCard(payment: payment),
+          _SubscriptionCard(payment: payment, onChanged: onChanged),
           const SizedBox(height: Spacing.stackMd),
         ],
       ],
@@ -399,9 +408,10 @@ class _PendingInsightCard extends StatelessWidget {
 }
 
 class _SubscriptionCard extends StatelessWidget {
-  const _SubscriptionCard({required this.payment});
+  const _SubscriptionCard({required this.payment, required this.onChanged});
 
   final RecurringPayment payment;
+  final VoidCallback onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -466,11 +476,16 @@ class _SubscriptionCard extends StatelessWidget {
             padding: const EdgeInsets.only(left: 18),
             child: Row(
               children: [
-                // Disabled until the subscription edit and cancel flows land.
-                // RecurringService.updateSubscriptionAmount and
-                // cancelSubscription are ready; there is no form for either.
-                const TextButton(onPressed: null, child: Text('EDIT')),
-                const TextButton(onPressed: null, child: Text('REMOVE')),
+                TextButton(
+                  onPressed: () async {
+                    final changed = await showSubscriptionSheet(
+                      context,
+                      payment,
+                    );
+                    if (changed ?? false) onChanged();
+                  },
+                  child: const Text('MANAGE'),
+                ),
               ],
             ),
           ),
