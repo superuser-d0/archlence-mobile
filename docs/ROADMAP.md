@@ -11,12 +11,13 @@ Every claim here was verified against the code on `main` before being written.
 
 **Done:** the toolchain, all five screens, the three layers underneath them
 that are hardest to get right — money, encryption, and the database schema —
-and the first service on top of them, accounts.
+and the two services that sit on top: accounts and the ledger.
 
-**Not done:** anything that connects the two. Every screen still renders
-hard-coded figures; no screen reads the database yet.
+**Not done:** the wiring. Every screen still renders hard-coded figures; no
+screen reads the database yet. The data to fill the Home, Cards and Assets
+tabs now exists behind a service call.
 
-99 unit tests and 4 device tests pass. `flutter analyze` is clean.
+146 unit tests and 4 device tests pass. `flutter analyze` is clean.
 
 ## Settled decisions
 
@@ -47,6 +48,19 @@ declared as drift tables. The desktop's shape carries columns appended by past
 a re-declaration in Dart would produce a tidier database that is not the same
 database. Data access is written as SQL for the same reason: the tables are an
 existing external contract, not something this app defines.
+
+### A corrupt row is reported, never counted as zero
+
+The desktop logs an unreadable amount and substitutes 0.0. On a phone that log
+has no reader, and a false ₺0,00 on screen is exactly what the money layer
+refuses — "showing no total is safer than showing a false one". So
+`LedgerEntry.amount` is nullable and carries `isCorrupt`, and
+`settleDueTransactions` returns how many due rows it had to skip. A build that
+ignores that count silently loses money off the screen.
+
+The distinction the desktop draws is kept: a missing KEY is rethrown, never
+swallowed. It says nothing about any particular row, and treating every row as
+corrupt because of it would report a settings problem as data loss.
 
 ### Services raise error codes, not sentences
 
@@ -176,6 +190,56 @@ file, which a unit test cannot stage.
 The acceptance scenario the desktop encodes — a card spend lowering net worth
 by exactly its amount — needs the transaction service and is not written yet.
 
+### Transactions — `lib/services/transaction_service.dart`
+
+Port of `services/transaction_service.py`: everything that writes to
+`transactions`, plus `adjustAccountBalance` in `lib/data/balance_events.dart`.
+Two rules carry it. A transaction and the balance it moves are ONE commit,
+with the credit-limit decision taken inside that commit against the snapshot
+the write will use. And a future-dated transaction is `pending` and touches no
+balance — money does not appear in an account before its date — which means
+`settleDueTransactions` is the only thing that posts one, and a build that
+never calls it never posts a future-dated row at all.
+
+**Proof:** `test/transaction_service_test.dart`, 43 tests, including the
+acceptance scenario the desktop was originally asked for: a 10,000-limit card,
+a 500 supermarket spend, net worth down exactly 500 and cash untouched.
+
+Checked for teeth by breaking each rule and confirming the suite failed:
+posting a future-dated row to the balance, writing everything as `completed`,
+dropping the per-row savepoint in settle, settling on a frozen account, never
+marking a settled row `completed`, comparing the due date strictly, truncating
+the monthly instalment, rounding it half-UP, charging the monthly amount
+instead of the whole one, making a single instalment a plan, cancelling a
+posted transaction, rescheduling to a date-only value, showing pending rows on
+a statement, reporting an unreadable amount as zero, flipping the balance
+sign, writing off a missing account silently, and skipping the ledger event.
+
+The instalment rounding case is worth keeping in mind: `100 / 3` does not
+separate truncation from half-even from half-up — all three give 33.33. The
+values that do are in the test's comment, and the first version of that test
+missed a truncation mutation because it only used `100 / 3`.
+
+### The REAL column's drift — `test/real_balance_drift_test.dart`
+
+Port of `tests/test_real_balance_invariants.py`, and the reason it exists is
+not obvious from any one file. `accounts.balance` is a `REAL` column updated
+with `balance = balance + ?`, so the accumulation happens in SQLite's binary
+floating point no matter how much `Decimal` the Dart side uses: 0.01 added ten
+thousand times lands at 100.00000000001425.
+
+The guarantee is not that the raw column is exact — it is that **the figure
+shown is correct and the decision agrees with the figure shown**. Quantizing
+on the way out of the column is what delivers it. The test drifts a real
+account and then asserts the whole displayed balance is spendable, and the
+whole displayed available limit too.
+
+One measured difference from the desktop: it records that removing either one
+of its two guard layers left the test green, the other absorbing the drift.
+That is not true here — each removal fails this file alone, because once a
+value is a `Decimal` the arithmetic after it is exact and there is no second
+place for drift to hide.
+
 ### Screens — `lib/screens/`
 
 All five tabs are built and were verified by running them on the emulator, not
@@ -199,15 +263,22 @@ The desktop's `services/` is the reference; port in this order, since each
 depends on the one before:
 
 1. ~~`account_service` — accounts and balances.~~ **Done.**
-2. `transaction_service` — the ledger, and the balance invariants that guard
-   it. **Next.** It is what closes out the accounts work: the acceptance
-   scenario, the expense-over-limit rejection and the import bypass all live
-   in the desktop's `test_account_service.py` and cannot be ported until
-   `add_transaction` exists. `assert_spending_allowed` is already in place and
-   is the rule it must call — inside its own write transaction, not before
-   opening one.
+2. ~~`transaction_service` — the ledger, and the balance invariants that
+   guard it.~~ **Done.**
 3. `asset_service` / `asset_purchase_service` / `asset_sale_service`.
+   **Next.** Note that `asset_service` is also where the price worker is
+   spawned as a subprocess, which is open question 3 below — the port can
+   leave prices out and still deliver holdings and P&L.
 4. `budget_service`, `savings_service`, `recurring_service`.
+
+Two pieces of `transaction_service.py` were deliberately left out and are
+worth picking up with whatever needs them:
+
+- The dashboard's period queries (`get_transactions_by_period` and the two
+  opening-balance readers). They exist to feed charts, and porting them before
+  a screen reads real data would be guessing at what those charts want.
+- Subscription detection, the hook `add_transaction` calls after a card
+  expense. It belongs here once `recurring_service` exists.
 
 Port the desktop's precision and integrity tests alongside each — they are the
 specification. `test_money_decisions_precision`, `test_portfolio_total_precision`,
@@ -217,7 +288,13 @@ the code itself.
 
 ### 2. Wire the screens to real data
 
-Only after (1). Every figure on every screen is currently a literal.
+Every figure on every screen is currently a literal. Home, Cards and the card
+statement no longer wait on anything: `AccountService` and `TransactionService`
+already return what they need. The Assets tab still waits on (1.3).
+
+Note that nothing calls `settleDueTransactions` yet. Until something does — on
+app start is the desktop's answer — a future-dated transaction is recorded and
+never posts.
 
 ### 3. Price fetching — needs a decision
 

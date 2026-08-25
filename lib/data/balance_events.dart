@@ -51,3 +51,74 @@ Future<int> recordBalanceEvent(
     ],
   );
 }
+
+/// A balance change named an account that does not exist.
+///
+/// Fail loud rather than write an ownerless record: the desktop removed its
+/// seeded default account, so a stale `DEFAULT_ACCOUNT_ID` matches nothing on
+/// a fresh install and the rows it produced belonged to no one.
+class UnknownAccountError implements Exception {
+  const UnknownAccountError(this.accountId);
+
+  final int accountId;
+
+  @override
+  String toString() =>
+      'UnknownAccountError: no account with id $accountId; the balance change '
+      'could not be applied.';
+}
+
+/// Moves `accounts.balance` in step with a transaction, and records the move.
+///
+/// Takes the caller's handle so the balance, the ledger row and whatever
+/// `transactions` row prompted them all land in one commit. Splitting them
+/// across connections would leave an observable state where the ledger and
+/// the balance disagree.
+///
+/// THE SIGN: income adds, everything else subtracts. On a checking account
+/// that is the obvious arithmetic; on a credit card it means an expense
+/// pushes the balance further negative — the debt GROWS — and a payment moves
+/// it toward zero. The one benefit that justifies the convention is that net
+/// worth stays correct from a plain `SUM(balance)`, so no caller has to tell
+/// the two kinds of account apart.
+///
+/// 'Gelir' is the Turkish spelling carried by rows the desktop wrote before
+/// its columns were standardised, and is still accepted on the way in.
+Future<void> adjustAccountBalance(
+  DatabaseConnectionUser db, {
+  required int accountId,
+  required String transactionType,
+  required double amount,
+  int? refId,
+  String source = 'transaction',
+}) async {
+  final delta = (transactionType == 'income' || transactionType == 'Gelir')
+      ? amount
+      : -amount;
+
+  final updated = await db.customUpdate(
+    'UPDATE accounts SET balance = balance + ? WHERE id = ?',
+    variables: [Variable<double>(delta), Variable<int>(accountId)],
+    updates: const {},
+  );
+  if (updated == 0) {
+    throw UnknownAccountError(accountId);
+  }
+
+  final row = await db
+      .customSelect(
+        'SELECT balance FROM accounts WHERE id = ?',
+        variables: [Variable<int>(accountId)],
+      )
+      .getSingle();
+
+  await recordBalanceEvent(
+    db,
+    entityType: accountEntity,
+    entityId: accountId,
+    delta: delta,
+    resultingValue: row.read<double>('balance'),
+    source: source,
+    refId: refId,
+  );
+}
