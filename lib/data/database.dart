@@ -14,6 +14,7 @@ import 'package:drift/native.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import 'default_categories.dart';
 import 'schema.dart';
 
 part 'database.g.dart';
@@ -77,6 +78,21 @@ class ArchlenceDatabase extends _$ArchlenceDatabase {
     onCreate: (m) async {
       for (final statement in desktopSchemaStatements) {
         await customStatement(statement);
+      }
+      // The schema dump carries no rows, but the desktop SEEDS its category
+      // list on first run, and those names are matched as literals by the
+      // budget, the distribution chart and the subscription radar. A database
+      // created here without them would agree on shape and disagree on
+      // content.
+      for (final (name, type, importance) in defaultCategories) {
+        await customInsert(
+          'INSERT INTO categories (name, type, importance) VALUES (?, ?, ?)',
+          variables: [
+            Variable<String>(name),
+            Variable<String>(type),
+            Variable<String>(importance),
+          ],
+        );
       }
     },
     beforeOpen: (details) async {

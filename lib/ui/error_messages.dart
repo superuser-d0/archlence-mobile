@@ -11,6 +11,7 @@
 library;
 
 import '../services/account_service.dart';
+import '../services/transaction_service.dart';
 
 String accountErrorMessage(AccountError error) => switch (error.code) {
   AccountErrorCode.emptyName => 'Give the account a name.',
@@ -38,4 +39,12 @@ String accountErrorMessage(AccountError error) => switch (error.code) {
   AccountErrorCode.balanceUpdateFailed =>
     'The balance could not be updated. Nothing was changed.',
   AccountErrorCode.unknownCardPreference => 'Unknown card setting.',
+};
+
+String transactionErrorMessage(TransactionError error) => switch (error.code) {
+  TransactionErrorCode.invalidAmount => 'That is not an amount.',
+  TransactionErrorCode.amountNotPositive => 'Enter an amount above zero.',
+  TransactionErrorCode.installmentCountOutOfRange =>
+    'Instalments have to be between 1 and 12.',
+  TransactionErrorCode.negativeLimit => 'The limit cannot be negative.',
 };

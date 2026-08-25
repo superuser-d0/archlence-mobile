@@ -20,7 +20,7 @@ launches a budget screen and a savings screen that do too. Settings still
 renders literals, and nothing in the app WRITES except the two card switches
 on the Cards tab.
 
-400 unit tests and 11 device tests pass. `flutter analyze` is clean, and the
+413 unit tests and 12 device tests pass. `flutter analyze` is clean, and the
 app runs on the emulator.
 
 ## Pick up here
@@ -310,6 +310,35 @@ quietly opening an empty account and telling the user their typo was ignored.
 The debt field on a card is labelled "Current debt", not "balance": the user
 enters what they OWE as a positive number and the service stores it negative.
 A "balance" label would invite a minus sign and double the debt.
+
+### Recording a transaction — `lib/screens/add_transaction_sheet.dart`
+
+The app's most frequent action, on the shell's one floating button. Cards
+still has none: the reference design put one there on top of its own "+ ADD"
+and it landed on the Freeze Card switch.
+
+Two things here are more than form-filling:
+
+- **A future date is explained, not just accepted.** The row is recorded as
+  `pending` and reaches no balance until start-up settles it, so the form says
+  so in place. Without that line a user records tomorrow's rent, sees the
+  balance unchanged, and concludes the app dropped it.
+- **The subscription radar is connected here** — the hook the desktop's
+  `add_transaction` calls after a card expense, and the last piece of
+  `transaction_service.py` that was still unported. A card is the GATE: the
+  same spend from cash is simply an expense.
+
+Instalments are cleared when the account changes. The service does not reject
+a count on a cash account — it would simply write a plan against one — so the
+form must not carry a choice made for a card onto something else.
+
+**`categories` is seeded on database creation.** The schema dump carries no
+rows, but the desktop seeds its category list on first run and those names are
+matched as LITERALS by the budget, the distribution chart and the radar. A
+database created here without them would agree on shape and disagree on
+content. `lib/data/default_categories.dart` is GENERATED from the desktop's
+own `default_categories`, not transcribed — a typo would quietly split a
+category in two across the two apps.
 
 ### Every control is live or visibly unavailable
 
@@ -670,22 +699,17 @@ surfaced only that way:
 
 ### 1. Write flows
 
-Adding an account is done — see "The first write flow" above for the pattern
-the rest should follow. Everything else still has a tested service call and no
-form:
+Opening an account and recording a transaction are done — see the two
+sections above for the pattern the rest should follow. What is left still has
+a tested service call and no form:
 
 | Action | Service call |
 | --- | --- |
-| Record a transaction | `TransactionService.addTransaction` |
 | Pay card debt | `AccountService.payCreditCardDebt` |
 | Buy / sell a holding | `AssetPurchaseService.createPurchase`, `AssetSaleService.sell` |
 | Add or edit a budget line | `BudgetService.savePlanItem` |
 | Open, fund or close a goal | `SavingsService.createGoal` / `depositToGoal` / `withdrawFromGoal` / `deleteGoal` |
 | Edit, skip or cancel a subscription | `RecurringService.updateSubscriptionAmount` / `skipNextOccurrence` / `cancelSubscription` |
-
-Connect subscription detection when the transaction form lands — it is the one
-piece of `transaction_service.py` still unported, the hook `add_transaction`
-calls after a card expense.
 
 ### 2. Onboarding
 

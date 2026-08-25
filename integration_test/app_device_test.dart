@@ -298,6 +298,36 @@ void main() {
     expect(find.text('17.300,50 ₺'), findsWidgets);
   });
 
+  testWidgets('a transaction recorded through the form reaches the balance', (
+    tester,
+  ) async {
+    final accountId = await services.accounts.createAccount(
+      name: 'Maaş Hesabı',
+      accountType: AccountType.checking,
+      initialBalance: 10000,
+    );
+
+    await pumpApp(tester);
+    await tester.tap(find.byType(FloatingActionButton));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.ancestor(of: find.text('Amount'), matching: find.byType(TextField)),
+      '1.234,56',
+    );
+    await tester.pumpAndSettle();
+    await scrollTo(tester, find.text('Record'), const Key('field-category'));
+    await tester.tap(find.text('Record'));
+    await tester.pumpAndSettle();
+
+    // Through the form, the service, the real key store and back onto the
+    // dashboard — the round trip an in-memory test cannot speak for.
+    expect(
+      (await services.accounts.getAccount(accountId))!.balance.toString(),
+      '8765.44',
+    );
+    expect(find.text('8.765,44 ₺'), findsWidgets);
+  });
+
   testWidgets('the cards tab reads the same account the dashboard did', (
     tester,
   ) async {

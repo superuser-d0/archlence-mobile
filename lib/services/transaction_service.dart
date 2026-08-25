@@ -682,6 +682,23 @@ class TransactionService {
     return items;
   }
 
+  /// The categories available for a transaction of [transactionType].
+  ///
+  /// Read from the table rather than a constant, so a category the user adds
+  /// on the desktop appears here after a restore.
+  Future<List<String>> getCategories(String transactionType) async {
+    final wanted = incomeTransactionTypes.contains(transactionType)
+        ? 'income'
+        : 'expense';
+    final rows = await _db
+        .customSelect(
+          'SELECT name FROM categories WHERE type = ? ORDER BY id',
+          variables: [Variable<String>(wanted)],
+        )
+        .get();
+    return [for (final row in rows) row.read<String>('name')];
+  }
+
   /// Completed transactions inside [period].
   ///
   /// An amount that cannot be read RAISES rather than being skipped: this

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'screens/add_transaction_sheet.dart';
 import 'screens/assets_screen.dart';
 import 'screens/cards_screen.dart';
 import 'screens/home_screen.dart';
@@ -23,6 +24,14 @@ const _navBarHeight = 68.0;
 class _AppShellState extends State<AppShell> {
   int _tab = 0;
 
+  /// Bumped after a write, so the visible tab reloads.
+  ///
+  /// The tabs keep their own futures and have no way to know a sheet opened
+  /// over them changed something; rebuilding them under a new key is the
+  /// smallest thing that makes a recorded transaction appear without each
+  /// screen growing a subscription to the database.
+  int _revision = 0;
+
   @override
   Widget build(BuildContext context) {
     final media = MediaQuery.of(context);
@@ -31,6 +40,19 @@ class _AppShellState extends State<AppShell> {
       extendBody: true,
       extendBodyBehindAppBar: true,
       appBar: const _GlassHeader(),
+      // Recording a transaction is the app's most frequent action, so it gets
+      // the one floating button. Cards deliberately has none — the reference
+      // design put one there on top of its own "+ ADD" and it landed on the
+      // Freeze Card switch.
+      floatingActionButton: _tab == 3 || _tab == 4
+          ? null
+          : FloatingActionButton(
+              onPressed: () async {
+                final recorded = await showAddTransactionSheet(context);
+                if (recorded != null) setState(() => _revision++);
+              },
+              child: const Icon(Icons.add),
+            ),
       // Both bars are translucent and sit ON TOP of the body, so the body's
       // own inset must grow by their height — otherwise the first and last
       // items of every screen scroll underneath them and are unreachable.
@@ -42,13 +64,16 @@ class _AppShellState extends State<AppShell> {
             bottom: media.padding.bottom + _navBarHeight,
           ),
         ),
-        child: switch (_tab) {
-          0 => const HomeScreen(),
-          1 => const AssetsScreen(),
-          2 => const CardsScreen(),
-          3 => const ToolsScreen(),
-          _ => const SettingsScreen(),
-        },
+        child: KeyedSubtree(
+          key: ValueKey('$_tab-$_revision'),
+          child: switch (_tab) {
+            0 => const HomeScreen(),
+            1 => const AssetsScreen(),
+            2 => const CardsScreen(),
+            3 => const ToolsScreen(),
+            _ => const SettingsScreen(),
+          },
+        ),
       ),
       bottomNavigationBar: GlassBar(
         border: const Border(
