@@ -90,7 +90,7 @@ Decimal quantizeFinancial(
 
   if (remainder < halfStep) return truncated;
 
-  final awayFromZero = decimal.signum >= 0
+  final awayFromZero = decimal.sign >= 0
       ? truncated + step
       : truncated - step;
   if (remainder > halfStep) return awayFromZero;
