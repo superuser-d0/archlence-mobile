@@ -20,14 +20,14 @@ launches a budget screen and a savings screen that do too. Settings still
 renders literals, and nothing in the app WRITES except the two card switches
 on the Cards tab.
 
-382 unit tests and 10 device tests pass. `flutter analyze` is clean, and the
+400 unit tests and 11 device tests pass. `flutter analyze` is clean, and the
 app runs on the emulator.
 
 ## Pick up here
 
 In priority order. Each of these is a self-contained next session.
 
-**1. Write flows — the thing that makes the app usable rather than readable.**
+**1. The remaining write flows — the thing that makes the app usable rather than readable.**
 Every service call is ready and no form calls it. In dependency order: add an
 account (nothing works without one), add a transaction, add a holding, add a
 budget line, open and fund a savings goal. `TransactionService.addTransaction`
@@ -280,6 +280,36 @@ point:
 - The device test's own first draft flipped a completed transaction to
   `pending` after the fact, leaving the balance already applied — settling then
   added it twice and the test would have passed on a doubled figure.
+
+### The first write flow — `lib/screens/add_account_sheet.dart`
+
+Opening an account, and the pattern the rest should follow.
+
+**The form is a thin collector.** It does not re-implement a rule:
+`createAccount` owns them, and the form shows what came back. Duplicating a
+rule in a form is exactly how the desktop ended up with
+`monthly_budget_plan.amount` validated only inside its Kivy mixin, where the
+next caller bypassed it without ever seeing it.
+
+`lib/ui/error_messages.dart` is where "services raise error codes, not
+sentences" finally pays off: every code becomes a sentence in ONE place, with
+no `default` branch, so a service growing a new rule is a compile error rather
+than a generic "something went wrong".
+
+**Amount parsing is presentation, and it is where money can quietly go
+wrong.** `parseAmountInput` accepts both `1.234,56` and `1.234.56` because the
+same user types both. The rules are documented at the function; the one that
+can lose money is that lone dots in groups of exactly three are GROUPING —
+`1.234` is a thousand, not a lira and a bit. A round-trip test pins the thing
+that matters most: what the app prints, the app can read back.
+
+Blank means zero — a real answer, an account opened with nothing in it. Text
+that is NOT a number is not zero, and saying so is the difference between
+quietly opening an empty account and telling the user their typo was ignored.
+
+The debt field on a card is labelled "Current debt", not "balance": the user
+enters what they OWE as a positive number and the service stores it negative.
+A "balance" label would invite a minus sign and double the debt.
 
 ### Every control is live or visibly unavailable
 
@@ -640,21 +670,18 @@ surfaced only that way:
 
 ### 1. Write flows
 
-No screen writes anything except the two card switches on the Cards tab. Every
-service call exists and is tested:
+Adding an account is done — see "The first write flow" above for the pattern
+the rest should follow. Everything else still has a tested service call and no
+form:
 
 | Action | Service call |
 | --- | --- |
-| Add an account or card | `AccountService.createAccount` |
 | Record a transaction | `TransactionService.addTransaction` |
 | Pay card debt | `AccountService.payCreditCardDebt` |
 | Buy / sell a holding | `AssetPurchaseService.createPurchase`, `AssetSaleService.sell` |
 | Add or edit a budget line | `BudgetService.savePlanItem` |
 | Open, fund or close a goal | `SavingsService.createGoal` / `depositToGoal` / `withdrawFromGoal` / `deleteGoal` |
 | Edit, skip or cancel a subscription | `RecurringService.updateSubscriptionAmount` / `skipNextOccurrence` / `cancelSubscription` |
-
-Adding an account comes first: on a fresh install there is no account, and
-almost every other flow needs one to move money into or out of.
 
 Connect subscription detection when the transaction form lands — it is the one
 piece of `transaction_service.py` still unported, the hook `add_transaction`

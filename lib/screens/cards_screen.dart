@@ -7,6 +7,7 @@ import '../services/transaction_service.dart';
 import '../theme/obsidian_prime.dart';
 import '../ui/async_data.dart';
 import '../ui/money_format.dart';
+import 'add_account_sheet.dart';
 import '../widgets/summary_row.dart';
 import '../widgets/surfaces.dart';
 
@@ -186,11 +187,16 @@ class _CardsBody extends StatelessWidget {
           child: Row(
             children: [
               Expanded(child: Text('My Cards', style: text.titleLarge)),
-              // AccountService.createAccount is ready and has no form.
-              const GradientButton(
+              GradientButton(
                 label: '+  ADD',
                 expand: false,
-                onPressed: null,
+                onPressed: () async {
+                  final created = await showAddAccountSheet(context);
+                  // Only reload when something was actually added; a
+                  // dismissed sheet should leave the page as it was rather
+                  // than flashing a spinner over unchanged figures.
+                  if (created != null) onChanged();
+                },
               ),
             ],
           ),

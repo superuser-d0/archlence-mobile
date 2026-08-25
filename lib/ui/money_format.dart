@@ -98,3 +98,58 @@ String _decimalDigits(
   }
   return '$whole.$fraction';
 }
+
+/// Reads an amount the user typed, or null if it is not a number.
+///
+/// Turkish keyboards and Turkish habits produce `1.234,56`; the same user may
+/// also type `1234.56` after years of software that wanted it. Both have to
+/// work, and the two are ambiguous on their own, so the rule is:
+///
+///  * BOTH separators present — the LAST one is the decimal point and the
+///    other is grouping. `1.234,56` is one thousand; so is `1,234.56`.
+///  * Only a comma — it is the decimal point. `1234,56`.
+///  * Only dots, and the last group is not exactly three digits — decimal
+///    point. `1234.56`, `1234.5`.
+///  * Only dots, and every group after the first is exactly three digits —
+///    grouping. `1.234` is one thousand two hundred, not 1.234.
+///
+/// The last rule is the one that can lose money, and it is a judgement call:
+/// `1.234` is far more likely to be a thousand-lira figure than a lira and a
+/// bit. The form shows what was understood before anything is written.
+///
+/// Returns null rather than throwing, and rather than guessing zero.
+Decimal? parseAmountInput(String input) {
+  final trimmed = input.trim().replaceAll(RegExp(r'[\s₺]'), '');
+  if (trimmed.isEmpty) return null;
+  if (!RegExp(r'^-?[0-9.,]+$').hasMatch(trimmed)) return null;
+
+  final lastComma = trimmed.lastIndexOf(',');
+  final lastDot = trimmed.lastIndexOf('.');
+
+  String normalized;
+  if (lastComma >= 0 && lastDot >= 0) {
+    final decimalAt = lastComma > lastDot ? lastComma : lastDot;
+    final grouping = lastComma > lastDot ? '.' : ',';
+    normalized =
+        '${trimmed.substring(0, decimalAt).replaceAll(grouping, '')}'
+        '.${trimmed.substring(decimalAt + 1)}';
+  } else if (lastComma >= 0) {
+    normalized = trimmed.replaceAll(',', '.');
+  } else if (lastDot >= 0) {
+    final groups = trimmed.split('.');
+    final everyGroupIsThree = groups
+        .skip(1)
+        .every((group) => group.length == 3);
+    normalized = everyGroupIsThree && groups.length > 1
+        ? trimmed.replaceAll('.', '')
+        : trimmed;
+  } else {
+    normalized = trimmed;
+  }
+
+  try {
+    return Decimal.parse(normalized);
+  } on FormatException {
+    return null;
+  }
+}

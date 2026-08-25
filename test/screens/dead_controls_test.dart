@@ -121,10 +121,14 @@ void main() {
         null;
 
     await onTab('Cards');
+    // "+ ADD" is deliberately NOT here any more: it opens the add-account
+    // sheet. This test caught that the moment the flow landed, which is what
+    // it is for — a control must be pinned as one or the other, never left
+    // unexamined.
     expect(
       gradientDisabled('+  ADD'),
-      isTrue,
-      reason: 'no add-account form yet',
+      isFalse,
+      reason: 'the add-account sheet is wired',
     );
     expect(buttonDisabled('Statement'), isTrue);
     expect(buttonDisabled('Pay Debt'), isTrue);

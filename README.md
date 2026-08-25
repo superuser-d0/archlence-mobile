@@ -17,10 +17,9 @@ service layer above them — accounts, the ledger, holdings, recurring payments,
 budgets and savings goals. Home, Cards and Assets read real data; the Tools
 grid opens a budget screen and a savings screen that do too.
 
-What is missing is the other direction: **no screen writes anything** except
-the two card switches. Adding an account, a transaction, a holding, a budget
-line or a savings goal each has a tested service call and no form to call it
-from. Live price fetching is an open decision, so holdings are shown at what
+Writing has started: an account can be opened from the Cards tab. A
+transaction, a holding, a budget line and a savings goal each still have a
+tested service call and no form to call it from. Live price fetching is an open decision, so holdings are shown at what
 they cost and labelled as such.
 
 Every control is either live or visibly unavailable — there is no button that

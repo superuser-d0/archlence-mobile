@@ -79,6 +79,67 @@ void main() {
     });
   });
 
+  group('parseAmountInput', () {
+    test('reads the Turkish form the app itself prints', () {
+      expect(parseAmountInput('1.234,56'), Decimal.parse('1234.56'));
+      expect(parseAmountInput('334.401,80'), Decimal.parse('334401.80'));
+      expect(parseAmountInput('1.234.567,89'), Decimal.parse('1234567.89'));
+    });
+
+    test('reads the Western form the same user may also type', () {
+      expect(parseAmountInput('1,234.56'), Decimal.parse('1234.56'));
+      expect(parseAmountInput('1234.56'), Decimal.parse('1234.56'));
+    });
+
+    test('a lone comma is a decimal point', () {
+      expect(parseAmountInput('1234,56'), Decimal.parse('1234.56'));
+      expect(parseAmountInput('0,5'), Decimal.parse('0.5'));
+    });
+
+    test('lone dots in groups of three are grouping, not decimals', () {
+      // The judgement call. `1.234` is far likelier to be a thousand-lira
+      // figure than a lira and a bit, and the form shows what it understood
+      // before anything is written.
+      expect(parseAmountInput('1.234'), Decimal.parse('1234'));
+      expect(parseAmountInput('1.234.567'), Decimal.parse('1234567'));
+    });
+
+    test('a lone dot with any other group length is a decimal point', () {
+      expect(parseAmountInput('1234.5'), Decimal.parse('1234.5'));
+      expect(parseAmountInput('12.3456'), Decimal.parse('12.3456'));
+      expect(parseAmountInput('0.05'), Decimal.parse('0.05'));
+    });
+
+    test('tolerates spaces and a lira sign', () {
+      expect(parseAmountInput('  1.234,56 ₺ '), Decimal.parse('1234.56'));
+    });
+
+    test('keeps a minus sign', () {
+      expect(parseAmountInput('-1.234,56'), Decimal.parse('-1234.56'));
+    });
+
+    test('returns null rather than guessing zero', () {
+      // A form that read "abc" as 0 would silently open an account with no
+      // money in it and tell the user nothing.
+      for (final input in ['', '   ', 'abc', '12abc', '1,2,3', '1.2.3,4,5']) {
+        expect(parseAmountInput(input), isNull, reason: input);
+      }
+    });
+
+    test('what the app prints, the app can read back', () {
+      // The round trip that matters: a figure shown on screen, retyped by the
+      // user, must come back as the same number.
+      for (final value in ['0', '0.05', '1234.56', '1234567.89', '-500.5']) {
+        final decimal = fiat(value);
+        expect(
+          parseAmountInput(formatLira(decimal)),
+          decimal,
+          reason: formatLira(decimal),
+        );
+      }
+    });
+  });
+
   test('the stored form and the shown form stay different', () {
     // If these ever agree, one of them has been changed to match the other —
     // and whichever way round that happened, it is a defect: the stored form

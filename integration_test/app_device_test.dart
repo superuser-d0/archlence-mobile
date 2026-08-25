@@ -18,7 +18,7 @@ import 'package:archlence_mobile/services/account_service.dart';
 import 'package:archlence_mobile/services/recurring_service.dart';
 import 'package:archlence_mobile/theme/obsidian_prime.dart';
 import 'package:decimal/decimal.dart';
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:drift/drift.dart' show Variable;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -264,6 +264,38 @@ void main() {
     );
     expect(find.textContaining(services.keyProtection!.method), findsOneWidget);
     expect(find.textContaining('Not known in this build'), findsNothing);
+  });
+
+  testWidgets('an account added through the form survives on the real file', (
+    tester,
+  ) async {
+    // The first write flow, end to end: a form, the service, the real
+    // database file and the real key store — then read back and drawn.
+    await pumpApp(tester);
+    await tester.tap(find.text('Cards'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('+  ADD'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.ancestor(of: find.text('Name'), matching: find.byType(TextField)),
+      'Maaş Hesabı',
+    );
+    await tester.enterText(
+      find.ancestor(
+        of: find.text('Opening balance'),
+        matching: find.byType(TextField),
+      ),
+      '17.300,50',
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Add account'));
+    await tester.pumpAndSettle();
+
+    final account = (await services.accounts.getAccounts()).single;
+    expect(account.name, 'Maaş Hesabı');
+    expect(account.balance.toString(), '17300.5');
+    expect(find.text('17.300,50 ₺'), findsWidgets);
   });
 
   testWidgets('the cards tab reads the same account the dashboard did', (
