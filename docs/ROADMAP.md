@@ -11,13 +11,16 @@ Every claim here was verified against the code on `main` before being written.
 
 **Done:** the toolchain, all five screens, the three layers underneath them
 that are hardest to get right — money, encryption, and the database schema —
-and the two services that sit on top: accounts and the ledger.
+and four services on top: accounts, the ledger, and holdings (portfolio CRUD,
+buying, selling). Live price fetching is the one piece of that layer left out
+— see open question 3.
 
 **Not done:** the wiring. Every screen still renders hard-coded figures; no
-screen reads the database yet. The data to fill the Home, Cards and Assets
-tabs now exists behind a service call.
+screen reads the database yet. The data to fill Home, Cards and Assets now
+exists behind a service call — Assets minus a current price, which nothing
+supplies yet.
 
-146 unit tests and 4 device tests pass. `flutter analyze` is clean.
+190 unit tests and 4 device tests pass. `flutter analyze` is clean.
 
 ## Settled decisions
 
@@ -190,6 +193,63 @@ file, which a unit test cannot stage.
 The acceptance scenario the desktop encodes — a card spend lowering net worth
 by exactly its amount — needs the transaction service and is not written yet.
 
+### Holdings — `lib/services/asset_service.dart` and friends
+
+Port of the CRUD-and-arithmetic half of `services/asset_service.py` plus
+`services/asset_purchase_service.py` and `services/asset_sale_service.py`.
+The other half — `fetch_current_price`, the portfolio cache, the BIST100
+batch fetch, the warm-up thread — is NOT ported; see open question 3, which
+this doesn't need to be resolved to build.
+
+`calculatePnl` is arithmetic only: Decimal throughout, quantized only on the
+way out, and the signal decided from the unrounded ratio so a position up
+0.0000001% still reads `profit`. One quirk is deliberately kept rather than
+fixed: a zero purchase price reports `breakeven` despite a real `pnlAmount`,
+because a zero cost defines no ratio — changing that is a product decision,
+not part of a port.
+
+Buying and selling are each one commit: the holding, the wallet transaction,
+the balance move and the ledger entry together, in that order — the frozen
+check on a purchase runs BEFORE the holding is inserted, so a rejection
+leaves nothing behind. A sale is NOT frozen-checked at all; freezing stops
+new debt, not access to money a sale is realising. Funding an unattributed
+purchase never auto-selects a credit card, and among checking accounts
+prefers the first one that can afford it over the richest one — a real
+distinction, not just phrasing, and worth keeping in mind if refactoring the
+picker.
+
+A corrupt row is NOT skipped-and-reported the way a transaction row is
+(compare `LedgerEntry.isCorrupt`). `getAllAssets` fails the whole read: a
+portfolio total built by silently dropping one holding would understate
+itself without saying so, and that is the desktop's own choice in
+`get_all_assets`, not a departure.
+
+Purchase/sale descriptions carry Western `1,234.56` grouping — deliberately
+NOT the Turkish formatting `AccountService`'s errors avoid entirely. Unlike
+those errors, a description is DATA: it is encrypted and stored in
+`transactions.description`, and a backup restored on the other app has to
+read the string the desktop itself would have written.
+
+**Proof:** three test files, 44 tests. The purchase quantization test is
+worth noting for HOW it checks: Decimal arithmetic here carries no
+representation artefact the way the desktop's raw floats did (2456.78 x
+0.12345678 is an *exact* decimal, just a long one), so comparing the stored
+amount against an expected value after re-quantizing it in the assertion
+would pass even on a mutant that skipped quantizing entirely. The test
+instead checks that quantizing the STORED value again is a no-op — genuine
+evidence it was already rounded before it reached the ledger.
+
+Checked for teeth by breaking each rule: the signal decided from the rounded
+percentage instead of the raw ratio, inputs rounded before the arithmetic
+instead of after, a corrupt row silently dropped, the positivity check
+skipped, `deleteAsset` reporting success on a no-op, the frozen check moved
+after the asset insert, the invested amount left unquantized, the funding
+picker preferring the richest account over the first affordable one, the
+picker allowed to choose a credit card, selling more than is owned, sale
+proceeds left unquantized, a partial sale deleting the holding anyway, a sale
+crediting an unrelated account, and the profit/loss sign hard-coded positive.
+Every one of those failed the suite.
+
 ### Transactions — `lib/services/transaction_service.dart`
 
 Port of `services/transaction_service.py`: everything that writes to
@@ -265,11 +325,10 @@ depends on the one before:
 1. ~~`account_service` — accounts and balances.~~ **Done.**
 2. ~~`transaction_service` — the ledger, and the balance invariants that
    guard it.~~ **Done.**
-3. `asset_service` / `asset_purchase_service` / `asset_sale_service`.
-   **Next.** Note that `asset_service` is also where the price worker is
-   spawned as a subprocess, which is open question 3 below — the port can
-   leave prices out and still deliver holdings and P&L.
-4. `budget_service`, `savings_service`, `recurring_service`.
+3. ~~`asset_service` / `asset_purchase_service` / `asset_sale_service`.~~
+   **Done** — the CRUD-and-arithmetic half; live price fetching stayed out,
+   see open question 3.
+4. `budget_service`, `savings_service`, `recurring_service`. **Next.**
 
 Two pieces of `transaction_service.py` were deliberately left out and are
 worth picking up with whatever needs them:
@@ -290,7 +349,9 @@ the code itself.
 
 Every figure on every screen is currently a literal. Home, Cards and the card
 statement no longer wait on anything: `AccountService` and `TransactionService`
-already return what they need. The Assets tab still waits on (1.3).
+already return what they need. The Assets tab can show holdings, cost basis
+and quantity now too — what it cannot show is a live P/L, which needs open
+question 3 settled first.
 
 Note that nothing calls `settleDueTransactions` yet. Until something does — on
 app start is the desktop's answer — a future-dated transaction is recorded and
