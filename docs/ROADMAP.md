@@ -20,18 +20,17 @@ launches a budget screen and a savings screen that do too. Settings still
 renders literals, and nothing in the app WRITES except the two card switches
 on the Cards tab.
 
-429 unit tests and 12 device tests pass. `flutter analyze` is clean, and the
+446 unit tests and 12 device tests pass. `flutter analyze` is clean, and the
 app runs on the emulator.
 
 ## Pick up here
 
 In priority order. Each of these is a self-contained next session.
 
-**1. The remaining write flows.** Opening an account, recording a transaction
-and buying or selling a holding are done, and the pattern is settled — see
-"The write flows" under what is proven. What is left: a budget line, opening
-and funding a savings goal, paying card debt, and editing or cancelling a
-subscription. Each has a tested service call and no form.
+**1. The remaining write flows.** Accounts, transactions, holdings and
+savings goals are done, and the pattern is settled — see the sections under
+what is proven. What is left: a budget line, paying card debt, and editing or
+cancelling a subscription. Each has a tested service call and no form.
 
 **2. Onboarding and sign-in.** Designed and not built. They gate the whole
 app and depend on nothing but the key provider, which is done.
@@ -309,6 +308,29 @@ quietly opening an empty account and telling the user their typo was ignored.
 The debt field on a card is labelled "Current debt", not "balance": the user
 enters what they OWE as a positive number and the service stores it negative.
 A "balance" label would invite a minus sign and double the debt.
+
+### Savings goals — `lib/screens/savings_sheets.dart`
+
+Opening a goal, and moving money in and out of one. Every call passes
+`goalUid`: that is the whole point of the field, since a numeric id can be
+reused after a restore and a screen still holding an old card would otherwise
+fund a goal the user never meant. The identity error is the one message in
+`error_messages.dart` that explains rather than names — a stale card pointing
+at a reused id is not something a user can reason about, and the only thing
+that matters is that no money moved.
+
+Two absences of a guard are said out loud, because a user cannot see a rule
+that is not there: **the account may go negative** to fund a goal, and money
+in a goal **is not spending** and never appears in an expense chart.
+
+A credit card is not offered to move money between. A goal holds money aside
+from a BALANCE, and a card has none — only a limit.
+
+**One deliberate divergence from the desktop:** `createGoal` now refuses a
+blank name. The desktop validates the amounts and not the name, which reads as
+an oversight beside `create_account`, and an unnamed goal is indistinguishable
+from its neighbours in a list. Nothing in the storage contract depends on a
+goal being nameless.
 
 ### Buying and selling a holding — `lib/screens/asset_sheets.dart`
 
@@ -722,7 +744,7 @@ tested service call and no form:
 | --- | --- |
 | Pay card debt | `AccountService.payCreditCardDebt` |
 | Add or edit a budget line | `BudgetService.savePlanItem` |
-| Open, fund or close a goal | `SavingsService.createGoal` / `depositToGoal` / `withdrawFromGoal` / `deleteGoal` |
+| Close a goal | `SavingsService.deleteGoal` |
 | Edit, skip or cancel a subscription | `RecurringService.updateSubscriptionAmount` / `skipNextOccurrence` / `cancelSubscription` |
 
 ### 2. Onboarding

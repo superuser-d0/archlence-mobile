@@ -12,6 +12,7 @@ library;
 
 import '../services/account_service.dart';
 import '../services/asset_service.dart';
+import '../services/savings_service.dart';
 import '../services/transaction_service.dart';
 
 String accountErrorMessage(AccountError error) => switch (error.code) {
@@ -54,4 +55,23 @@ String assetErrorMessage(AssetError error) => switch (error.code) {
   AssetErrorCode.invalidAmount =>
     'Price and quantity both have to be numbers above zero.',
   AssetErrorCode.assetNotFound => 'That holding no longer exists.',
+};
+
+String savingsErrorMessage(SavingsError error) => switch (error.code) {
+  SavingsErrorCode.emptyName => 'Say what the goal is for.',
+  SavingsErrorCode.invalidAmount => 'That is not an amount.',
+  SavingsErrorCode.amountNotPositive => 'Enter an amount above zero.',
+  SavingsErrorCode.negativeOpeningAmount =>
+    'A goal cannot start with less than nothing in it.',
+  // The one message here that has to explain rather than name. A stale card
+  // pointing at a reused id is not something a user can be expected to
+  // reason about, and the only thing that matters is that no money moved.
+  SavingsErrorCode.identityMismatch =>
+    'This goal has changed since the screen was drawn. Nothing was moved — '
+        'pull to refresh and try again.',
+  SavingsErrorCode.accountNotFound => 'That cash account no longer exists.',
+  SavingsErrorCode.goalNotFoundOrCompleted => 'This goal is already complete.',
+  SavingsErrorCode.insufficientGoalBalance =>
+    'The goal does not hold that much.',
+  SavingsErrorCode.refundAccountRequired => 'Choose where the money should go.',
 };

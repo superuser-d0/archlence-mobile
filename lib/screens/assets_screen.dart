@@ -12,6 +12,7 @@ import '../ui/async_data.dart';
 import '../ui/money_format.dart';
 import '../widgets/savings_goal_card.dart';
 import 'asset_sheets.dart';
+import 'savings_sheets.dart';
 import '../widgets/summary_row.dart';
 import '../widgets/surfaces.dart';
 
@@ -229,7 +230,7 @@ class _AssetsBody extends StatelessWidget {
 
         Padding(
           padding: horizontal,
-          child: _SavingsGoals(goals: data.goals),
+          child: _SavingsGoals(goals: data.goals, onChanged: onChanged),
         ),
         const SizedBox(height: Spacing.sectionGap),
 
@@ -813,9 +814,10 @@ class _TotalHoldingsCard extends StatelessWidget {
 /// however many goals the user opened, each with its own target and status.
 /// Showing only the first would hide the rest.
 class _SavingsGoals extends StatelessWidget {
-  const _SavingsGoals({required this.goals});
+  const _SavingsGoals({required this.goals, required this.onChanged});
 
   final List<SavingsGoal> goals;
+  final VoidCallback onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -829,7 +831,13 @@ class _SavingsGoals extends StatelessWidget {
     return Column(
       children: [
         for (final goal in goals) ...[
-          SavingsGoalCard(goal: goal),
+          SavingsGoalCard(
+            goal: goal,
+            onMoveMoney: () async {
+              final moved = await showMoveMoneySheet(context, goal);
+              if (moved ?? false) onChanged();
+            },
+          ),
           if (goal != goals.last) const SizedBox(height: Spacing.stackMd),
         ],
       ],

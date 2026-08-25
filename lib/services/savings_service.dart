@@ -43,6 +43,7 @@ class SavingsStatus {
 }
 
 enum SavingsErrorCode {
+  emptyName,
   invalidAmount,
   amountNotPositive,
   negativeOpeningAmount,
@@ -145,6 +146,12 @@ class SavingsService {
   ///
   /// [goalUid] is generated here unless a caller supplies one; only a
   /// migration does, and it supplies a fresh UUID too.
+  ///
+  /// A BLANK NAME IS REFUSED, which the desktop does not do. That looks like
+  /// an oversight rather than a decision there: `create_account` rejects one
+  /// and an unnamed goal is exactly as unusable — indistinguishable from its
+  /// neighbours in a list, and impossible to speak about. Nothing in the
+  /// storage contract depends on a goal being nameless.
   Future<int> createGoal({
     required String goalName,
     required Object? targetAmount,
@@ -155,6 +162,14 @@ class SavingsService {
     String? createdAt,
     String? goalUid,
   }) async {
+    final trimmedName = goalName.trim();
+    if (trimmedName.isEmpty) {
+      throw const SavingsError(
+        SavingsErrorCode.emptyName,
+        'A savings goal needs a name.',
+      );
+    }
+
     final target = _requireFinite(targetAmount);
     final current = _requireFinite(currentAmount);
     if (target <= Decimal.zero) {
@@ -177,7 +192,7 @@ class SavingsService {
         'target_date, status, goal_uid, color, auto_deposit, created_at) '
         'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
         variables: [
-          Variable<String>((await _crypto.encryptField(goalName))!),
+          Variable<String>((await _crypto.encryptField(trimmedName))!),
           Variable<double>(target.toDouble()),
           Variable<double>(openingAmount),
           Variable<String>(targetDate),

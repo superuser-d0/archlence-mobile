@@ -16,9 +16,20 @@ import '../ui/money_format.dart';
 import 'surfaces.dart';
 
 class SavingsGoalCard extends StatelessWidget {
-  const SavingsGoalCard({required this.goal, super.key});
+  const SavingsGoalCard({
+    required this.goal,
+    required this.onMoveMoney,
+    super.key,
+  });
 
   final SavingsGoal goal;
+
+  /// Opens the deposit/withdraw sheet.
+  ///
+  /// Required and non-null: both hosts offer it, and an optional callback
+  /// would leave a branch nothing reaches — room for the button to become
+  /// live-and-inert without any test able to notice.
+  final VoidCallback onMoveMoney;
 
   @override
   Widget build(BuildContext context) {
@@ -101,8 +112,10 @@ class SavingsGoalCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: Spacing.stackMd),
-          // SavingsService.depositToGoal is ready and has no form.
-          const GradientButton(label: 'Save', onPressed: null),
+          GradientButton(
+            label: goal.isCompleted ? 'Take back' : 'Save',
+            onPressed: onMoveMoney,
+          ),
         ],
       ),
     );

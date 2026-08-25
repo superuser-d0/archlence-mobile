@@ -173,6 +173,35 @@ void main() {
       },
     );
 
+    test('refuses a blank name, where the desktop does not', () async {
+      // A deliberate divergence. The desktop's create_goal validates the
+      // amounts and not the name, which reads as an oversight beside
+      // create_account, and an unnamed goal is indistinguishable from its
+      // neighbours in a list.
+      for (final name in ['', '   ']) {
+        await expectLater(
+          () => savings.createGoal(goalName: name, targetAmount: 1000),
+          throwsA(
+            isA<SavingsError>().having(
+              (e) => e.code,
+              'code',
+              SavingsErrorCode.emptyName,
+            ),
+          ),
+          reason: '"$name"',
+        );
+      }
+      expect(await count('savings_goals'), 0);
+    });
+
+    test('stores the name trimmed', () async {
+      final id = await savings.createGoal(
+        goalName: '  Tatil  ',
+        targetAmount: 1000,
+      );
+      expect((await savings.getGoal(id))!.goalName, 'Tatil');
+    });
+
     test('rejects a non-finite amount', () async {
       await expectLater(
         () => savings.createGoal(goalName: 'A', targetAmount: double.nan),

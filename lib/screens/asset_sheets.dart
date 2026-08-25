@@ -11,7 +11,6 @@ library;
 
 import 'package:decimal/decimal.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../app_services.dart';
 import '../money/financial_decimal.dart';
@@ -20,7 +19,7 @@ import '../services/asset_service.dart';
 import '../theme/obsidian_prime.dart';
 import '../ui/error_messages.dart';
 import '../ui/money_format.dart';
-import '../widgets/surfaces.dart';
+import '../widgets/sheet_frame.dart';
 
 Future<T?> _showSheet<T>(BuildContext context, Widget child) {
   return showModalBottomSheet<T>(
@@ -130,16 +129,16 @@ class _BuyAssetSheetState extends State<_BuyAssetSheet> {
     final price = parseAmountInput(_price.text);
     final quantity = parseAmountInput(_quantity.text);
 
-    return _SheetFrame(
+    return SheetFrame(
       title: 'New holding',
       error: _error,
       saving: _saving,
       actionLabel: 'Add holding',
       onSave: _save,
       children: [
-        _Field(controller: _name, label: 'Name', hint: 'Gram Altın'),
+        SheetField(controller: _name, label: 'Name', hint: 'Gram Altın'),
         const SizedBox(height: Spacing.stackMd),
-        _Field(controller: _code, label: 'Code', hint: 'GC=F'),
+        SheetField(controller: _code, label: 'Code', hint: 'GC=F'),
         const SizedBox(height: Spacing.stackMd),
         DropdownButtonFormField<String>(
           key: const Key('field-type'),
@@ -152,7 +151,7 @@ class _BuyAssetSheetState extends State<_BuyAssetSheet> {
           onChanged: (value) => setState(() => _type = value ?? _type),
         ),
         const SizedBox(height: Spacing.stackMd),
-        _Field(
+        SheetField(
           controller: _price,
           label: 'Unit price',
           hint: '0,00',
@@ -160,7 +159,7 @@ class _BuyAssetSheetState extends State<_BuyAssetSheet> {
           onChanged: (_) => setState(() {}),
         ),
         const SizedBox(height: Spacing.stackMd),
-        _Field(
+        SheetField(
           controller: _quantity,
           label: 'Quantity',
           hint: '1',
@@ -319,7 +318,7 @@ class _SellAssetSheetState extends State<_SellAssetSheet> {
     final price = parseAmountInput(_price.text);
     final quantity = parseAmountInput(_quantity.text);
 
-    return _SheetFrame(
+    return SheetFrame(
       title: 'Sell ${holding.assetName}',
       error: _error,
       saving: _saving,
@@ -334,7 +333,7 @@ class _SellAssetSheetState extends State<_SellAssetSheet> {
           ),
         ),
         const SizedBox(height: Spacing.stackMd),
-        _Field(
+        SheetField(
           controller: _price,
           label: 'Sale price, per unit',
           hint: '0,00',
@@ -342,7 +341,7 @@ class _SellAssetSheetState extends State<_SellAssetSheet> {
           onChanged: (_) => setState(() {}),
         ),
         const SizedBox(height: Spacing.stackMd),
-        _Field(
+        SheetField(
           controller: _quantity,
           label: 'Quantity to sell',
           numeric: true,
@@ -399,130 +398,6 @@ class _SellAssetSheetState extends State<_SellAssetSheet> {
           },
         ),
       ],
-    );
-  }
-}
-
-// ─── Shared chrome ─────────────────────────────────────────────────────────
-
-InputDecoration sheetDecoration(String label) => InputDecoration(
-  labelText: label,
-  filled: true,
-  fillColor: ObsidianPalette.surfaceContainerHigh,
-  border: OutlineInputBorder(
-    borderRadius: BorderRadius.circular(Radii.md),
-    borderSide: const BorderSide(color: ObsidianPalette.cardStroke),
-  ),
-  enabledBorder: OutlineInputBorder(
-    borderRadius: BorderRadius.circular(Radii.md),
-    borderSide: const BorderSide(color: ObsidianPalette.cardStroke),
-  ),
-);
-
-class _SheetFrame extends StatelessWidget {
-  const _SheetFrame({
-    required this.title,
-    required this.children,
-    required this.actionLabel,
-    required this.onSave,
-    required this.saving,
-    this.error,
-  });
-
-  final String title;
-  final List<Widget> children;
-  final String actionLabel;
-  final VoidCallback onSave;
-  final bool saving;
-  final String? error;
-
-  @override
-  Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(Spacing.containerMargin),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: ObsidianPalette.cardStroke,
-                  borderRadius: BorderRadius.circular(Radii.full),
-                ),
-              ),
-            ),
-            const SizedBox(height: Spacing.stackLg),
-            Text(title, style: text.headlineMedium),
-            const SizedBox(height: Spacing.stackLg),
-            ...children,
-            if (error != null) ...[
-              const SizedBox(height: Spacing.stackMd),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(
-                    Icons.error_outline,
-                    size: 18,
-                    color: ObsidianPalette.error,
-                  ),
-                  const SizedBox(width: Spacing.stackSm),
-                  Expanded(
-                    child: Text(
-                      error!,
-                      style: text.bodySmall?.copyWith(
-                        color: ObsidianPalette.error,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-            const SizedBox(height: Spacing.stackLg),
-            GradientButton(
-              label: saving ? 'Saving…' : actionLabel,
-              onPressed: saving ? null : onSave,
-            ),
-            const SizedBox(height: Spacing.stackMd),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _Field extends StatelessWidget {
-  const _Field({
-    required this.controller,
-    required this.label,
-    this.hint,
-    this.numeric = false,
-    this.onChanged,
-  });
-
-  final TextEditingController controller;
-  final String label;
-  final String? hint;
-  final bool numeric;
-  final ValueChanged<String>? onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return TextField(
-      controller: controller,
-      onChanged: onChanged,
-      keyboardType: numeric
-          ? const TextInputType.numberWithOptions(decimal: true)
-          : TextInputType.text,
-      inputFormatters: numeric
-          ? [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,\s]'))]
-          : null,
-      decoration: sheetDecoration(label).copyWith(hintText: hint),
     );
   }
 }

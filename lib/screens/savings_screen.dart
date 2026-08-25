@@ -11,6 +11,7 @@ import '../services/savings_service.dart';
 import '../theme/obsidian_prime.dart';
 import '../ui/async_data.dart';
 import '../widgets/savings_goal_card.dart';
+import 'savings_sheets.dart';
 
 class SavingsScreen extends StatefulWidget {
   const SavingsScreen({super.key});
@@ -28,18 +29,31 @@ class _SavingsScreenState extends State<SavingsScreen> {
     _goals ??= ServicesScope.of(context).savings.getGoals();
   }
 
+  void _reload() {
+    setState(() {
+      _goals = ServicesScope.of(context).savings.getGoals();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Savings Goals')),
+      appBar: AppBar(
+        title: const Text('Savings Goals'),
+        actions: [
+          IconButton(
+            onPressed: () async {
+              final created = await showNewGoalSheet(context);
+              if (created != null) _reload();
+            },
+            icon: const Icon(Icons.add),
+          ),
+        ],
+      ),
       body: RefreshIndicator(
-        onRefresh: () async {
-          setState(() {
-            _goals = ServicesScope.of(context).savings.getGoals();
-          });
-        },
+        onRefresh: () async => _reload(),
         child: ListView(
           key: const PageStorageKey('savings'),
           padding: const EdgeInsets.fromLTRB(
@@ -62,12 +76,20 @@ class _SavingsScreenState extends State<SavingsScreen> {
               placeholderHeight: 200,
               builder: (context, goals) {
                 if (goals.isEmpty) {
-                  return const NothingYet(message: 'No savings goals yet.');
+                  return const NothingYet(
+                    message: 'No savings goals yet. Add one with the + above.',
+                  );
                 }
                 return Column(
                   children: [
                     for (final goal in goals) ...[
-                      SavingsGoalCard(goal: goal),
+                      SavingsGoalCard(
+                        goal: goal,
+                        onMoveMoney: () async {
+                          final moved = await showMoveMoneySheet(context, goal);
+                          if (moved ?? false) _reload();
+                        },
+                      ),
                       const SizedBox(height: Spacing.stackMd),
                     ],
                   ],

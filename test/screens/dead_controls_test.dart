@@ -134,6 +134,12 @@ void main() {
     expect(buttonDisabled('Pay Debt'), isTrue);
 
     await onTab('Assets');
-    expect(gradientDisabled('Save'), isTrue, reason: 'no deposit form yet');
+    // Save is live now too — the deposit sheet landed. Pinned as live rather
+    // than removed, so making it inert again would fail here.
+    expect(
+      gradientDisabled('Save'),
+      isFalse,
+      reason: 'the deposit sheet is wired',
+    );
   });
 }
