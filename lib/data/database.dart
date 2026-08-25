@@ -33,6 +33,11 @@ String sqliteTimestamp(DateTime when) {
       '${two(when.second)}';
 }
 
+/// Formats [when] as the bare `YYYY-MM-DD` that date-only columns hold —
+/// `recurring_payments.next_due_date` and the like, which the desktop
+/// compares with SQLite's `date()`.
+String sqliteDate(DateTime when) => sqliteTimestamp(when).substring(0, 10);
+
 /// Matches `PRAGMA user_version` on the desktop, which tracks its own
 /// migrations. Kept at the value the current schema corresponds to so that a
 /// database opened by either app agrees about how far it has been migrated.

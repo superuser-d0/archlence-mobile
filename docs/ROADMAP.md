@@ -11,16 +11,16 @@ Every claim here was verified against the code on `main` before being written.
 
 **Done:** the toolchain, all five screens, the three layers underneath them
 that are hardest to get right — money, encryption, and the database schema —
-and four services on top: accounts, the ledger, and holdings (portfolio CRUD,
-buying, selling). Live price fetching is the one piece of that layer left out
-— see open question 3.
+and five services on top: accounts, the ledger, holdings (portfolio CRUD,
+buying, selling), and recurring payments. Live price fetching is the one piece
+of that layer left out — see open question 3.
 
 **Not done:** the wiring. Every screen still renders hard-coded figures; no
 screen reads the database yet. The data to fill Home, Cards and Assets now
 exists behind a service call — Assets minus a current price, which nothing
 supplies yet.
 
-190 unit tests and 4 device tests pass. `flutter analyze` is clean.
+237 unit tests and 4 device tests pass. `flutter analyze` is clean.
 
 ## Settled decisions
 
@@ -193,6 +193,60 @@ file, which a unit test cannot stage.
 The acceptance scenario the desktop encodes — a card spend lowering net worth
 by exactly its amount — needs the transaction service and is not written yet.
 
+### Recurring payments — `lib/services/recurring_service.dart`
+
+Port of `services/recurring_service.py` plus the `recurring_payments` helpers
+that live in the desktop's `database/db.py`. The subscription radar, the
+charge/refund pair, and the date arithmetic underneath both.
+
+The date arithmetic is where the traps are, and Dart makes one of them worse
+than Python does: `DateTime(2026, 1, 31 + 31)` silently rolls into March
+rather than failing, so every advance clamps its day explicitly. 31 January
+plus one month is 28 February; plus three months is 30 April, not 90 days
+later; and a payment pinned to the 31st that fell due on the 28th goes BACK to
+the 31st next month rather than staying there. An unrecognised frequency
+raises instead of defaulting to monthly — a payment quietly rescheduled to the
+wrong period is worse than one that fails.
+
+Charging is idempotent through SQLite, not through UI state: the marker's
+primary key is `(payment, due date, 'charge')` and it is keyed on the due date
+the payment had GOING IN, so a stale object still holding the old date
+collides with the same marker instead of minting a second charge. The spending
+rule runs on the charge's own transaction handle, inside the write lock.
+
+Two departures worth knowing:
+
+- An unreadable name or a non-positive amount reads back as `null`, not as
+  `"Bilinmeyen Ödeme"` / `0.0`. The desktop learned the cost of the second
+  one: `recurring_payments.amount` is a MAGNITUDE (direction lives in
+  `transaction_type`), so a stored `-10.00` is an invalid record, not a
+  reversed payment — and it entered the monthly budget as a `-10.00` reserve,
+  overstating the spendable amount by 10 lira. Silently.
+- `processDueRecurringPayment` REFUSES a payment whose name will not decrypt,
+  where the desktop charges it under a placeholder. The description is the
+  only handle `findCurrentPeriodCharge` has, so such a charge could never be
+  refunded — and two of them would make a refund match the wrong one.
+
+**Proof:** `test/recurring_service_test.dart`, 47 tests. Broken to check for
+teeth: the monthly advance letting a day overflow, quarterly as 90 days, the
+leap-day fallback spilling into March, an unknown frequency defaulting to
+monthly, the recurrence day not pinned back, the initial-income clamp dropped,
+a card counted as a subscription signal on its own, the card gate dropped, the
+duplicate check made case-sensitive or made to count cancelled rows, a
+non-positive stored amount read as valid, the charge marker keyed on the new
+due date, an already-claimed marker ignored, the spending rule skipped, the
+due date not advanced, the marker's transaction id never recorded, a corrupt
+amount charged under a substitute, an unreadable name charged under a
+placeholder, the refund made non-idempotent or treating a corrupt charge as no
+charge, a price change resetting the due date or reaching a cancelled row,
+cancel deleting instead of deactivating, and skipping not moving the date.
+Every one failed the suite.
+
+Two of those started as mutations that did NOT fail the suite — and both times
+the mutation was the problem, not the tests: they had been written to add a
+comment or a dead branch rather than to change behaviour. Worth remembering
+when a mutation comes back green: check that it actually mutated something.
+
 ### Holdings — `lib/services/asset_service.dart` and friends
 
 Port of the CRUD-and-arithmetic half of `services/asset_service.py` plus
@@ -328,7 +382,10 @@ depends on the one before:
 3. ~~`asset_service` / `asset_purchase_service` / `asset_sale_service`.~~
    **Done** — the CRUD-and-arithmetic half; live price fetching stayed out,
    see open question 3.
-4. `budget_service`, `savings_service`, `recurring_service`. **Next.**
+4. `recurring_service`. ~~Done.~~
+5. `budget_service`, `savings_service`. **Next.** `budget_service` depends on
+   recurring (it reserves the month's subscriptions against the plan) and is
+   ready to port; `savings_service` stands alone.
 
 Two pieces of `transaction_service.py` were deliberately left out and are
 worth picking up with whatever needs them:
