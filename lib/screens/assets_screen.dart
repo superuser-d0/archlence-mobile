@@ -244,10 +244,9 @@ class _AssetsBody extends StatelessWidget {
                   Expanded(
                     child: Text('My Active Assets', style: text.titleLarge),
                   ),
-                  IconButton(
-                    onPressed: () {},
-                    icon: const Icon(Icons.add, color: ObsidianPalette.primary),
-                  ),
+                  // AssetPurchaseService.createPurchase is ready and has no
+                  // form; a disabled button says so.
+                  const IconButton(onPressed: null, icon: Icon(Icons.add)),
                 ],
               ),
               // The mockup says "Last updated: 23:00" beside a live price.
@@ -844,7 +843,7 @@ class _HoldingTile extends StatelessWidget {
     final cost = fiat(holding.purchasePrice * holding.quantity);
 
     return AppCard(
-      onTap: () {},
+      // No holding detail screen yet.
       child: Row(
         children: [
           Container(

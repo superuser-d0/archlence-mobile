@@ -20,7 +20,7 @@ import 'services/savings_service.dart';
 import 'services/transaction_service.dart';
 
 class AppServices {
-  AppServices._(this.db, this.crypto)
+  AppServices._(this.db, this.crypto, this.keyProtection)
     : accounts = AccountService(db, crypto),
       assets = AssetService(db, crypto),
       savings = SavingsService(db, crypto);
@@ -29,8 +29,12 @@ class AppServices {
   ///
   /// Tests use this with an in-memory database and a fixed key; production
   /// goes through [open].
-  factory AppServices.forDatabase(ArchlenceDatabase db, FieldCrypto crypto) {
-    final services = AppServices._(db, crypto);
+  factory AppServices.forDatabase(
+    ArchlenceDatabase db,
+    FieldCrypto crypto, {
+    KeyProtectionStatus? keyProtection,
+  }) {
+    final services = AppServices._(db, crypto, keyProtection);
     services.transactions = TransactionService(db, crypto, services.accounts);
     services.recurring = RecurringService(db, crypto, services.accounts);
     services.budget = BudgetService(db, crypto, services.recurring);
@@ -49,11 +53,23 @@ class AppServices {
     final keyProvider = await createPlatformKeyProvider(
       await applicationDataDirectory(),
     );
-    return AppServices.forDatabase(db, FieldCrypto(keyProvider));
+    return AppServices.forDatabase(
+      db,
+      FieldCrypto(keyProvider),
+      keyProtection: keyProvider.status,
+    );
   }
 
   final ArchlenceDatabase db;
   final FieldCrypto crypto;
+
+  /// Where the encryption key actually ended up, for Settings to report.
+  ///
+  /// Null in tests, which inject a fixed key with no platform store behind
+  /// it. A screen must say it does not know rather than assume the best
+  /// case — claiming Keystore protection that is not there is the worst
+  /// possible thing to be wrong about on that screen.
+  final KeyProtectionStatus? keyProtection;
 
   final AccountService accounts;
   final AssetService assets;

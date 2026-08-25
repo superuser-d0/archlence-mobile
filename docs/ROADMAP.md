@@ -13,42 +13,32 @@ Every claim here was verified against the code on `main` before being written.
 that are hardest to get right — money, encryption, and the database schema —
 and the whole service layer on top: accounts, the ledger, holdings (portfolio
 CRUD, buying, selling), recurring payments, the monthly budget and savings
-goals. Live price fetching is the one piece left out — see open work 4.
+goals. Live price fetching is the one piece left out — see open work 3.
 
 **Wired so far:** Home, Cards and Assets read real data, and the Tools grid
 launches a budget screen and a savings screen that do too. Settings still
 renders literals, and nothing in the app WRITES except the two card switches
 on the Cards tab.
 
-376 unit tests and 8 device tests pass. `flutter analyze` is clean, and the
+382 unit tests and 10 device tests pass. `flutter analyze` is clean, and the
 app runs on the emulator.
 
 ## Pick up here
 
 In priority order. Each of these is a self-contained next session.
 
-**1. Make every control honest.** There are 19 `onTap: () {}` /
-`onPressed: () {}` left — the "+ ADD" button on Cards, "+" on Assets, EDIT and
-REMOVE on a subscription, "Save" on a savings goal, the wallet selector, the
-search field, the notification bell, and every row of Settings. Each looks
-live and does nothing. The Tools grid shows the pattern to follow: a control
-with no destination is drawn as unavailable, and the guard goes on the
-affordance rather than inside the handler, or the ripple still invites the
-tap. This is cheap, and it stops the app lying about what it can do.
-
-**2. Write flows — the thing that makes the app usable rather than readable.**
+**1. Write flows — the thing that makes the app usable rather than readable.**
 Every service call is ready and no form calls it. In dependency order: add an
 account (nothing works without one), add a transaction, add a holding, add a
 budget line, open and fund a savings goal. `TransactionService.addTransaction`
 is also where subscription detection gets connected — the one piece of
 `transaction_service.py` still unported.
 
-**3. Settings, then onboarding.** Settings has one real thing available today:
-key-protection status from `KeyProvider`. Onboarding gates the whole app and
-depends on nothing but that same provider.
+**2. Onboarding and sign-in.** Designed and not built. They gate the whole
+app and depend on nothing but the key provider, which is done.
 
-Open work 4 and 5 below (price fetching, backup/i18n/release) are larger and
-none of the above waits on them.
+Open work 3 and 4 below (price fetching, backup/i18n/release) are larger and
+neither of the above waits on them.
 
 ## Settled decisions
 
@@ -291,6 +281,40 @@ point:
   `pending` after the fact, leaving the balance already applied — settling then
   added it twice and the test would have passed on a doubled figure.
 
+### Every control is live or visibly unavailable
+
+There is no third state. A user cannot tell an inert button from a slow one,
+so they tap it again and conclude the app is broken rather than unfinished.
+Nineteen `onTap: () {}` / `onPressed: () {}` are gone: disabled buttons, a
+disabled search field, and a `NotYetChip` where a label alone would not
+explain.
+
+**The guard goes on the affordance, not inside the handler.** `onPressed: null`
+removes the ripple and the pointer behaviour; an early `return` leaves both
+and still invites the tap.
+
+Settings gained the one real thing it can report: **where the encryption key
+actually is**, from `KeyProtectionStatus`. It used to be a hard-coded sentence
+claiming an owner-only file, which on a device with a working Keystore said
+the exact opposite of the truth — the worst thing on that screen to be wrong
+about. An unknown store reports "not known" rather than assuming the best
+case. Its two dead switches went too: they moved local state and nothing else,
+so a user could turn Dark Mode off and watch nothing happen.
+
+**Proof:** `test/screens/dead_controls_test.dart` holds the rule for the whole
+app rather than per screen, so a new dead control cannot arrive with a screen
+that has no such test. The enforcement is a source-shape check — at runtime an
+empty handler is indistinguishable from a real one — plus a walk pinning the
+controls that currently have no flow.
+
+Writing it produced a lesson worth keeping: the first version looped over
+`find.byType(ButtonStyleButton)` asserting every button was live or disabled.
+That was doubly worthless. The assertion is a tautology, since
+`ButtonStyleButton.enabled` is DEFINED as `onPressed != null`; and
+`find.byType` matches the EXACT runtime type, so the finder matched nothing
+and the loop body never ran at all. Use `find.bySubtype<T>()` for a base
+class.
+
 ### The wired tabs — what departs from the mockup, and why
 
 **Home** shows net worth, cash and card debt from `AccountService`, and the
@@ -481,7 +505,7 @@ when a mutation comes back green: check that it actually mutated something.
 Port of the CRUD-and-arithmetic half of `services/asset_service.py` plus
 `services/asset_purchase_service.py` and `services/asset_sale_service.py`.
 The other half — `fetch_current_price`, the portfolio cache, the BIST100
-batch fetch, the warm-up thread — is NOT ported; see open work 4, which
+batch fetch, the warm-up thread — is NOT ported; see open work 3, which
 this doesn't need to be resolved to build.
 
 `calculatePnl` is arithmetic only: Decimal throughout, quantized only on the
@@ -614,14 +638,7 @@ surfaced only that way:
 
 ## Open work
 
-### 1. Controls that do nothing
-
-Nineteen `onTap: () {}` / `onPressed: () {}` remain across the app. The Tools
-grid was fixed to mark unavailable cards and remove the tap affordance
-entirely; everything else still invites a tap and swallows it. Listed in
-"Pick up here".
-
-### 2. Write flows
+### 1. Write flows
 
 No screen writes anything except the two card switches on the Cards tab. Every
 service call exists and is tested:
@@ -643,18 +660,12 @@ Connect subscription detection when the transaction form lands — it is the one
 piece of `transaction_service.py` still unported, the hook `add_transaction`
 calls after a card expense.
 
-### 3. Settings and onboarding
+### 2. Onboarding
 
-**Settings** still renders literals. The one thing available today is
-key-protection status from `KeyProvider` (`KeyProtectionStatus` reports which
-store is in use and whether it is hardware-backed). The rest of that screen is
-backup/restore and i18n, in item 5.
+Designed in the published mockup canvas and not built. They gate everything
+else in the app, and depend on nothing but the key provider, which is done.
 
-**Onboarding and sign-in** are designed in the published mockup canvas and not
-built. They gate everything else in the app, and depend on nothing but the key
-provider, which is done.
-
-### 4. Price fetching — needs a decision
+### 3. Price fetching — needs a decision
 
 The desktop runs `services/asset_price_worker.py` as a **subprocess**
 (`asset_service.py:700`). That architecture does not work on Android: there is
@@ -668,7 +679,7 @@ is a deliberate holding position, not an oversight: `AssetService.calculatePnl`
 already takes a current price as a plain argument, so wiring a feed in is a
 small change once the source exists.
 
-### 5. Not yet considered
+### 4. Not yet considered
 
 Backup and restore, i18n (the desktop has `ui/i18n.py` with a full Turkish/
 English map; the mobile screens are English-only strings in the widgets, while
@@ -686,11 +697,11 @@ is fully accounted for. What has not been ported is not forgotten:
 - **Migration engines** (`migration_service`, `savings_migration`,
   `crypto_migration_service`, `startup_recovery`). A fresh mobile install has
   nothing to migrate from; these matter only if restoring a desktop backup
-  becomes a feature, which is item 5.
+  becomes a feature, which is item 4.
 - **Price machinery** (`price_service`, `price_providers`, `price_guard`,
   `asset_price_worker`, `crypto_top100`, `brand_icon_service`, `logo_service`).
-  Item 4.
-- **Backup service.** Item 5.
+  Item 3.
+- **Backup service.** Item 4.
 - **`background_task_manager`.** Flutter has its own answer; the desktop's
   thread pool does not port.
 

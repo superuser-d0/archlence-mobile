@@ -20,8 +20,11 @@ grid opens a budget screen and a savings screen that do too.
 What is missing is the other direction: **no screen writes anything** except
 the two card switches. Adding an account, a transaction, a holding, a budget
 line or a savings goal each has a tested service call and no form to call it
-from. Settings still renders literals, and live price fetching is an open
-decision, so holdings are shown at what they cost and labelled as such.
+from. Live price fetching is an open decision, so holdings are shown at what
+they cost and labelled as such.
+
+Every control is either live or visibly unavailable — there is no button that
+looks tappable and does nothing.
 
 **Start at [docs/ROADMAP.md](docs/ROADMAP.md)** — it opens with a "Pick up
 here" section listing the next steps in priority order, and records how each

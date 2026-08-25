@@ -186,7 +186,12 @@ class _CardsBody extends StatelessWidget {
           child: Row(
             children: [
               Expanded(child: Text('My Cards', style: text.titleLarge)),
-              GradientButton(label: '+  ADD', expand: false, onPressed: () {}),
+              // AccountService.createAccount is ready and has no form.
+              const GradientButton(
+                label: '+  ADD',
+                expand: false,
+                onPressed: null,
+              ),
             ],
           ),
         ),
@@ -525,17 +530,16 @@ class _CardDetailState extends State<_CardDetail> {
           Row(
             spacing: Spacing.stackMd,
             children: [
-              Expanded(
+              // Statement has no screen yet; Pay Debt has
+              // AccountService.payCreditCardDebt behind it and no form.
+              const Expanded(
                 child: OutlinedButton(
-                  onPressed: () {},
-                  child: const Text('Statement'),
+                  onPressed: null,
+                  child: Text('Statement'),
                 ),
               ),
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () {},
-                  child: const Text('Pay Debt'),
-                ),
+              const Expanded(
+                child: OutlinedButton(onPressed: null, child: Text('Pay Debt')),
               ),
             ],
           ),
@@ -758,7 +762,7 @@ class _AccountTile extends StatelessWidget {
       color: highlighted
           ? ObsidianPalette.tertiary.withValues(alpha: 0.08)
           : null,
-      onTap: () {},
+      // No account detail screen yet, so the tile does not offer one.
       child: Row(
         children: [
           if (highlighted) ...[

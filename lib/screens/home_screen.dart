@@ -8,6 +8,7 @@ import '../theme/obsidian_prime.dart';
 import '../ui/async_data.dart';
 import '../ui/money_format.dart';
 import '../widgets/balance_ring.dart';
+import '../widgets/not_yet.dart';
 import '../widgets/surfaces.dart';
 
 /// Dashboard.
@@ -193,8 +194,11 @@ class _SearchField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return TextField(
+      // Disabled: search is not ported. A field that accepts typing and
+      // returns nothing is worse than one that plainly cannot be used.
+      enabled: false,
       decoration: InputDecoration(
-        hintText: 'Search in Archlence...',
+        hintText: 'Search — not yet',
         prefixIcon: const Icon(Icons.search, size: 20),
         fillColor: ObsidianPalette.surfaceContainerHigh,
         border: OutlineInputBorder(
@@ -225,7 +229,8 @@ class _WalletSelector extends StatelessWidget {
       radius: Radii.full,
       color: ObsidianPalette.surfaceContainerHigh,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      onTap: () {},
+      // Not tappable: there is one wallet and no picker to open. The chevron
+      // goes with it — it promises a menu that does not exist.
       child: Row(
         mainAxisSize: MainAxisSize.min,
         spacing: Spacing.stackSm,
@@ -236,7 +241,6 @@ class _WalletSelector extends StatelessWidget {
             style: Theme.of(context).textTheme.labelMedium
                 ?.copyWith(letterSpacing: 0),
           ),
-          const Icon(Icons.expand_more, size: 18),
         ],
       ),
     );
@@ -351,23 +355,7 @@ class _PendingInsightCard extends StatelessWidget {
             children: [
               Icon(icon, size: 20, color: accent),
               Expanded(child: Text(title, style: text.titleLarge)),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: ObsidianPalette.surfaceContainerHigh,
-                  borderRadius: BorderRadius.circular(Radii.full),
-                ),
-                child: Text(
-                  'NOT YET',
-                  style: text.labelMedium?.copyWith(
-                    fontSize: 10,
-                    color: ObsidianPalette.onSurfaceVariant,
-                  ),
-                ),
-              ),
+              const NotYetChip(),
             ],
           ),
           const SizedBox(height: Spacing.stackMd),
@@ -478,14 +466,11 @@ class _SubscriptionCard extends StatelessWidget {
             padding: const EdgeInsets.only(left: 18),
             child: Row(
               children: [
-                TextButton(onPressed: () {}, child: const Text('EDIT')),
-                TextButton(
-                  onPressed: () {},
-                  style: TextButton.styleFrom(
-                    foregroundColor: ObsidianPalette.onSurfaceVariant,
-                  ),
-                  child: const Text('REMOVE'),
-                ),
+                // Disabled until the subscription edit and cancel flows land.
+                // RecurringService.updateSubscriptionAmount and
+                // cancelSubscription are ready; there is no form for either.
+                const TextButton(onPressed: null, child: Text('EDIT')),
+                const TextButton(onPressed: null, child: Text('REMOVE')),
               ],
             ),
           ),

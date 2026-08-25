@@ -101,7 +101,8 @@ class SavingsGoalCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: Spacing.stackMd),
-          GradientButton(label: 'Save', onPressed: () {}),
+          // SavingsService.depositToGoal is ready and has no form.
+          const GradientButton(label: 'Save', onPressed: null),
         ],
       ),
     );

@@ -247,6 +247,25 @@ void main() {
     expect(find.text('350.000,00 ₺'), findsOneWidget);
   });
 
+  testWidgets('Settings reports the key store this device actually has', (
+    tester,
+  ) async {
+    // The one claim in the app that only a real device can settle. The row
+    // used to be a hard-coded sentence saying the key sat in a local file;
+    // on a device with a working Keystore that was the opposite of the truth.
+    await pumpApp(tester);
+    await tester.tap(find.text('Settings'));
+    await tester.pumpAndSettle();
+
+    expect(
+      services.keyProtection,
+      isNotNull,
+      reason: 'the device build must know where its key is',
+    );
+    expect(find.textContaining(services.keyProtection!.method), findsOneWidget);
+    expect(find.textContaining('Not known in this build'), findsNothing);
+  });
+
   testWidgets('the cards tab reads the same account the dashboard did', (
     tester,
   ) async {

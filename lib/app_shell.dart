@@ -132,9 +132,10 @@ class _GlassHeader extends StatelessWidget implements PreferredSizeWidget {
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                 ),
-                IconButton(
-                  onPressed: () {},
-                  icon: const Icon(Icons.notifications_outlined),
+                // Nothing raises a notification yet.
+                const IconButton(
+                  onPressed: null,
+                  icon: Icon(Icons.notifications_outlined),
                 ),
               ],
             ),

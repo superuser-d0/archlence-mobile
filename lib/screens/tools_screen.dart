@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/obsidian_prime.dart';
+import '../widgets/not_yet.dart';
 import '../widgets/surfaces.dart';
 import 'budget_screen.dart';
 import 'savings_screen.dart';
@@ -150,24 +151,7 @@ class _ToolCard extends StatelessWidget {
                 child: Icon(tool.icon, size: 22, color: accent),
               ),
               const Spacer(),
-              if (!available)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: ObsidianPalette.surfaceContainerHigh,
-                    borderRadius: BorderRadius.circular(Radii.full),
-                  ),
-                  child: Text(
-                    'NOT YET',
-                    style: text.labelMedium?.copyWith(
-                      fontSize: 9,
-                      color: ObsidianPalette.onSurfaceVariant,
-                    ),
-                  ),
-                ),
+              if (!available) const NotYetChip(),
             ],
           ),
           const Spacer(),
