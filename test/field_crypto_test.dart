@@ -12,33 +12,9 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:archlence_mobile/crypto/field_crypto.dart';
-import 'package:archlence_mobile/crypto/key_provider.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// Serves one fixed key, standing in for the platform store.
-class _FixedKeyProvider implements KeyProvider {
-  _FixedKeyProvider(this.key);
-
-  final Uint8List key;
-
-  @override
-  Future<Uint8List?> loadKey() async => key;
-
-  @override
-  Future<Uint8List> getOrCreateKey() async => key;
-
-  @override
-  Future<void> storeKey(List<int> key) async {}
-
-  @override
-  Future<void> replaceKey(
-    List<int> key, {
-    required List<int> expectedCurrent,
-  }) async {}
-
-  @override
-  Future<void> deleteKey({required List<int> expectedCurrent}) async {}
-}
+import 'support/fixed_key_provider.dart';
 
 void main() {
   late Uint8List key;
@@ -52,7 +28,7 @@ void main() {
     key = base64.decode(lines.first.split('|')[1]);
   });
 
-  FieldCrypto crypto() => FieldCrypto(_FixedKeyProvider(key));
+  FieldCrypto crypto() => FieldCrypto(FixedKeyProvider(key));
 
   group('storage format', () {
     test('decrypts every value the desktop wrote', () async {
@@ -145,7 +121,7 @@ void main() {
 
     test('a wrong key raises rather than returning anything', () async {
       final token = (await crypto().encryptField('334401.80'))!;
-      final other = FieldCrypto(_FixedKeyProvider(Uint8List(32)));
+      final other = FieldCrypto(FixedKeyProvider(Uint8List(32)));
 
       expect(
         () => other.decryptField(token),

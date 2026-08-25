@@ -9,14 +9,14 @@ Every claim here was verified against the code on `main` before being written.
 
 ## Where things stand
 
-**Done:** the toolchain, all five screens, and the three layers underneath
-them that are hardest to get right — money, encryption, and the database
-schema.
+**Done:** the toolchain, all five screens, the three layers underneath them
+that are hardest to get right — money, encryption, and the database schema —
+and the first service on top of them, accounts.
 
 **Not done:** anything that connects the two. Every screen still renders
-hard-coded figures; nothing reads or writes the database yet.
+hard-coded figures; no screen reads the database yet.
 
-59 unit tests and 4 device tests pass. `flutter analyze` is clean.
+99 unit tests and 4 device tests pass. `flutter analyze` is clean.
 
 ## Settled decisions
 
@@ -47,6 +47,21 @@ declared as drift tables. The desktop's shape carries columns appended by past
 a re-declaration in Dart would produce a tidier database that is not the same
 database. Data access is written as SQL for the same reason: the tables are an
 existing external contract, not something this app defines.
+
+### Services raise error codes, not sentences
+
+The desktop raises `ValueError` with the Turkish user-facing text baked into
+it, and its tests match on substrings. The port raises a typed error carrying
+a code (`AccountErrorCode.insufficientLimit` and so on) with a developer-facing
+English message beside it. The reason is i18n: the desktop has both languages
+in `ui/i18n.py` and this app will need the same, and a code survives
+translation where a matched string does not.
+
+The same line separates data from interface text. `network_logo` values, and
+the `Borç Ödeme` category a card payment is filed under, stay verbatim —
+the desktop groups and reports on those literals, so translating them would
+split one category in two. A `type_label` field was dropped for the opposite
+reason: it was a Turkish UI string sitting on a data model.
 
 ### Obsidian Prime, with four deliberate deviations
 
@@ -129,6 +144,38 @@ connection.
 lazily on the first instalment plan, so it is legitimately absent from a fresh
 schema.
 
+### Accounts — `lib/services/account_service.dart`
+
+Port of `services/account_service.py`, and the only writer of the `accounts`
+table. Its substance is the sign convention: `balance` is the account's
+signed contribution to net worth, so card debt is stored NEGATIVE and net
+worth stays correct from a plain `SUM(balance)`. The positive `debt` and
+`available_limit` a screen shows are derived, never stored.
+
+`lib/data/balance_events.dart` came with it — the ledger that has to land in
+the same commit as the balance change it records.
+
+**Proof:** `test/account_service_test.dart`, 40 tests. Rather than trusting a
+green suite, each rule was checked for teeth by breaking it: storing card debt
+positive, dropping the zero clamp on the available limit, testing Visa's
+one-digit prefix before Troy's four, limiting a checking account by its
+balance, reading `credit_limit = 0` as "no room" instead of "no limit
+recorded", skipping the frozen check for income, letting a checking account
+keep a card limit, dropping the opening ledger event, leaving recurring
+payments behind on delete, defaulting a null `online_payments_enabled` to
+disabled, and moving the amount validation below the account lookups. Every
+one of those failed the suite.
+
+One line is deliberately NOT covered, and says so at its call site: the
+`balance <= ?` re-check inside the card-payment UPDATE. Drift's sqlite3
+executor opens transactions with `BEGIN IMMEDIATE`, so within this app the
+decision already reads under the write lock and no second writer can
+interleave; what the guard defends against is the desktop holding the same
+file, which a unit test cannot stage.
+
+The acceptance scenario the desktop encodes — a card spend lowering net worth
+by exactly its amount — needs the transaction service and is not written yet.
+
 ### Screens — `lib/screens/`
 
 All five tabs are built and were verified by running them on the emulator, not
@@ -148,12 +195,17 @@ by reading the code. Three defects surfaced only that way:
 
 ### 1. Services — the layer that connects screens to the database
 
-Nothing here yet. The desktop's `services/` is the reference; port in this
-order, since each depends on the one before:
+The desktop's `services/` is the reference; port in this order, since each
+depends on the one before:
 
-1. `account_service` — accounts and balances.
+1. ~~`account_service` — accounts and balances.~~ **Done.**
 2. `transaction_service` — the ledger, and the balance invariants that guard
-   it.
+   it. **Next.** It is what closes out the accounts work: the acceptance
+   scenario, the expense-over-limit rejection and the import bypass all live
+   in the desktop's `test_account_service.py` and cannot be ported until
+   `add_transaction` exists. `assert_spending_allowed` is already in place and
+   is the rule it must call — inside its own write transaction, not before
+   opening one.
 3. `asset_service` / `asset_purchase_service` / `asset_sale_service`.
 4. `budget_service`, `savings_service`, `recurring_service`.
 

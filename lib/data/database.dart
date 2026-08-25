@@ -18,6 +18,21 @@ import 'schema.dart';
 
 part 'database.g.dart';
 
+/// Formats [when] the way every date and timestamp column in this database is
+/// written: `YYYY-MM-DD HH:MM:SS` in local time.
+///
+/// The desktop produces these with
+/// `datetime.now().strftime("%Y-%m-%d %H:%M:%S")`, and its queries compare
+/// and sort the column as text. An ISO-8601 string from `DateTime.toString()`
+/// would carry sub-second digits and sort differently against the rows
+/// already there, so the format is fixed here rather than left to each caller.
+String sqliteTimestamp(DateTime when) {
+  String two(int value) => value.toString().padLeft(2, '0');
+  return '${when.year.toString().padLeft(4, '0')}-${two(when.month)}-'
+      '${two(when.day)} ${two(when.hour)}:${two(when.minute)}:'
+      '${two(when.second)}';
+}
+
 /// Matches `PRAGMA user_version` on the desktop, which tracks its own
 /// migrations. Kept at the value the current schema corresponds to so that a
 /// database opened by either app agrees about how far it has been migrated.
