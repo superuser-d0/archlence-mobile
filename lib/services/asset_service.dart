@@ -28,6 +28,22 @@ import '../crypto/key_provider.dart';
 import '../data/database.dart';
 import '../money/financial_decimal.dart';
 
+/// The kinds of holding, as stored in `active_assets.asset_type`.
+///
+/// These are DATA, not labels: `quantity()` in the money layer picks its
+/// precision from them — four digits for gold, six for a share, eight for
+/// crypto — and the desktop's price fetcher decides how to resolve a symbol
+/// from them too. Translating one would change how much of a holding the app
+/// can even record.
+const List<String> assetTypes = [
+  'Hisse',
+  'Altın',
+  'Tahvil',
+  'Döviz',
+  'Kripto',
+  'Diğer',
+];
+
 /// A stored holding, decrypted.
 class Asset {
   const Asset({

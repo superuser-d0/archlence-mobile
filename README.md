@@ -17,9 +17,9 @@ service layer above them — accounts, the ledger, holdings, recurring payments,
 budgets and savings goals. Home, Cards and Assets read real data; the Tools
 grid opens a budget screen and a savings screen that do too.
 
-Writing has started: an account can be opened from the Cards tab and a
-transaction recorded from anywhere. A holding, a budget line and a savings
-goal each still have a tested service call and no form to call it from. Live price fetching is an open decision, so holdings are shown at what
+Writing has started: accounts, transactions and holdings can all be entered.
+A budget line and a savings goal each still have a tested service call and no
+form to call it from. Live price fetching is an open decision, so holdings are shown at what
 they cost and labelled as such.
 
 Every control is either live or visibly unavailable — there is no button that

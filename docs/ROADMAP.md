@@ -20,19 +20,18 @@ launches a budget screen and a savings screen that do too. Settings still
 renders literals, and nothing in the app WRITES except the two card switches
 on the Cards tab.
 
-413 unit tests and 12 device tests pass. `flutter analyze` is clean, and the
+429 unit tests and 12 device tests pass. `flutter analyze` is clean, and the
 app runs on the emulator.
 
 ## Pick up here
 
 In priority order. Each of these is a self-contained next session.
 
-**1. The remaining write flows — the thing that makes the app usable rather than readable.**
-Every service call is ready and no form calls it. In dependency order: add an
-account (nothing works without one), add a transaction, add a holding, add a
-budget line, open and fund a savings goal. `TransactionService.addTransaction`
-is also where subscription detection gets connected — the one piece of
-`transaction_service.py` still unported.
+**1. The remaining write flows.** Opening an account, recording a transaction
+and buying or selling a holding are done, and the pattern is settled — see
+"The write flows" under what is proven. What is left: a budget line, opening
+and funding a savings goal, paying card debt, and editing or cancelling a
+subscription. Each has a tested service call and no form.
 
 **2. Onboarding and sign-in.** Designed and not built. They gate the whole
 app and depend on nothing but the key provider, which is done.
@@ -310,6 +309,22 @@ quietly opening an empty account and telling the user their typo was ignored.
 The debt field on a card is labelled "Current debt", not "balance": the user
 enters what they OWE as a positive number and the service stores it negative.
 A "balance" label would invite a minus sign and double the debt.
+
+### Buying and selling a holding — `lib/screens/asset_sheets.dart`
+
+One thing here has to be said in words, because no layout says it: **"I
+already owned this" writes the holding WITHOUT taking the money from any
+account.** Getting that wrong either invents a purchase that never happened or
+loses one that did.
+
+Both forms show the arithmetic BEFORE anything is written — the purchase total,
+and the sale's proceeds against its cost with the gain or loss signed. That is
+not decoration: `parseAmountInput` makes a judgement on the user's behalf
+(`1.234` is a thousand), and this is where they can see what it decided.
+
+A credit card is not offered as somewhere to pay from. Charging a purchase to
+a card as debt is a separate product decision, which the service refuses to
+make silently and the form does not either.
 
 ### Recording a transaction — `lib/screens/add_transaction_sheet.dart`
 
@@ -699,14 +714,13 @@ surfaced only that way:
 
 ### 1. Write flows
 
-Opening an account and recording a transaction are done — see the two
-sections above for the pattern the rest should follow. What is left still has
-a tested service call and no form:
+Opening an account, recording a transaction, and buying or selling a holding
+are done — see the sections above for the pattern. What is left still has a
+tested service call and no form:
 
 | Action | Service call |
 | --- | --- |
 | Pay card debt | `AccountService.payCreditCardDebt` |
-| Buy / sell a holding | `AssetPurchaseService.createPurchase`, `AssetSaleService.sell` |
 | Add or edit a budget line | `BudgetService.savePlanItem` |
 | Open, fund or close a goal | `SavingsService.createGoal` / `depositToGoal` / `withdrawFromGoal` / `deleteGoal` |
 | Edit, skip or cancel a subscription | `RecurringService.updateSubscriptionAmount` / `skipNextOccurrence` / `cancelSubscription` |

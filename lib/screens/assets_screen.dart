@@ -11,6 +11,7 @@ import '../theme/obsidian_prime.dart';
 import '../ui/async_data.dart';
 import '../ui/money_format.dart';
 import '../widgets/savings_goal_card.dart';
+import 'asset_sheets.dart';
 import '../widgets/summary_row.dart';
 import '../widgets/surfaces.dart';
 
@@ -161,7 +162,8 @@ class _AssetsScreenState extends State<AssetsScreen> {
           AsyncData<_AssetsData>(
             future: _data!,
             placeholderHeight: 420,
-            builder: (context, data) => _AssetsBody(data: data),
+            builder: (context, data) =>
+                _AssetsBody(data: data, onChanged: _reload),
           ),
         ],
       ),
@@ -170,9 +172,12 @@ class _AssetsScreenState extends State<AssetsScreen> {
 }
 
 class _AssetsBody extends StatelessWidget {
-  const _AssetsBody({required this.data});
+  const _AssetsBody({required this.data, required this.onChanged});
 
   final _AssetsData data;
+
+  /// Called after a write, so the page re-reads what it just changed.
+  final VoidCallback onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -246,7 +251,13 @@ class _AssetsBody extends StatelessWidget {
                   ),
                   // AssetPurchaseService.createPurchase is ready and has no
                   // form; a disabled button says so.
-                  const IconButton(onPressed: null, icon: Icon(Icons.add)),
+                  IconButton(
+                    onPressed: () async {
+                      final bought = await showBuyAssetSheet(context);
+                      if (bought != null) onChanged();
+                    },
+                    icon: const Icon(Icons.add, color: ObsidianPalette.primary),
+                  ),
                 ],
               ),
               // The mockup says "Last updated: 23:00" beside a live price.
@@ -268,7 +279,7 @@ class _AssetsBody extends StatelessWidget {
                 )
               else
                 for (final holding in data.holdings) ...[
-                  _HoldingTile(holding: holding),
+                  _HoldingTile(holding: holding, onChanged: onChanged),
                   const SizedBox(height: Spacing.stackMd),
                 ],
             ],
@@ -833,9 +844,10 @@ class _SavingsGoals extends StatelessWidget {
 /// direction, so the column shows the cost of the position and carries no
 /// colour that would imply a gain or a loss.
 class _HoldingTile extends StatelessWidget {
-  const _HoldingTile({required this.holding});
+  const _HoldingTile({required this.holding, required this.onChanged});
 
   final Asset holding;
+  final VoidCallback onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -843,7 +855,12 @@ class _HoldingTile extends StatelessWidget {
     final cost = fiat(holding.purchasePrice * holding.quantity);
 
     return AppCard(
-      // No holding detail screen yet.
+      // No detail screen; tapping sells, which is the only thing there is to
+      // do with a holding today.
+      onTap: () async {
+        final sold = await showSellAssetSheet(context, holding);
+        if (sold != null) onChanged();
+      },
       child: Row(
         children: [
           Container(

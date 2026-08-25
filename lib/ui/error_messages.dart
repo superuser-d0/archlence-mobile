@@ -11,6 +11,7 @@
 library;
 
 import '../services/account_service.dart';
+import '../services/asset_service.dart';
 import '../services/transaction_service.dart';
 
 String accountErrorMessage(AccountError error) => switch (error.code) {
@@ -47,4 +48,10 @@ String transactionErrorMessage(TransactionError error) => switch (error.code) {
   TransactionErrorCode.installmentCountOutOfRange =>
     'Instalments have to be between 1 and 12.',
   TransactionErrorCode.negativeLimit => 'The limit cannot be negative.',
+};
+
+String assetErrorMessage(AssetError error) => switch (error.code) {
+  AssetErrorCode.invalidAmount =>
+    'Price and quantity both have to be numbers above zero.',
+  AssetErrorCode.assetNotFound => 'That holding no longer exists.',
 };
