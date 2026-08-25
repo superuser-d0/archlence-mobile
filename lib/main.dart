@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'app_services.dart';
 import 'app_shell.dart';
+import 'screens/onboarding_screen.dart';
 import 'theme/obsidian_prime.dart';
 
 void main() {
@@ -24,28 +25,41 @@ class ArchlenceApp extends StatefulWidget {
   State<ArchlenceApp> createState() => _ArchlenceAppState();
 }
 
-class _ArchlenceAppState extends State<ArchlenceApp> {
-  late final Future<AppServices> _startUp = _start();
+/// What the root shows once the services are open.
+enum _Destination { onboarding, shell }
 
-  Future<AppServices> _start() async {
+class _ArchlenceAppState extends State<ArchlenceApp> {
+  late final Future<(AppServices, _Destination)> _startUp = _start();
+  _Destination? _override;
+
+  Future<(AppServices, _Destination)> _start() async {
     final services = await AppServices.open();
     await services.startUp();
-    return services;
+    return (
+      services,
+      await services.isSetUp ? _Destination.shell : _Destination.onboarding,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<AppServices>(
+    return FutureBuilder<(AppServices, _Destination)>(
       future: _startUp,
       builder: (context, snapshot) {
-        final services = snapshot.data;
+        final resolved = snapshot.data;
         return ArchlenceRoot(
-          services: services,
+          services: resolved?.$1,
           theme: obsidianPrimeTheme(),
-          home: switch ((snapshot.error, services)) {
+          home: switch ((snapshot.error, resolved)) {
             (final Object error, _) => _StartUpFailed(error: error),
             (_, null) => const _Splash(),
-            (_, _) => const AppShell(),
+            (_, final r) =>
+              (_override ?? r!.$2) == _Destination.onboarding
+                  ? OnboardingScreen(
+                      onFinished: () =>
+                          setState(() => _override = _Destination.shell),
+                    )
+                  : const AppShell(),
           },
         );
       },

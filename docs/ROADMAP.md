@@ -20,15 +20,23 @@ launches a budget screen and a savings screen that do too. Settings still
 renders literals, and nothing in the app WRITES except the two card switches
 on the Cards tab.
 
-476 unit tests and 12 device tests pass. `flutter analyze` is clean, and the
+486 unit tests and 12 device tests pass. `flutter analyze` is clean, and the
 app runs on the emulator.
 
 ## Pick up here
 
 In priority order. Each of these is a self-contained next session.
 
-**1. Onboarding and sign-in.** Designed and not built. They gate the whole
-app and depend on nothing but the key provider, which is done.
+**1. A screen lock — needs a decision, not code.** Onboarding is built; a
+LOCK is a separate question and this port should not answer it alone. The data
+is already encrypted at rest under a Keystore-backed key, so an app-level PIN
+stored anywhere this app can reach would add ceremony rather than protection.
+The honest options are (a) nothing beyond the phone's own lock, (b) biometric
+/ device-credential re-auth on resume via `local_auth`, which is a new
+dependency, or (c) a passphrase that actually derives the key, which is the
+strongest and the only one that can lose the user's data outright. The desktop
+does not answer this either: its only passphrase guards a key-RECOVERY export,
+not entry to the app.
 
 **THE WRITE FLOWS ARE DONE.** Every service call the app has now has a form
 behind it, and no control is disabled for want of one. What remains is
@@ -305,6 +313,26 @@ quietly opening an empty account and telling the user their typo was ignored.
 The debt field on a card is labelled "Current debt", not "balance": the user
 enters what they OWE as a positive number and the service stores it negative.
 A "balance" label would invite a minus sign and double the debt.
+
+### The first run — `lib/screens/onboarding_screen.dart`
+
+**The gate asks the DATA, not a preference flag.** `hasAnyAccount()` is the
+desktop's own condition and the right one: "has the user seen a welcome
+screen" is the wrong question, because a flag would survive a wiped or
+restored-empty database and strand a fresh install on a dashboard of zeroes
+with no way to add anything.
+
+The last step CREATES an account rather than offering to. Nothing works
+without one — a transaction has nowhere to come from, a goal nothing to hold
+money aside from — so an onboarding that ends without one has not finished.
+
+Two things it says that a welcome screen is tempted to leave out. The
+local-first trade cuts both ways, so **"backups are on you"** sits beside "no
+account, no server". And the key page reports what the key provider ACTUALLY
+did: on a device whose store is unavailable it says the key is a file and that
+this is weaker, rather than implying Keystore protection that is not there.
+Verified on the emulator, where it reads "Android Keystore — held by the
+operating system".
 
 ### Paying card debt — `lib/screens/pay_debt_sheet.dart`
 
@@ -776,10 +804,24 @@ surfaced only that way:
 
 ## Open work
 
-### 1. Onboarding
+### 1. A screen lock — needs a decision
 
-Designed in the published mockup canvas and not built. They gate everything
-else in the app, and depend on nothing but the key provider, which is done.
+Onboarding is built. A LOCK is a different question, and one this port should
+not answer on its own: the data is already encrypted at rest under a
+Keystore-backed key, so an app-level PIN kept anywhere this app can reach is
+ceremony rather than protection.
+
+- **Nothing beyond the phone's own lock.** Defensible, and free.
+- **Biometric or device-credential re-auth on resume** (`local_auth`). Stops a
+  borrowed unlocked phone; a new dependency, and the key still opens without
+  it, so it is a UI gate rather than a cryptographic one.
+- **A passphrase that derives the key.** The only option that genuinely
+  strengthens anything — and the only one that can lose the data outright when
+  forgotten. The desktop's `key_recovery_service` exists precisely because
+  that risk needs a way out.
+
+The desktop does not answer this either: its only passphrase guards a
+key-RECOVERY export, not entry to the app.
 
 ### 2. Price fetching — needs a decision
 

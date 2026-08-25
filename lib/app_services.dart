@@ -92,6 +92,14 @@ class AppServices {
   /// say so.
   Future<SettleOutcome> startUp() => transactions.settleDueTransactions();
 
+  /// Whether the app has anything to show yet.
+  ///
+  /// The onboarding gate, and it asks the DATA rather than a preference
+  /// flag. "Has the user seen a welcome screen" is the wrong question: a flag
+  /// would survive a database that was wiped or restored empty, and strand a
+  /// fresh install on a dashboard of zeroes with no way to add anything.
+  Future<bool> get isSetUp => accounts.hasAnyAccount();
+
   Future<void> close() => db.close();
 }
 

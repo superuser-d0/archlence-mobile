@@ -21,8 +21,8 @@ Everything can be entered: accounts, transactions, holdings, savings goals,
 budget lines, card payments and changes to a subscription. No control in the
 app is disabled for want of a form.
 
-What is left before it can be used end to end is onboarding — there is no
-first-run flow, so a fresh install opens on an empty dashboard. Live price fetching is an open decision, so holdings are shown at what
+A fresh install opens on a first-run flow that explains the trade, reports
+where the encryption key actually ended up, and sets up the first account. Live price fetching is an open decision, so holdings are shown at what
 they cost and labelled as such.
 
 Every control is either live or visibly unavailable — there is no button that
