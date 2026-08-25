@@ -1,6 +1,12 @@
+import 'package:decimal/decimal.dart';
 import 'package:flutter/material.dart';
 
+import '../app_services.dart';
+import '../services/account_service.dart';
+import '../services/transaction_service.dart';
 import '../theme/obsidian_prime.dart';
+import '../ui/async_data.dart';
+import '../ui/money_format.dart';
 import '../widgets/summary_row.dart';
 import '../widgets/surfaces.dart';
 
@@ -12,30 +18,76 @@ class CardsScreen extends StatefulWidget {
   State<CardsScreen> createState() => _CardsScreenState();
 }
 
-class _CardsScreenState extends State<CardsScreen> {
-  static const _cards = <_BankCard>[
-    _BankCard(
-      name: 'World Platinum',
-      kind: 'Credit Card',
-      last4: '4826',
-      network: 'VISA',
-      availableLimit: '₺70.464,50',
-      currentDebt: '₺49.535,50',
-      usage: 0.41,
-    ),
-    _BankCard(
-      name: 'Bonus Flexi',
-      kind: 'Credit Card',
-      last4: '7391',
-      network: 'MC',
-      availableLimit: '₺63.423,27',
-      currentDebt: '₺11.576,73',
-      usage: 0.18,
-    ),
-  ];
+/// Everything this screen draws, read in one pass.
+///
+/// One load rather than a future per card: the summary row, the carousel and
+/// the account list all describe the SAME set of accounts, and loading them
+/// separately would let the header disagree with the list below it while the
+/// second query was still running.
+class _CardsData {
+  const _CardsData({
+    required this.cards,
+    required this.checkingAccounts,
+    required this.netWorth,
+    required this.holdingsCost,
+    required this.holdingsCount,
+  });
 
+  final List<Account> cards;
+  final List<Account> checkingAccounts;
+  final NetWorth netWorth;
+
+  /// What the holdings COST, not what they are worth. There is no price
+  /// source yet (roadmap open question 3), and labelling a cost basis as a
+  /// market value would be a lie the user cannot see through.
+  final Decimal holdingsCost;
+  final int holdingsCount;
+}
+
+class _CardsScreenState extends State<CardsScreen> {
   final _controller = PageController(viewportFraction: 0.88);
   int _index = 0;
+  Future<_CardsData>? _data;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _data ??= _load();
+  }
+
+  Future<_CardsData> _load() async {
+    final services = ServicesScope.of(context);
+    final accounts = await services.accounts.getAccounts();
+    final holdings = await services.assets.getAllAssets();
+
+    var cost = Decimal.zero;
+    for (final holding in holdings) {
+      cost += holding.purchasePrice * holding.quantity;
+    }
+
+    return _CardsData(
+      cards: [
+        for (final account in accounts)
+          if (account.accountType == AccountType.creditCard) account,
+      ],
+      checkingAccounts: [
+        for (final account in accounts)
+          if (account.accountType == AccountType.checking) account,
+      ],
+      netWorth: await services.accounts.getNetWorth(),
+      holdingsCost: cost,
+      holdingsCount: holdings.length,
+    );
+  }
+
+  void _reload() {
+    // A block body, not an arrow: `setState(() => _data = _load())` returns
+    // the assignment's value — a Future — and Flutter asserts on a setState
+    // callback that returns one.
+    setState(() {
+      _data = _load();
+    });
+  }
 
   @override
   void dispose() {
@@ -45,48 +97,92 @@ class _CardsScreenState extends State<CardsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
     final inset = MediaQuery.paddingOf(context);
-    final card = _cards[_index];
 
     // No floating action button here. The reference design carries one on top
     // of the "+ ADD" header button — two affordances for the same action —
     // and, floating, it lands squarely on the Freeze Card switch, making that
     // control untappable mid-scroll. "+ ADD" stays: it is discoverable, it
     // never covers anything, and it does not need scrolling to reach.
-    return ListView(
-      key: const PageStorageKey('cards'),
-      padding: EdgeInsets.only(
-        top: inset.top + Spacing.stackMd,
-        bottom: inset.bottom + Spacing.stackLg,
+    return RefreshIndicator(
+      onRefresh: () async => _reload(),
+      child: ListView(
+        key: const PageStorageKey('cards'),
+        padding: EdgeInsets.only(
+          top: inset.top + Spacing.stackMd,
+          bottom: inset.bottom + Spacing.stackLg,
+        ),
+        children: [
+          AsyncData<_CardsData>(
+            future: _data!,
+            placeholderHeight: 360,
+            builder: (context, data) => _CardsBody(
+              data: data,
+              controller: _controller,
+              index: _index.clamp(
+                0,
+                data.cards.isEmpty ? 0 : data.cards.length - 1,
+              ),
+              onIndexChanged: (i) => setState(() => _index = i),
+              onChanged: _reload,
+            ),
+          ),
+        ],
       ),
+    );
+  }
+}
+
+class _CardsBody extends StatelessWidget {
+  const _CardsBody({
+    required this.data,
+    required this.controller,
+    required this.index,
+    required this.onIndexChanged,
+    required this.onChanged,
+  });
+
+  final _CardsData data;
+  final PageController controller;
+  final int index;
+  final ValueChanged<int> onIndexChanged;
+  final VoidCallback onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    const horizontal = EdgeInsets.symmetric(
+      horizontal: Spacing.containerMargin,
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: Spacing.containerMargin,
-          ),
-          child: const SummaryRow(
+          padding: horizontal,
+          child: SummaryRow(
             stats: [
               SummaryStat(
                 label: 'Cash',
-                value: '₺706.919,03',
+                value: formatLira(data.netWorth.cash),
                 tone: SummaryTone.positive,
               ),
               SummaryStat(
                 label: 'Card Debt',
-                value: '₺61.112,23',
+                value: formatLira(data.netWorth.cardDebt),
                 tone: SummaryTone.negative,
               ),
-              SummaryStat(label: 'Net Worth', value: '₺645.806,80'),
+              SummaryStat(
+                label: 'Net Worth',
+                value: formatLira(data.netWorth.net),
+              ),
             ],
           ),
         ),
         const SizedBox(height: Spacing.stackLg),
 
         Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: Spacing.containerMargin,
-          ),
+          padding: horizontal,
           child: Row(
             children: [
               Expanded(child: Text('My Cards', style: text.titleLarge)),
@@ -96,57 +192,76 @@ class _CardsScreenState extends State<CardsScreen> {
         ),
         const SizedBox(height: Spacing.stackMd),
 
-        SizedBox(
-          height: 200,
-          child: PageView.builder(
-            controller: _controller,
-            itemCount: _cards.length,
-            onPageChanged: (i) => setState(() => _index = i),
-            itemBuilder: (context, i) => Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6),
-              child: _CardFace(card: _cards[i]),
+        if (data.cards.isEmpty)
+          const Padding(
+            padding: horizontal,
+            child: NothingYet(
+              message:
+                  'No credit cards yet. Add one to track its limit and '
+                  'debt here.',
+            ),
+          )
+        else ...[
+          SizedBox(
+            height: 200,
+            child: PageView.builder(
+              controller: controller,
+              itemCount: data.cards.length,
+              onPageChanged: onIndexChanged,
+              itemBuilder: (context, i) => Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                child: _CardFace(card: data.cards[i]),
+              ),
             ),
           ),
-        ),
-        const SizedBox(height: Spacing.stackMd),
-        _PageDots(count: _cards.length, active: _index),
-        const SizedBox(height: Spacing.stackMd),
-
-        Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: Spacing.containerMargin,
+          const SizedBox(height: Spacing.stackMd),
+          _PageDots(count: data.cards.length, active: index),
+          const SizedBox(height: Spacing.stackMd),
+          Padding(
+            padding: horizontal,
+            child: _CardDetail(
+              // Keyed on the account so switching cards rebuilds the detail
+              // against the new one instead of keeping the old card's state.
+              key: ValueKey(data.cards[index].id),
+              card: data.cards[index],
+              onChanged: onChanged,
+            ),
           ),
-          child: _CardDetail(card: card),
-        ),
+        ],
         const SizedBox(height: Spacing.sectionGap),
 
         Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: Spacing.containerMargin,
-          ),
+          padding: horizontal,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('My Accounts', style: text.titleLarge),
               const SizedBox(height: Spacing.stackMd),
-              const _AccountTile(
-                name: 'My Active Assets',
-                meta: '9/9 assets · Last known price',
-                balance: '₺572.190,00',
-                highlighted: true,
-              ),
-              const SizedBox(height: Spacing.stackMd),
-              const _AccountTile(
-                name: 'Everyday Account',
-                meta: 'Cash / Checking',
-                balance: '₺29.949,53',
-              ),
-              const SizedBox(height: Spacing.stackMd),
-              const _AccountTile(
-                name: 'Salary & Savings',
-                meta: 'Cash / Checking',
-                balance: '₺154.212,17',
-              ),
+              if (data.holdingsCount > 0) ...[
+                _AccountTile(
+                  name: 'My Active Assets',
+                  // Cost, not value: see _CardsData.holdingsCost.
+                  meta: '${data.holdingsCount} holdings · at cost',
+                  balance: formatLira(data.holdingsCost),
+                  highlighted: true,
+                ),
+                const SizedBox(height: Spacing.stackMd),
+              ],
+              if (data.checkingAccounts.isEmpty)
+                const NothingYet(
+                  message:
+                      'No cash accounts yet. Everything else in Archlence '
+                      'needs one to move money into or out of.',
+                )
+              else
+                for (final account in data.checkingAccounts) ...[
+                  _AccountTile(
+                    name: account.name,
+                    meta: 'Cash / Checking',
+                    balance: formatLira(account.balance),
+                  ),
+                  const SizedBox(height: Spacing.stackMd),
+                ],
             ],
           ),
         ),
@@ -155,30 +270,22 @@ class _CardsScreenState extends State<CardsScreen> {
   }
 }
 
-class _BankCard {
-  const _BankCard({
-    required this.name,
-    required this.kind,
-    required this.last4,
-    required this.network,
-    required this.availableLimit,
-    required this.currentDebt,
-    required this.usage,
-  });
-
-  final String name;
-  final String kind;
-  final String last4;
-  final String network;
-  final String availableLimit;
-  final String currentDebt;
-  final double usage;
-}
+/// The network's own name for a card, from the logo path stored on the row.
+///
+/// `Account.networkLogo` holds the desktop's asset path (`assets/visa.png`)
+/// because that string is a STORAGE contract the desktop reads back. Turning
+/// it into something to show is the screen's job, which is what this is.
+String cardNetworkLabel(String networkLogo) => switch (networkLogo) {
+  'assets/visa.png' => 'VISA',
+  'assets/mastercard.png' => 'MC',
+  'assets/troy.png' => 'TROY',
+  _ => '',
+};
 
 class _CardFace extends StatelessWidget {
   const _CardFace({required this.card});
 
-  final _BankCard card;
+  final Account card;
 
   @override
   Widget build(BuildContext context) {
@@ -208,7 +315,9 @@ class _CardFace extends StatelessWidget {
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
             child: Text(
-              '••••  ••••  ••••  ${card.last4}',
+              // maskedNumber already carries the placeholder form for a card
+              // whose digits were never entered.
+              card.maskedNumber.replaceAll('*', '•'),
               maxLines: 1,
               style: text.bodyLarge?.copyWith(letterSpacing: 2),
             ),
@@ -227,7 +336,7 @@ class _CardFace extends StatelessWidget {
                 ),
               ),
               Text(
-                card.network,
+                cardNetworkLabel(card.networkLogo),
                 style: text.bodyLarge?.copyWith(
                   fontWeight: FontWeight.w700,
                   fontStyle: FontStyle.italic,
@@ -271,22 +380,51 @@ class _PageDots extends StatelessWidget {
 }
 
 class _CardDetail extends StatefulWidget {
-  const _CardDetail({required this.card});
+  const _CardDetail({required this.card, required this.onChanged, super.key});
 
-  final _BankCard card;
+  final Account card;
+
+  /// Called after a control writes, so the summary row and the carousel are
+  /// re-read from the same source the switch just changed.
+  final VoidCallback onChanged;
 
   @override
   State<_CardDetail> createState() => _CardDetailState();
 }
 
 class _CardDetailState extends State<_CardDetail> {
-  bool _onlineShopping = true;
-  bool _frozen = false;
+  /// Set while a switch is being written, so a second tap cannot race the
+  /// first — the switch shows the value it is moving to meanwhile.
+  bool? _pendingFrozen;
+  bool? _pendingOnline;
+
+  Future<void> _setFrozen(bool value) async {
+    setState(() => _pendingFrozen = value);
+    await ServicesScope.of(context).accounts
+        .setCardFrozen(widget.card.id, value);
+    if (!mounted) return;
+    setState(() => _pendingFrozen = null);
+    widget.onChanged();
+  }
+
+  Future<void> _setOnlinePayments(bool value) async {
+    setState(() => _pendingOnline = value);
+    await ServicesScope.of(context).accounts
+        .setOnlinePayments(widget.card.id, value);
+    if (!mounted) return;
+    setState(() => _pendingOnline = null);
+    widget.onChanged();
+  }
 
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final card = widget.card;
+    // A limit of zero means "none recorded", not "none left" — the same rule
+    // the spending check applies — so there is no usage bar to draw.
+    final usage = card.creditLimit > Decimal.zero
+        ? (card.debt / card.creditLimit).toDouble().clamp(0.0, 1.0)
+        : 0.0;
 
     return AppCard(
       padding: const EdgeInsets.all(Spacing.gutter),
@@ -318,7 +456,7 @@ class _CardDetailState extends State<_CardDetail> {
                   borderRadius: BorderRadius.circular(Radii.full),
                 ),
                 child: Text(
-                  card.kind.toUpperCase(),
+                  'CREDIT CARD',
                   style: text.labelMedium?.copyWith(
                     fontSize: 10,
                     color: ObsidianPalette.onSurfaceVariant,
@@ -336,13 +474,13 @@ class _CardDetailState extends State<_CardDetail> {
               Expanded(
                 child: _Figure(
                   label: 'Available Limit',
-                  value: card.availableLimit,
+                  value: formatLira(card.availableLimit),
                 ),
               ),
               Expanded(
                 child: _Figure(
                   label: 'Current Debt',
-                  value: card.currentDebt,
+                  value: formatLira(card.debt),
                   color: ObsidianPalette.error,
                   alignEnd: true,
                 ),
@@ -353,7 +491,7 @@ class _CardDetailState extends State<_CardDetail> {
           ClipRRect(
             borderRadius: BorderRadius.circular(Radii.full),
             child: LinearProgressIndicator(
-              value: card.usage,
+              value: usage,
               minHeight: 5,
               backgroundColor: ObsidianPalette.surfaceContainerHigh,
               valueColor: const AlwaysStoppedAnimation(ObsidianPalette.primary),
@@ -367,26 +505,21 @@ class _CardDetailState extends State<_CardDetail> {
             icon: Icons.public,
             title: 'Online Shopping Preference',
             subtitle: 'Stored as a preference only',
-            value: _onlineShopping,
-            onChanged: (v) => setState(() => _onlineShopping = v),
+            value: _pendingOnline ?? card.onlinePaymentsEnabled,
+            onChanged: _setOnlinePayments,
           ),
           _ControlRow(
             icon: Icons.ac_unit,
             title: 'Freeze Card',
-            value: _frozen,
-            onChanged: (v) => setState(() => _frozen = v),
+            subtitle: 'Blocks new spending, not debt payments',
+            value: _pendingFrozen ?? card.isFrozen,
+            onChanged: _setFrozen,
           ),
           const SizedBox(height: Spacing.stackMd),
 
           const SectionLabel('Recent Transactions'),
           const SizedBox(height: Spacing.stackSm),
-          const _TxRow(date: '08-06', name: 'Fuel', amount: '-₺1.893,95'),
-          const _TxRow(date: '08-06', name: 'Team lunch', amount: '-₺420,00'),
-          const _TxRow(
-            date: '08-05',
-            name: 'Lunch or dinner',
-            amount: '-₺402,19',
-          ),
+          _RecentTransactions(accountId: card.id),
           const SizedBox(height: Spacing.stackMd),
 
           Row(
@@ -505,22 +638,66 @@ class _ControlRow extends StatelessWidget {
   }
 }
 
-class _TxRow extends StatelessWidget {
-  const _TxRow({required this.date, required this.name, required this.amount});
+/// The last few completed rows on one account.
+///
+/// Its own loader rather than part of the screen's single read: the statement
+/// changes only when the account it belongs to changes, and folding it into
+/// the page load would re-decrypt every row each time a switch is flipped.
+class _RecentTransactions extends StatefulWidget {
+  const _RecentTransactions({required this.accountId});
 
-  final String date;
-  final String name;
-  final String amount;
+  final int accountId;
+
+  @override
+  State<_RecentTransactions> createState() => _RecentTransactionsState();
+}
+
+class _RecentTransactionsState extends State<_RecentTransactions> {
+  Future<List<LedgerEntry>>? _entries;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _entries ??= ServicesScope.of(context).transactions
+        .getRecentForAccount(widget.accountId);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AsyncData<List<LedgerEntry>>(
+      future: _entries!,
+      placeholderHeight: 72,
+      builder: (context, entries) {
+        if (entries.isEmpty) {
+          return const NothingYet(message: 'Nothing on this card yet.');
+        }
+        return Column(
+          children: [for (final entry in entries) _TxRow(entry: entry)],
+        );
+      },
+    );
+  }
+}
+
+class _TxRow extends StatelessWidget {
+  const _TxRow({required this.entry});
+
+  final LedgerEntry entry;
 
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    // Income on a card is a payment against the debt, so it reads as a
+    // credit; everything else grows what is owed.
+    final isCredit = entry.type == 'income' || entry.type == 'payment';
+    final amount = entry.amount;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
           Text(
-            date,
+            formatStoredDayMonth(entry.date),
             style: text.bodySmall?.copyWith(
               color: ObsidianPalette.onSurfaceVariant,
             ),
@@ -528,16 +705,33 @@ class _TxRow extends StatelessWidget {
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              name,
+              // The service returns what was stored and invents no fallback,
+              // so the category stands in for a description left blank.
+              entry.description.isNotEmpty ? entry.description : entry.category,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: text.bodySmall,
             ),
           ),
-          Text(
-            amount,
-            style: text.bodySmall?.copyWith(color: ObsidianPalette.error),
-          ),
+          if (amount == null)
+            // Never a zero: this row's amount could not be decrypted, and
+            // printing 0,00 ₺ would present that as a fact.
+            Text(
+              'unreadable',
+              style: text.bodySmall?.copyWith(
+                fontStyle: FontStyle.italic,
+                color: ObsidianPalette.error,
+              ),
+            )
+          else
+            Text(
+              '${isCredit ? '+' : '-'}${formatLira(amount)}',
+              style: text.bodySmall?.copyWith(
+                color: isCredit
+                    ? ObsidianPalette.tertiary
+                    : ObsidianPalette.error,
+              ),
+            ),
         ],
       ),
     );

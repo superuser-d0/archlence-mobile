@@ -18,6 +18,15 @@ import 'schema.dart';
 
 part 'database.g.dart';
 
+/// Where this app keeps everything it owns: the database and the key file
+/// alongside it.
+///
+/// One function rather than a `getApplicationDocumentsDirectory()` call at
+/// each site — the two must not be able to drift apart, since a key beside
+/// the wrong database opens nothing.
+Future<String> applicationDataDirectory() async =>
+    (await getApplicationDocumentsDirectory()).path;
+
 /// Formats [when] the way every date and timestamp column in this database is
 /// written: `YYYY-MM-DD HH:MM:SS` in local time.
 ///
@@ -49,10 +58,9 @@ class ArchlenceDatabase extends _$ArchlenceDatabase {
 
   /// Opens the app's own database file under the platform data directory.
   static Future<ArchlenceDatabase> open() async {
-    final directory = await getApplicationDocumentsDirectory();
     return ArchlenceDatabase(
       NativeDatabase.createInBackground(
-        File(p.join(directory.path, 'finance.db')),
+        File(p.join(await applicationDataDirectory(), 'finance.db')),
       ),
     );
   }

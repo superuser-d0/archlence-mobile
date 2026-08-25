@@ -1,10 +1,22 @@
+import 'package:decimal/decimal.dart';
 import 'package:flutter/material.dart';
 
+import '../app_services.dart';
+import '../services/account_service.dart';
+import '../services/recurring_service.dart';
 import '../theme/obsidian_prime.dart';
+import '../ui/async_data.dart';
+import '../ui/money_format.dart';
 import '../widgets/balance_ring.dart';
 import '../widgets/surfaces.dart';
 
-/// Dashboard. Figures are placeholders until the data layer lands.
+/// Dashboard.
+///
+/// Two of its cards — the forecast and the health score — are drawn WITHOUT
+/// figures. Both come from the desktop's dashboard/insight services, which
+/// this port has not reached; the mockup fills them with numbers, and showing
+/// those would be inventing financial advice. They say what they are waiting
+/// for instead.
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -13,8 +25,21 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  static const _periods = ['Today', '1 Week', '1 Month', '1 Year'];
-  int _period = 3;
+  Future<_HomeData>? _data;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _data ??= _load();
+  }
+
+  Future<_HomeData> _load() async {
+    final services = ServicesScope.of(context);
+    return _HomeData(
+      netWorth: await services.accounts.getNetWorth(),
+      subscriptions: await services.recurring.getActiveRecurringPayments(),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,80 +47,141 @@ class _HomeScreenState extends State<HomeScreen> {
     // AppShell folds the translucent header and nav bar into this inset.
     final inset = MediaQuery.paddingOf(context);
 
-    return ListView(
-      key: const PageStorageKey('home'),
-      padding: EdgeInsets.fromLTRB(
-        Spacing.containerMargin,
-        inset.top + Spacing.stackMd,
-        Spacing.containerMargin,
-        inset.bottom + Spacing.stackLg,
-      ),
-      children: [
-        const _SearchField(),
-        const SizedBox(height: Spacing.stackMd),
-        const Center(child: _WalletSelector()),
-        const SizedBox(height: Spacing.stackLg),
+    return RefreshIndicator(
+      onRefresh: () async {
+        // A block body, not an arrow: an arrow would hand setState a closure
+        // returning a Future, which Flutter asserts on.
+        setState(() {
+          _data = _load();
+        });
+      },
+      child: ListView(
+        key: const PageStorageKey('home'),
+        padding: EdgeInsets.fromLTRB(
+          Spacing.containerMargin,
+          inset.top + Spacing.stackMd,
+          Spacing.containerMargin,
+          inset.bottom + Spacing.stackLg,
+        ),
+        children: [
+          const _SearchField(),
+          const SizedBox(height: Spacing.stackMd),
+          const Center(child: _WalletSelector()),
+          const SizedBox(height: Spacing.stackLg),
 
-        const Center(
+          AsyncData<_HomeData>(
+            future: _data!,
+            placeholderHeight: 320,
+            builder: (context, data) => _HomeBody(data: data),
+          ),
+          const SizedBox(height: Spacing.sectionGap),
+
+          const _ForecastCard(),
+          const SizedBox(height: Spacing.sectionGap),
+
+          const _HealthScoreCard(),
+          const SizedBox(height: Spacing.sectionGap),
+
+          Row(
+            spacing: Spacing.stackSm,
+            children: [
+              const Icon(
+                Icons.autorenew,
+                size: 20,
+                color: ObsidianPalette.tertiary,
+              ),
+              Text('My Active Subscriptions', style: text.titleLarge),
+            ],
+          ),
+          const SizedBox(height: Spacing.stackMd),
+          AsyncData<_HomeData>(
+            future: _data!,
+            placeholderHeight: 96,
+            builder: (context, data) => _Subscriptions(data.subscriptions),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HomeData {
+  const _HomeData({required this.netWorth, required this.subscriptions});
+
+  final NetWorth netWorth;
+  final List<RecurringPayment> subscriptions;
+}
+
+class _HomeBody extends StatelessWidget {
+  const _HomeBody({required this.data});
+
+  final _HomeData data;
+
+  @override
+  Widget build(BuildContext context) {
+    final worth = data.netWorth;
+    // How much of the ring is filled: cash against everything the user holds,
+    // so a debt-free account reads full. With nothing at all it stays empty
+    // rather than dividing by zero into a full ring.
+    final total = worth.cash + worth.cardDebt;
+    final progress = total > Decimal.zero
+        ? (worth.cash / total).toDouble().clamp(0.0, 1.0)
+        : 0.0;
+
+    return Column(
+      children: [
+        Center(
           child: BalanceRing(
-            amount: '334.401,80 ₺',
-            changeLabel: '-%6.2',
-            changeIsPositive: false,
-            periodLabel: 'Change (1 Year)',
-            progress: 0.75,
+            amount: formatLira(worth.net),
+            // The change over a period needs the dashboard's period queries,
+            // which are not ported. An empty label draws no figure rather
+            // than a made-up one.
+            changeLabel: '',
+            changeIsPositive: worth.net >= Decimal.zero,
+            periodLabel: 'Net Worth',
+            progress: progress,
           ),
         ),
         const SizedBox(height: Spacing.stackLg),
-
-        _PeriodSelector(
-          periods: _periods,
-          selected: _period,
-          onChanged: (index) => setState(() => _period = index),
-        ),
-        const SizedBox(height: Spacing.stackMd),
-
         Row(
           spacing: Spacing.gutter,
-          children: const [
-            Expanded(
-              child: _MiniStat(label: '1 Year', value: '-22.131,50 ₺'),
-            ),
-            Expanded(
-              child: _MiniStat(label: 'Total', value: '334.401,80 ₺'),
-            ),
-          ],
-        ),
-        const SizedBox(height: Spacing.sectionGap),
-
-        const _ForecastCard(),
-        const SizedBox(height: Spacing.sectionGap),
-
-        const _HealthScoreCard(),
-        const SizedBox(height: Spacing.sectionGap),
-
-        Row(
-          spacing: Spacing.stackSm,
           children: [
-            const Icon(
-              Icons.autorenew,
-              size: 20,
-              color: ObsidianPalette.tertiary,
+            Expanded(
+              child: _MiniStat(label: 'Cash', value: formatLira(worth.cash)),
             ),
-            Text('My Active Subscriptions', style: text.titleLarge),
+            Expanded(
+              child: _MiniStat(
+                label: 'Card Debt',
+                value: formatLira(worth.cardDebt),
+              ),
+            ),
           ],
         ),
-        const SizedBox(height: Spacing.stackMd),
-        const _SubscriptionCard(
-          name: 'Rent',
-          amount: '₺30.000,00',
-          renews: 'Renews on the 7th of each month',
-        ),
-        const SizedBox(height: Spacing.stackMd),
-        const _SubscriptionCard(
-          name: 'Fiber internet',
-          amount: '₺690,00',
-          renews: 'Renews on the 9th of each month',
-        ),
+      ],
+    );
+  }
+}
+
+class _Subscriptions extends StatelessWidget {
+  const _Subscriptions(this.payments);
+
+  final List<RecurringPayment> payments;
+
+  @override
+  Widget build(BuildContext context) {
+    if (payments.isEmpty) {
+      return const NothingYet(
+        message:
+            'Nothing recurring yet. A subscription paid by card is '
+            'noticed automatically and lands here.',
+      );
+    }
+    return Column(
+      children: [
+        for (final payment in payments) ...[
+          _SubscriptionCard(payment: payment),
+          const SizedBox(height: Spacing.stackMd),
+        ],
       ],
     );
   }
@@ -157,65 +243,6 @@ class _WalletSelector extends StatelessWidget {
   }
 }
 
-class _PeriodSelector extends StatelessWidget {
-  const _PeriodSelector({
-    required this.periods,
-    required this.selected,
-    required this.onChanged,
-  });
-
-  final List<String> periods;
-  final int selected;
-  final ValueChanged<int> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: ObsidianPalette.surfaceContainer,
-        borderRadius: BorderRadius.circular(Radii.full),
-        border: Border.all(color: ObsidianPalette.cardStroke),
-      ),
-      child: Row(
-        children: [
-          for (var i = 0; i < periods.length; i++)
-            Expanded(
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => onChanged(i),
-                child: Container(
-                  // 44px minimum touch target.
-                  height: 36,
-                  alignment: Alignment.center,
-                  decoration: i == selected
-                      ? BoxDecoration(
-                          color: ObsidianPalette.surfaceContainerHigh,
-                          borderRadius: BorderRadius.circular(Radii.full),
-                          border: Border.all(color: ObsidianPalette.cardStroke),
-                        )
-                      : null,
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      periods[i],
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        letterSpacing: 0,
-                        color: i == selected
-                            ? ObsidianPalette.onSurface
-                            : ObsidianPalette.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
 class _MiniStat extends StatelessWidget {
   const _MiniStat({required this.label, required this.value});
 
@@ -249,68 +276,117 @@ class _MiniStat extends StatelessWidget {
   }
 }
 
+/// The forecast card, with its analysis missing rather than invented.
+///
+/// The mockup fills this with a spending trend, a top category and a
+/// month-end projection. Every one of those comes from the desktop's
+/// `insights_service` / `projection_service` / `dashboard_period_service`,
+/// none of which is ported — so the numbers in the mockup are decoration, and
+/// drawing them would be presenting made-up financial advice as analysis.
 class _ForecastCard extends StatelessWidget {
   const _ForecastCard();
 
   @override
   Widget build(BuildContext context) {
+    return const _PendingInsightCard(
+      icon: Icons.trending_up,
+      accent: ObsidianPalette.tertiary,
+      title: 'Algorithmic Forecast',
+      message:
+          'Spending trends and the month-end projection arrive with the '
+          'insight and projection services.',
+      showsGradientEdge: true,
+    );
+  }
+}
+
+/// The health-score card, likewise unscored.
+///
+/// The score is a weighted read of savings rate, debt-to-income and expense
+/// volatility — `financial_metrics_service` on the desktop. A number here
+/// with nothing behind it would be the most confidently wrong thing on the
+/// screen.
+class _HealthScoreCard extends StatelessWidget {
+  const _HealthScoreCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return const _PendingInsightCard(
+      icon: Icons.monitor_heart_outlined,
+      accent: ObsidianPalette.primary,
+      title: 'Financial Health Score',
+      message:
+          'Scoring needs savings rate, debt-to-income and expense '
+          'volatility, which the metrics service will supply.',
+    );
+  }
+}
+
+/// A card that names what it is waiting for instead of drawing a figure.
+class _PendingInsightCard extends StatelessWidget {
+  const _PendingInsightCard({
+    required this.icon,
+    required this.accent,
+    required this.title,
+    required this.message,
+    this.showsGradientEdge = false,
+  });
+
+  final IconData icon;
+  final Color accent;
+  final String title;
+  final String message;
+  final bool showsGradientEdge;
+
+  @override
+  Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final card = AppCard(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            spacing: 12,
+            children: [
+              Icon(icon, size: 20, color: accent),
+              Expanded(child: Text(title, style: text.titleLarge)),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: ObsidianPalette.surfaceContainerHigh,
+                  borderRadius: BorderRadius.circular(Radii.full),
+                ),
+                child: Text(
+                  'NOT YET',
+                  style: text.labelMedium?.copyWith(
+                    fontSize: 10,
+                    color: ObsidianPalette.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: Spacing.stackMd),
+          Text(
+            message,
+            style: text.bodySmall?.copyWith(
+              color: ObsidianPalette.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (!showsGradientEdge) return card;
     return ClipRRect(
       borderRadius: BorderRadius.circular(Radii.lg),
       child: Stack(
         children: [
-          AppCard(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  spacing: 12,
-                  children: [
-                    const Icon(
-                      Icons.trending_up,
-                      size: 20,
-                      color: ObsidianPalette.tertiary,
-                    ),
-                    Text('Algorithmic Forecast', style: text.titleLarge),
-                  ],
-                ),
-                const SizedBox(height: Spacing.stackMd),
-                Text(
-                  'Compared with the previous period, your spending this '
-                  'month %9.1 increased.',
-                  style: text.bodySmall?.copyWith(
-                    color: ObsidianPalette.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: Spacing.stackSm),
-                Text(
-                  'Highest-spending category: Asset Purchase.',
-                  style: text.bodySmall?.copyWith(
-                    color: ObsidianPalette.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: Spacing.stackSm),
-                Text(
-                  'Your net savings rate this month: %-2.5.',
-                  style: text.bodySmall?.copyWith(
-                    color: ObsidianPalette.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: Spacing.stackMd),
-                const Divider(),
-                const SizedBox(height: Spacing.stackMd),
-                Text(
-                  'Based on the last 3 months of statistics, you are expected '
-                  'to have 359.843,69 ₺ left at the end of this month; you '
-                  'could consider putting it toward an investment.',
-                  style: text.bodySmall?.copyWith(
-                    color: ObsidianPalette.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-          ),
+          card,
           // The tertiary-to-primary hairline along the card's top edge.
           Positioned(
             top: 0,
@@ -334,84 +410,17 @@ class _ForecastCard extends StatelessWidget {
   }
 }
 
-class _HealthScoreCard extends StatelessWidget {
-  const _HealthScoreCard();
-
-  @override
-  Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
-    return AppCard(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            spacing: 12,
-            children: [
-              const Icon(
-                Icons.monitor_heart_outlined,
-                size: 20,
-                color: ObsidianPalette.primary,
-              ),
-              Text('Financial Health Score', style: text.titleLarge),
-            ],
-          ),
-          const SizedBox(height: Spacing.stackMd),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            spacing: 12,
-            children: [
-              Text(
-                '72',
-                style: text.displayLarge?.copyWith(
-                  color: ObsidianPalette.tertiary,
-                ),
-              ),
-              Text('Good', style: text.bodyLarge),
-            ],
-          ),
-          const SizedBox(height: Spacing.stackMd),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(Radii.full),
-            child: LinearProgressIndicator(
-              value: 0.72,
-              minHeight: 6,
-              backgroundColor: ObsidianPalette.surfaceContainerHigh,
-              valueColor: const AlwaysStoppedAnimation(
-                ObsidianPalette.tertiary,
-              ),
-            ),
-          ),
-          const SizedBox(height: Spacing.stackSm),
-          Text(
-            'Savings rate %21   ·   Debt/income %15   ·   '
-            'Expense volatility %41',
-            style: text.labelMedium?.copyWith(
-              letterSpacing: 0,
-              color: ObsidianPalette.onSurfaceVariant,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _SubscriptionCard extends StatelessWidget {
-  const _SubscriptionCard({
-    required this.name,
-    required this.amount,
-    required this.renews,
-  });
+  const _SubscriptionCard({required this.payment});
 
-  final String name;
-  final String amount;
-  final String renews;
+  final RecurringPayment payment;
 
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final amount = payment.amount;
+    final name = payment.name;
+
     return AppCard(
       color: ObsidianPalette.tertiary.withValues(alpha: 0.08),
       child: Column(
@@ -427,21 +436,38 @@ class _SubscriptionCard extends StatelessWidget {
               const SizedBox(width: Spacing.stackSm),
               Expanded(
                 child: Text(
-                  name,
-                  style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                  // A name that will not decrypt is said so, not replaced
+                  // with a plausible-looking placeholder.
+                  name ?? 'Unreadable subscription',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: text.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    fontStyle: name == null ? FontStyle.italic : null,
+                    color: name == null ? ObsidianPalette.error : null,
+                  ),
                 ),
               ),
-              Text(
-                amount,
-                style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
-              ),
+              if (amount == null)
+                Text(
+                  'unreadable',
+                  style: text.bodySmall?.copyWith(
+                    fontStyle: FontStyle.italic,
+                    color: ObsidianPalette.error,
+                  ),
+                )
+              else
+                Text(
+                  formatLira(amount),
+                  style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+                ),
             ],
           ),
           const SizedBox(height: 4),
           Padding(
             padding: const EdgeInsets.only(left: 26),
             child: Text(
-              renews,
+              'Next on ${formatStoredDate(payment.nextDueDate)}',
               style: text.bodySmall?.copyWith(
                 color: ObsidianPalette.onSurfaceVariant,
               ),

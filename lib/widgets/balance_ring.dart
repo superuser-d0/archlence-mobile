@@ -7,6 +7,8 @@ import 'surfaces.dart';
 
 /// The dashboard's headline: total balance inside a progress ring.
 ///
+/// [changeLabel] may be empty, and then no change chip is drawn at all.
+///
 /// The amount is wrapped in a [FittedBox]. The reference design sets it at a
 /// fixed 40px, which already overflows the ring at "334.401,80 ₺" and breaks
 /// outright once a balance reaches seven or eight digits — a real prospect in
@@ -61,8 +63,16 @@ class BalanceRing extends StatelessWidget {
                   fit: BoxFit.scaleDown,
                   child: Text(amount, maxLines: 1, style: text.displayLarge),
                 ),
-                const SizedBox(height: 8),
-                TrendChip(label: changeLabel, positive: changeIsPositive),
+                // An empty label means there is no change to report — the
+                // period figures come from services this port has not
+                // reached. The chip is dropped entirely rather than drawn
+                // empty: on the emulator a bare green pill with an upward
+                // arrow and no number reads as a gain, which is worse than
+                // saying nothing.
+                if (changeLabel.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  TrendChip(label: changeLabel, positive: changeIsPositive),
+                ],
                 const SizedBox(height: 6),
                 Text(
                   periodLabel,

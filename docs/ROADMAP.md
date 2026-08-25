@@ -15,12 +15,11 @@ and the whole service layer on top: accounts, the ledger, holdings (portfolio
 CRUD, buying, selling), recurring payments, the monthly budget and savings
 goals. Live price fetching is the one piece left out — see open question 3.
 
-**Not done:** the wiring. Every screen still renders hard-coded figures; no
-screen reads the database yet. The data to fill Home, Cards and Assets now
-exists behind a service call — Assets minus a current price, which nothing
-supplies yet.
+**Wired so far:** Home and Cards read real data. Assets, Tools and Settings
+still render literals.
 
-314 unit tests and 4 device tests pass. `flutter analyze` is clean.
+340 unit tests and 7 device tests pass. `flutter analyze` is clean, and the
+app runs on the emulator.
 
 ## Settled decisions
 
@@ -192,6 +191,67 @@ file, which a unit test cannot stage.
 
 The acceptance scenario the desktop encodes — a card spend lowering net worth
 by exactly its amount — needs the transaction service and is not written yet.
+
+### The screen–service join — `lib/app_services.dart`, `lib/ui/`
+
+`AppServices` builds one graph over ONE database connection and ONE
+`FieldCrypto`: the first holds a write lock, the second holds the decryption
+key, and a second of either defeats both. `ServicesScope` carries it down the
+tree; screens read it in `didChangeDependencies` and keep a `Future` they can
+replace to reload.
+
+Start-up opens the database and key store, then calls `settleDueTransactions`
+BEFORE the first draw. Nothing else posts a future-dated transaction, so
+without that call a scheduled rent or salary is recorded and never arrives —
+and drawing first would show a balance about to change on its own.
+
+`AsyncData` is the one place that decides what a screen shows while loading
+and when a load fails, and it exists to enforce a single rule: **a failure is
+never drawn as a zero.** Every service refuses to substitute a plausible
+number for one it could not read; a screen that caught the exception and
+rendered `0,00 ₺` would undo all of it at the last step. `DataUnavailable` and
+`NothingYet` stay separate for the same reason — "we could not read what you
+added" and "you have not added anything" call for different reactions.
+
+Two things on the dashboard are deliberately drawn WITHOUT figures. The
+forecast and health-score cards come from the desktop's insight, projection
+and metrics services, none of them ported; the mockup fills both with numbers,
+and showing those would be presenting invented financial advice as analysis.
+They say what they are waiting for and carry a `NOT YET` chip.
+
+`lib/ui/money_format.dart` is presentation only, and must NEVER converge with
+`formatWithThousands` in `asset_service.dart`. That one produces the Western
+`1,234.56` that goes INTO a stored `transactions.description` and has to match
+what the desktop writes; this one produces `1.234,56 ₺` for a screen. A test
+pins both against each other so a well-meaning unification fails loudly.
+
+**Proof:** `test/screens/` (15 tests) drives the real service graph over an
+in-memory database — no stubs, because what is being tested IS the join.
+`integration_test/app_device_test.dart` (3 tests) runs the same screens
+against the real database file and the real Android Keystore, which is the
+only way to know that a figure encrypted through the platform store comes back
+the same on screen, and that start-up really does post what has fallen due.
+
+Broken to check for teeth: Turkish grouping switched to Western, trailing
+zeros dropped, the minus sign lost, the percent sign moved after the number, a
+bad date stamp rendered anyway, the statement zeroing an unreadable amount,
+the summary showing cash where net worth belongs, the freeze switch not
+writing through, a fixed network label, limit and debt swapped, holdings
+relabelled as a market value, empty states drawn as nothing, the ring showing
+cash, an unreadable subscription given a plausible placeholder, and the
+insight cards inventing a score again.
+
+**Three defects surfaced only by running it**, which is the habit's whole
+point:
+
+- `setState(() => _data = _load())` — an arrow body returns the assignment's
+  value, a `Future`, and Flutter asserts on that. It was in two screens.
+- The balance ring drew its change chip even when there was nothing to report,
+  so the emulator showed a bare green pill with an upward arrow and no number:
+  it reads as a gain. The chip is now omitted entirely when the label is empty.
+- The device test's own first draft flipped a completed transaction to
+  `pending` after the fact, leaving the balance already applied — settling then
+  added it twice and the test would have passed on a doubled figure.
 
 ### Savings goals — `lib/services/savings_service.dart`
 
@@ -503,19 +563,25 @@ the code itself.
 
 ### 2. Wire the screens to real data
 
-**This is now the critical path** — nothing else blocks it, and nothing the
-service layer produces reaches a user until it is done.
+Home and Cards are done, and so is the infrastructure the rest needs:
+`AppServices`, `ServicesScope`, `AsyncData` and the money formatter. Start-up
+settles what has fallen due.
 
-Every figure on every screen is currently a literal. Home, Cards and the card
-statement no longer wait on anything: `AccountService` and `TransactionService`
-already return what they need. The Assets tab can show holdings, cost basis
-and quantity now too — what it cannot show is a live P/L, which needs open
-question 3 settled first. Tools covers the budget and savings screens, both of
-which have their whole service behind them.
+**Still literals:**
 
-Note that nothing calls `settleDueTransactions` yet. Until something does — on
-app start is the desktop's answer — a future-dated transaction is recorded and
-never posts.
+- **Assets.** Holdings, cost basis and quantity are all available through
+  `AssetService`; what it cannot show is a live P/L, which waits on open
+  question 3. The tab should show cost until then, labelled as cost.
+- **Tools.** The budget and savings screens both have their whole service
+  behind them — `BudgetService` and `SavingsService` — and nothing blocks
+  them.
+- **Settings.** Key-protection status is available from `KeyProvider`; the
+  rest of that screen is backup/restore and i18n, which are open work 5.
+
+**No screen WRITES yet** beyond the two card switches. Adding an account, a
+transaction, a holding, a budget line or a savings goal all have their service
+call ready and no form to call it from — which is the next thing that makes
+the app usable rather than merely readable.
 
 ### 3. Price fetching — needs a decision
 
