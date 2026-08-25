@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import 'app_services.dart';
 import 'app_shell.dart';
+import 'screens/locked_screen.dart';
 import 'screens/onboarding_screen.dart';
+import 'security/screen_lock.dart';
 import 'theme/obsidian_prime.dart';
 
 void main() {
@@ -53,16 +55,39 @@ class _ArchlenceAppState extends State<ArchlenceApp> {
           home: switch ((snapshot.error, resolved)) {
             (final Object error, _) => _StartUpFailed(error: error),
             (_, null) => const _Splash(),
-            (_, final r) =>
-              (_override ?? r!.$2) == _Destination.onboarding
+            (_, final r) => _Gated(
+              lock: r!.$1.screenLock,
+              child: (_override ?? r.$2) == _Destination.onboarding
                   ? OnboardingScreen(
                       onFinished: () =>
                           setState(() => _override = _Destination.shell),
                     )
                   : const AppShell(),
+            ),
           },
         );
       },
+    );
+  }
+}
+
+/// Wraps the app in the resume gate.
+///
+/// Inside `home`, so the lock covers whatever the app is showing — including
+/// onboarding, where the first account's balance is already on screen.
+class _Gated extends StatelessWidget {
+  const _Gated({required this.lock, required this.child});
+
+  final ScreenLock lock;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return ScreenLockGate(
+      lock: lock,
+      locked: (context, unlock) =>
+          LockedScreen(onAuthenticate: lock.authenticate, onUnlocked: unlock),
+      child: child,
     );
   }
 }

@@ -22,7 +22,12 @@ budget lines, card payments and changes to a subscription. No control in the
 app is disabled for want of a form.
 
 A fresh install opens on a first-run flow that explains the trade, reports
-where the encryption key actually ended up, and sets up the first account. Live price fetching is an open decision, so holdings are shown at what
+where the encryption key actually ended up, and sets up the first account. An
+optional lock re-asks for the phone's own fingerprint or PIN after a minute
+away — it hides the screen, and says plainly that it adds no encryption.
+
+The largest thing still missing is backup and restore, which is awkward given
+that onboarding tells you backups are your responsibility. Live price fetching is an open decision, so holdings are shown at what
 they cost and labelled as such.
 
 Every control is either live or visibly unavailable — there is no button that

@@ -17,10 +17,11 @@ import 'services/asset_service.dart';
 import 'services/budget_service.dart';
 import 'services/recurring_service.dart';
 import 'services/savings_service.dart';
+import 'security/screen_lock.dart';
 import 'services/transaction_service.dart';
 
 class AppServices {
-  AppServices._(this.db, this.crypto, this.keyProtection)
+  AppServices._(this.db, this.crypto, this.keyProtection, this.screenLock)
     : accounts = AccountService(db, crypto),
       assets = AssetService(db, crypto),
       savings = SavingsService(db, crypto);
@@ -33,8 +34,14 @@ class AppServices {
     ArchlenceDatabase db,
     FieldCrypto crypto, {
     KeyProtectionStatus? keyProtection,
+    ScreenLock? screenLock,
   }) {
-    final services = AppServices._(db, crypto, keyProtection);
+    final services = AppServices._(
+      db,
+      crypto,
+      keyProtection,
+      screenLock ?? ScreenLock(),
+    );
     services.transactions = TransactionService(db, crypto, services.accounts);
     services.recurring = RecurringService(db, crypto, services.accounts);
     services.budget = BudgetService(db, crypto, services.recurring);
@@ -62,6 +69,15 @@ class AppServices {
 
   final ArchlenceDatabase db;
   final FieldCrypto crypto;
+
+  /// The resume gate. Held here so Settings and the root see one instance
+  /// and cannot disagree about whether it is on.
+  ///
+  /// Injectable for the same reason [keyProtection] is: a widget test has no
+  /// platform behind `local_auth`, and a screen that only draws its real
+  /// explanation on a capable device would go untested on exactly the path
+  /// users see.
+  final ScreenLock screenLock;
 
   /// Where the encryption key actually ended up, for Settings to report.
   ///

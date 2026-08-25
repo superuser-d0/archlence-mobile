@@ -20,28 +20,23 @@ launches a budget screen and a savings screen that do too. Settings still
 renders literals, and nothing in the app WRITES except the two card switches
 on the Cards tab.
 
-486 unit tests and 12 device tests pass. `flutter analyze` is clean, and the
+502 unit tests and 12 device tests pass. `flutter analyze` is clean, and the
 app runs on the emulator.
 
 ## Pick up here
 
 In priority order. Each of these is a self-contained next session.
 
-**1. A screen lock — needs a decision, not code.** Onboarding is built; a
-LOCK is a separate question and this port should not answer it alone. The data
-is already encrypted at rest under a Keystore-backed key, so an app-level PIN
-stored anywhere this app can reach would add ceremony rather than protection.
-The honest options are (a) nothing beyond the phone's own lock, (b) biometric
-/ device-credential re-auth on resume via `local_auth`, which is a new
-dependency, or (c) a passphrase that actually derives the key, which is the
-strongest and the only one that can lose the user's data outright. The desktop
-does not answer this either: its only passphrase guards a key-RECOVERY export,
-not entry to the app.
+**1. Backup and restore.** The largest thing left, and the one the app most
+needs: onboarding tells the user backups are on them, and there is no way to
+make one. `services/backup_service.py` is 995 lines and security-sensitive —
+an encrypted package, streamed hashing, size limits — and its format is a
+contract with the desktop, so the parity work is the expensive part.
 
-**THE WRITE FLOWS ARE DONE.** Every service call the app has now has a form
-behind it, and no control is disabled for want of one. What remains is
-onboarding, and then the three larger pieces below — price fetching, backup,
-i18n and release — none of which onboarding waits on.
+**2. i18n.** The numbers are already Turkish-formatted; the labels are English
+strings sitting in widgets. The desktop's `ui/i18n.py` has the full map.
+
+Open work 2 below (price fetching) needs a decision before it needs code.
 
 ## Settled decisions
 
@@ -333,6 +328,39 @@ did: on a device whose store is unavailable it says the key is a file and that
 this is weaker, rather than implying Keystore protection that is not there.
 Verified on the emulator, where it reads "Android Keystore — held by the
 operating system".
+
+### The screen lock — `lib/security/screen_lock.dart`
+
+**A UI gate, not cryptography, and the app says so.** The database key lives
+in the Keystore and opens without any of this; someone with root or a forensic
+image is not stopped by a lock screen the app draws. What it stops is the
+realistic case — a phone already unlocked and briefly in someone else's hands.
+The Settings switch says "it hides the screen … it does not add encryption",
+and a test pins that wording, because a lock that claimed more would be the
+app making a promise it cannot keep.
+
+Three decisions worth not re-deriving:
+
+- **A sixty-second grace period.** Asking on every return — after a
+  notification glance, a copied code — is how a lock gets switched off in the
+  first week, and a lock the user disabled protects nothing.
+- **`biometricOnly: false`.** A device credential must work too, or a user
+  with no fingerprint enrolled is locked out of an app they set up themselves.
+- **Turning it ON asks first.** A lock switched on by someone who cannot then
+  pass it is a lock on the owner's own data.
+
+The preference lives in the platform secure store, not `finance.db`: that
+file's schema is a contract with the desktop and a UI preference is not
+financial data. A read that fails reports OFF rather than locking someone out
+over a storage error.
+
+The gate takes an injectable clock. Reading `DateTime.now()` inline made the
+grace period untestable without waiting out a real minute — the seam exists
+because the first test could not be written otherwise.
+
+Still open, deliberately: `FLAG_SECURE` would also blank the app in the
+recents list, which is the same threat. It is not set, because it blocks
+legitimate screenshots too and that is a product call.
 
 ### Paying card debt — `lib/screens/pay_debt_sheet.dart`
 
@@ -804,24 +832,15 @@ surfaced only that way:
 
 ## Open work
 
-### 1. A screen lock — needs a decision
+### 1. Backup and restore
 
-Onboarding is built. A LOCK is a different question, and one this port should
-not answer on its own: the data is already encrypted at rest under a
-Keystore-backed key, so an app-level PIN kept anywhere this app can reach is
-ceremony rather than protection.
-
-- **Nothing beyond the phone's own lock.** Defensible, and free.
-- **Biometric or device-credential re-auth on resume** (`local_auth`). Stops a
-  borrowed unlocked phone; a new dependency, and the key still opens without
-  it, so it is a UI gate rather than a cryptographic one.
-- **A passphrase that derives the key.** The only option that genuinely
-  strengthens anything — and the only one that can lose the data outright when
-  forgotten. The desktop's `key_recovery_service` exists precisely because
-  that risk needs a way out.
-
-The desktop does not answer this either: its only passphrase guards a
-key-RECOVERY export, not entry to the app.
+Onboarding tells the user that backups are on them, which makes this the
+largest gap between what the app says and what it can do.
+`services/backup_service.py` is 995 lines: an encrypted package, streamed
+hashing, size limits, and a format that is a contract with the desktop. The
+parity work is the expensive part, and `key_recovery_service.py` belongs with
+it — a passphrase-derived key (below) cannot responsibly exist without a
+recovery path.
 
 ### 2. Price fetching — needs a decision
 
@@ -909,6 +928,17 @@ that.
 derived by hand tests the derivation, not the port. Every parity claim here
 rests on output generated by the desktop's own modules — its
 `quantize_financial`, its `aead_crypto`, its `initialize_database()`.
+
+**`setState` must never be handed a callback that returns a Future.**
+`setState(() => _data = _load())` reads as an assignment and is not one: the
+arrow body RETURNS the assignment's value, Flutter asserts on that, the
+assertion is swallowed, and the state is simply never updated — a screen that
+does not change with nothing in the log to say why. It has been walked into
+three times here, and twice it surfaced as a widget test failing for a reason
+that looked unrelated. `test/no_async_set_state_test.dart` now holds the line,
+with no exception for calls that happen to be synchronous: text cannot tell
+`_load()` from `value.round()`, and a rule with a judgement call in it gets
+argued with.
 
 **Check the tests for teeth.** Break the rule deliberately and require the
 suite to fail. This is the habit that has paid the most, because a green suite

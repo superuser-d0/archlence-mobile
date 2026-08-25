@@ -216,7 +216,9 @@ class _BudgetLineSheetState extends State<_BudgetLineSheet> {
           max: 100,
           divisions: 18,
           label: '%$_threshold',
-          onChanged: (value) => setState(() => _threshold = value.round()),
+          onChanged: (value) => setState(() {
+            _threshold = value.round();
+          }),
         ),
       ],
     );

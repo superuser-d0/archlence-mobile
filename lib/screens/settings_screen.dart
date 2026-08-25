@@ -24,6 +24,36 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+  Future<(bool available, bool enabled)>? _lockState;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _lockState ??= _readLock();
+  }
+
+  Future<(bool, bool)> _readLock() async {
+    final lock = ServicesScope.of(context).screenLock;
+    return (await lock.isAvailable(), await lock.isEnabled());
+  }
+
+  Future<void> _setLock(bool enabled) async {
+    final lock = ServicesScope.of(context).screenLock;
+    // Asked for BEFORE turning it on. A lock switched on by someone who
+    // cannot then pass it is a lock on the owner's own data.
+    if (enabled && !await lock.authenticate()) return;
+    await lock.setEnabled(enabled);
+    if (!mounted) return;
+    // A block body, not an arrow. `setState(() => x = f())` returns the
+    // assignment's value — here a Future — and Flutter asserts on a setState
+    // callback that returns one, which leaves the state UNCHANGED. This is
+    // the third time that trap has been walked into in this codebase; see
+    // `test/no_async_set_state_test.dart`.
+    setState(() {
+      _lockState = _readLock();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
@@ -75,6 +105,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
               color: ObsidianPalette.onSurfaceVariant.withValues(alpha: 0.6),
             ),
           ),
+        ),
+        const SizedBox(height: Spacing.sectionGap),
+
+        const SectionLabel('Security'),
+        const SizedBox(height: Spacing.stackSm),
+        FutureBuilder<(bool, bool)>(
+          future: _lockState,
+          builder: (context, snapshot) {
+            final (available, enabled) = snapshot.data ?? (false, false);
+            return _SettingsGroup(
+              children: [
+                _LockTile(
+                  available: available,
+                  enabled: enabled,
+                  onChanged: _setLock,
+                ),
+              ],
+            );
+          },
         ),
         const SizedBox(height: Spacing.sectionGap),
 
@@ -248,4 +297,76 @@ String _keyProtectionSummary(KeyProtectionStatus? status) {
       : '${status.method} — NOT in an OS key store; the key is a local file '
             'readable only by this app.';
   return status.warning == null ? where : '$where ${status.warning}';
+}
+
+/// The resume gate's switch, with what it actually buys written under it.
+///
+/// The subtitle is not decoration. A lock the app draws stops a borrowed
+/// phone; it does not stop anyone who can read the device's storage, because
+/// the database key opens without it. Saying "your data is protected" here
+/// would be the app claiming something it does not do.
+class _LockTile extends StatelessWidget {
+  const _LockTile({
+    required this.available,
+    required this.enabled,
+    required this.onChanged,
+  });
+
+  final bool available;
+  final bool enabled;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: ObsidianPalette.primary.withValues(alpha: 0.10),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.fingerprint,
+              size: 18,
+              color: ObsidianPalette.primary,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Lock when I come back',
+                  style: text.bodyMedium?.copyWith(
+                    color: available
+                        ? ObsidianPalette.onSurface
+                        : ObsidianPalette.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  available
+                      ? 'Asks for your fingerprint or PIN after a minute away. '
+                            'It hides the screen from someone holding your '
+                            'phone — it does not add encryption.'
+                      : 'This device has no fingerprint or screen lock set up.',
+                  style: text.bodySmall?.copyWith(
+                    color: ObsidianPalette.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Switch(value: enabled, onChanged: available ? onChanged : null),
+        ],
+      ),
+    );
+  }
 }
