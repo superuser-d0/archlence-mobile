@@ -20,17 +20,17 @@ launches a budget screen and a savings screen that do too. Settings still
 renders literals, and nothing in the app WRITES except the two card switches
 on the Cards tab.
 
-446 unit tests and 12 device tests pass. `flutter analyze` is clean, and the
+459 unit tests and 12 device tests pass. `flutter analyze` is clean, and the
 app runs on the emulator.
 
 ## Pick up here
 
 In priority order. Each of these is a self-contained next session.
 
-**1. The remaining write flows.** Accounts, transactions, holdings and
-savings goals are done, and the pattern is settled — see the sections under
-what is proven. What is left: a budget line, paying card debt, and editing or
-cancelling a subscription. Each has a tested service call and no form.
+**1. The remaining write flows.** Accounts, transactions, holdings, savings
+goals and budget lines are done, and the pattern is settled — see the sections
+under what is proven. What is left is the small stuff: paying card debt, and
+editing or cancelling a subscription.
 
 **2. Onboarding and sign-in.** Designed and not built. They gate the whole
 app and depend on nothing but the key provider, which is done.
@@ -308,6 +308,18 @@ quietly opening an empty account and telling the user their typo was ignored.
 The debt field on a card is labelled "Current debt", not "balance": the user
 enters what they OWE as a positive number and the service stores it negative.
 A "balance" label would invite a minus sign and double the debt.
+
+### A budget line — `lib/screens/budget_line_sheet.dart`
+
+Two of its fields need explaining rather than labelling, because neither says
+what it does: **"Every month"** makes the line a TEMPLATE, applying to every
+month until a concrete line of the same identity overrides it in one; and
+**"Carry the balance over"** takes LAST MONTH's leftover into this month's
+limit and does not chain past it.
+
+The category is optional and the sheet says what leaving it out costs: the
+line still counts towards the month's total, but nothing tracks it against
+what was actually spent. That consequence is invisible otherwise.
 
 ### Savings goals — `lib/screens/savings_sheets.dart`
 
@@ -743,7 +755,6 @@ tested service call and no form:
 | Action | Service call |
 | --- | --- |
 | Pay card debt | `AccountService.payCreditCardDebt` |
-| Add or edit a budget line | `BudgetService.savePlanItem` |
 | Close a goal | `SavingsService.deleteGoal` |
 | Edit, skip or cancel a subscription | `RecurringService.updateSubscriptionAmount` / `skipNextOccurrence` / `cancelSubscription` |
 

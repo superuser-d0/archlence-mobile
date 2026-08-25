@@ -15,6 +15,7 @@ import '../ui/money_format.dart';
 import '../widgets/savings_goal_card.dart';
 import '../widgets/summary_row.dart';
 import '../widgets/surfaces.dart';
+import 'budget_line_sheet.dart';
 
 class BudgetScreen extends StatefulWidget {
   const BudgetScreen({super.key});
@@ -47,6 +48,12 @@ class _BudgetScreenState extends State<BudgetScreen> {
     _data ??= _load();
   }
 
+  void _reload() {
+    setState(() {
+      _data = _load();
+    });
+  }
+
   Future<_BudgetData> _load() async {
     final budget = ServicesScope.of(context).budget;
     return _BudgetData(
@@ -61,13 +68,24 @@ class _BudgetScreenState extends State<BudgetScreen> {
     final text = Theme.of(context).textTheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Monthly Budget')),
+      appBar: AppBar(
+        title: const Text('Monthly Budget'),
+        actions: [
+          IconButton(
+            onPressed: () async {
+              final saved = await showBudgetLineSheet(
+                context,
+                month: _month,
+                year: _year,
+              );
+              if (saved ?? false) _reload();
+            },
+            icon: const Icon(Icons.add),
+          ),
+        ],
+      ),
       body: RefreshIndicator(
-        onRefresh: () async {
-          setState(() {
-            _data = _load();
-          });
-        },
+        onRefresh: () async => _reload(),
         child: ListView(
           key: const PageStorageKey('budget'),
           padding: const EdgeInsets.fromLTRB(

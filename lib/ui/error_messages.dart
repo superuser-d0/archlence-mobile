@@ -12,6 +12,7 @@ library;
 
 import '../services/account_service.dart';
 import '../services/asset_service.dart';
+import '../services/budget_service.dart';
 import '../services/savings_service.dart';
 import '../services/transaction_service.dart';
 
@@ -74,4 +75,14 @@ String savingsErrorMessage(SavingsError error) => switch (error.code) {
   SavingsErrorCode.insufficientGoalBalance =>
     'The goal does not hold that much.',
   SavingsErrorCode.refundAccountRequired => 'Choose where the money should go.',
+};
+
+String budgetErrorMessage(BudgetError error) => switch (error.code) {
+  BudgetErrorCode.unknownItemType => 'Choose income or expense.',
+  BudgetErrorCode.emptyName => 'Give the line a name.',
+  BudgetErrorCode.invalidAmount => 'That is not an amount.',
+  BudgetErrorCode.amountNotPositive => 'Enter an amount above zero.',
+  BudgetErrorCode.invalidMonth => 'Pick a month between January and December.',
+  BudgetErrorCode.invalidAlertThreshold =>
+    'The alert threshold has to be between 1 and 100 per cent.',
 };
