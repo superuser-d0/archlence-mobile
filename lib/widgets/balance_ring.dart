@@ -1,0 +1,133 @@
+import 'dart:math' as math;
+
+import 'package:flutter/material.dart';
+
+import '../theme/obsidian_prime.dart';
+import 'surfaces.dart';
+
+/// The dashboard's headline: total balance inside a progress ring.
+///
+/// The amount is wrapped in a [FittedBox]. The reference design sets it at a
+/// fixed 40px, which already overflows the ring at "334.401,80 ₺" and breaks
+/// outright once a balance reaches seven or eight digits — a real prospect in
+/// a lira-denominated app. Shrinking to fit keeps a large balance inside the
+/// ring instead of letting it collide with the border.
+class BalanceRing extends StatelessWidget {
+  const BalanceRing({
+    super.key,
+    required this.amount,
+    required this.changeLabel,
+    required this.changeIsPositive,
+    required this.periodLabel,
+    required this.progress,
+    this.diameter = 256,
+  });
+
+  final String amount;
+  final String changeLabel;
+  final bool changeIsPositive;
+  final String periodLabel;
+
+  /// 0..1 — how much of the ring is drawn.
+  final double progress;
+  final double diameter;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return SizedBox(
+      width: diameter,
+      height: diameter,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Positioned.fill(
+            child: CustomPaint(
+              painter: _RingPainter(progress: progress),
+            ),
+          ),
+          Padding(
+            // Keep the label block clear of the stroke on both sides.
+            padding: EdgeInsets.symmetric(horizontal: diameter * 0.14),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Total Balance',
+                  style: text.bodySmall
+                      ?.copyWith(color: ObsidianPalette.onSurfaceVariant),
+                ),
+                const SizedBox(height: 4),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    amount,
+                    maxLines: 1,
+                    style: text.displayLarge,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TrendChip(
+                  label: changeLabel,
+                  positive: changeIsPositive,
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  periodLabel,
+                  style: text.labelMedium?.copyWith(
+                    fontSize: 10,
+                    letterSpacing: 0,
+                    color: ObsidianPalette.onSurfaceVariant
+                        .withValues(alpha: 0.7),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RingPainter extends CustomPainter {
+  const _RingPainter({required this.progress});
+
+  final double progress;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const strokeWidth = 5.0;
+    final center = size.center(Offset.zero);
+    final radius = (size.shortestSide - strokeWidth) / 2;
+
+    final track = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..color = Colors.white.withValues(alpha: 0.05);
+    canvas.drawCircle(center, radius, track);
+
+    if (progress <= 0) return;
+
+    final arc = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round
+      ..color = ObsidianPalette.tertiary
+      // DESIGN.md's `drop-shadow(0 0 8px)` glow, kept subtle enough that the
+      // stroke still reads as a line rather than a smear.
+      ..maskFilter = const MaskFilter.blur(BlurStyle.solid, 2.5);
+
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      -math.pi / 2,
+      2 * math.pi * progress.clamp(0.0, 1.0),
+      false,
+      arc,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_RingPainter oldDelegate) =>
+      oldDelegate.progress != progress;
+}
