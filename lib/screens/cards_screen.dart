@@ -8,6 +8,7 @@ import '../theme/obsidian_prime.dart';
 import '../ui/async_data.dart';
 import '../ui/money_format.dart';
 import 'add_account_sheet.dart';
+import 'pay_debt_sheet.dart';
 import '../widgets/summary_row.dart';
 import '../widgets/surfaces.dart';
 
@@ -544,8 +545,19 @@ class _CardDetailState extends State<_CardDetail> {
                   child: Text('Statement'),
                 ),
               ),
-              const Expanded(
-                child: OutlinedButton(onPressed: null, child: Text('Pay Debt')),
+              Expanded(
+                child: OutlinedButton(
+                  // Only when there is something to pay: a payment against a
+                  // clear card is refused by the service, and offering it
+                  // would be inviting the error rather than preventing it.
+                  onPressed: card.debt > Decimal.zero
+                      ? () async {
+                          final paid = await showPayDebtSheet(context, card);
+                          if (paid ?? false) widget.onChanged();
+                        }
+                      : null,
+                  child: const Text('Pay Debt'),
+                ),
               ),
             ],
           ),

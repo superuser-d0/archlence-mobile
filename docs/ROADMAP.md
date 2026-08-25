@@ -13,29 +13,27 @@ Every claim here was verified against the code on `main` before being written.
 that are hardest to get right — money, encryption, and the database schema —
 and the whole service layer on top: accounts, the ledger, holdings (portfolio
 CRUD, buying, selling), recurring payments, the monthly budget and savings
-goals. Live price fetching is the one piece left out — see open work 3.
+goals. Live price fetching is the one piece left out — see open work 2.
 
 **Wired so far:** Home, Cards and Assets read real data, and the Tools grid
 launches a budget screen and a savings screen that do too. Settings still
 renders literals, and nothing in the app WRITES except the two card switches
 on the Cards tab.
 
-468 unit tests and 12 device tests pass. `flutter analyze` is clean, and the
+476 unit tests and 12 device tests pass. `flutter analyze` is clean, and the
 app runs on the emulator.
 
 ## Pick up here
 
 In priority order. Each of these is a self-contained next session.
 
-**1. Paying card debt** — the last write flow. `AccountService.payCreditCardDebt`
-is ready and tested; the "Pay Debt" button on the card detail is the only
-control in the app still disabled for want of a form.
-
-**2. Onboarding and sign-in.** Designed and not built. They gate the whole
+**1. Onboarding and sign-in.** Designed and not built. They gate the whole
 app and depend on nothing but the key provider, which is done.
 
-Open work 3 and 4 below (price fetching, backup/i18n/release) are larger and
-neither of the above waits on them.
+**THE WRITE FLOWS ARE DONE.** Every service call the app has now has a form
+behind it, and no control is disabled for want of one. What remains is
+onboarding, and then the three larger pieces below — price fetching, backup,
+i18n and release — none of which onboarding waits on.
 
 ## Settled decisions
 
@@ -307,6 +305,23 @@ quietly opening an empty account and telling the user their typo was ignored.
 The debt field on a card is labelled "Current debt", not "balance": the user
 enters what they OWE as a positive number and the service stores it negative.
 A "balance" label would invite a minus sign and double the debt.
+
+### Paying card debt — `lib/screens/pay_debt_sheet.dart`
+
+The last write flow. Two things it gets right by refusing rather than
+allowing: a CARD is not offered as somewhere to pay from, and the "Pay Debt"
+button does not appear at all on a card that owes nothing. The service refuses
+both, and offering them would be inviting the error rather than preventing it
+— the affordance and the rule say the same thing.
+
+"Pay it all off" fills in exactly what is owed. Typing that figure by hand is
+the step most likely to go wrong by a kurus, and paying more than the debt is
+refused.
+
+A FROZEN card can still be paid, and the sheet says so. Freezing stops new
+debt; trapping the user with a balance they cannot clear would be the opposite
+of what the switch is for, and the absence of that guard is invisible
+otherwise.
 
 ### Managing a subscription — `lib/screens/subscription_sheet.dart`
 
@@ -628,7 +643,7 @@ when a mutation comes back green: check that it actually mutated something.
 Port of the CRUD-and-arithmetic half of `services/asset_service.py` plus
 `services/asset_purchase_service.py` and `services/asset_sale_service.py`.
 The other half — `fetch_current_price`, the portfolio cache, the BIST100
-batch fetch, the warm-up thread — is NOT ported; see open work 3, which
+batch fetch, the warm-up thread — is NOT ported; see open work 2, which
 this doesn't need to be resolved to build.
 
 `calculatePnl` is arithmetic only: Decimal throughout, quantized only on the
@@ -761,23 +776,12 @@ surfaced only that way:
 
 ## Open work
 
-### 1. Write flows
-
-Opening an account, recording a transaction, and buying or selling a holding
-are done — see the sections above for the pattern. What is left still has a
-tested service call and no form:
-
-| Action | Service call |
-| --- | --- |
-| Pay card debt | `AccountService.payCreditCardDebt` |
-| Close a goal | `SavingsService.deleteGoal` |
-
-### 2. Onboarding
+### 1. Onboarding
 
 Designed in the published mockup canvas and not built. They gate everything
 else in the app, and depend on nothing but the key provider, which is done.
 
-### 3. Price fetching — needs a decision
+### 2. Price fetching — needs a decision
 
 The desktop runs `services/asset_price_worker.py` as a **subprocess**
 (`asset_service.py:700`). That architecture does not work on Android: there is
@@ -791,7 +795,7 @@ is a deliberate holding position, not an oversight: `AssetService.calculatePnl`
 already takes a current price as a plain argument, so wiring a feed in is a
 small change once the source exists.
 
-### 4. Not yet considered
+### 3. Not yet considered
 
 Backup and restore, i18n (the desktop has `ui/i18n.py` with a full Turkish/
 English map; the mobile screens are English-only strings in the widgets, while
@@ -812,8 +816,8 @@ is fully accounted for. What has not been ported is not forgotten:
   becomes a feature, which is item 4.
 - **Price machinery** (`price_service`, `price_providers`, `price_guard`,
   `asset_price_worker`, `crypto_top100`, `brand_icon_service`, `logo_service`).
-  Item 3.
-- **Backup service.** Item 4.
+  Item 2.
+- **Backup service.** Item 3.
 - **`background_task_manager`.** Flutter has its own answer; the desktop's
   thread pool does not port.
 

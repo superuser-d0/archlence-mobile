@@ -130,8 +130,15 @@ void main() {
       isFalse,
       reason: 'the add-account sheet is wired',
     );
-    expect(buttonDisabled('Statement'), isTrue);
-    expect(buttonDisabled('Pay Debt'), isTrue);
+    expect(buttonDisabled('Statement'), isTrue, reason: 'no statement screen');
+    // Disabled here for a DIFFERENT reason than it used to be: the form
+    // exists now, and this card has nothing owing. `pay_debt_test.dart`
+    // covers the case where it does and the button is live.
+    expect(
+      buttonDisabled('Pay Debt'),
+      isTrue,
+      reason: 'this card owes nothing',
+    );
 
     await onTab('Assets');
     // Save is live now too — the deposit sheet landed. Pinned as live rather

@@ -17,9 +17,12 @@ service layer above them — accounts, the ledger, holdings, recurring payments,
 budgets and savings goals. Home, Cards and Assets read real data; the Tools
 grid opens a budget screen and a savings screen that do too.
 
-Almost everything can be entered now: accounts, transactions, holdings,
-savings goals, budget lines, and changes to a subscription. Paying card debt
-is the last flow still waiting on a form. Live price fetching is an open decision, so holdings are shown at what
+Everything can be entered: accounts, transactions, holdings, savings goals,
+budget lines, card payments and changes to a subscription. No control in the
+app is disabled for want of a form.
+
+What is left before it can be used end to end is onboarding — there is no
+first-run flow, so a fresh install opens on an empty dashboard. Live price fetching is an open decision, so holdings are shown at what
 they cost and labelled as such.
 
 Every control is either live or visibly unavailable — there is no button that
