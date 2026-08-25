@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 
+import 'screens/assets_screen.dart';
+import 'screens/cards_screen.dart';
 import 'screens/home_screen.dart';
+import 'screens/settings_screen.dart';
+import 'screens/tools_screen.dart';
 import 'theme/obsidian_prime.dart';
 import 'widgets/surfaces.dart';
 
@@ -40,7 +44,10 @@ class _AppShellState extends State<AppShell> {
         ),
         child: switch (_tab) {
           0 => const HomeScreen(),
-          _ => _Placeholder(label: _destinations[_tab].label),
+          1 => const AssetsScreen(),
+          2 => const CardsScreen(),
+          3 => const ToolsScreen(),
+          _ => const SettingsScreen(),
         },
       ),
       bottomNavigationBar: GlassBar(
@@ -138,21 +145,3 @@ class _GlassHeader extends StatelessWidget implements PreferredSizeWidget {
   }
 }
 
-class _Placeholder extends StatelessWidget {
-  const _Placeholder({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Text(
-        label,
-        style: Theme.of(context)
-            .textTheme
-            .headlineMedium
-            ?.copyWith(color: ObsidianPalette.onSurfaceVariant),
-      ),
-    );
-  }
-}

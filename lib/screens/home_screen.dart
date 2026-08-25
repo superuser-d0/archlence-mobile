@@ -23,6 +23,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final inset = MediaQuery.paddingOf(context);
 
     return ListView(
+      key: const PageStorageKey('home'),
       padding: EdgeInsets.fromLTRB(
         Spacing.containerMargin,
         inset.top + Spacing.stackMd,
