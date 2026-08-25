@@ -76,8 +76,11 @@ class _HomeScreenState extends State<HomeScreen> {
         Row(
           spacing: Spacing.stackSm,
           children: [
-            const Icon(Icons.autorenew, size: 20,
-                color: ObsidianPalette.tertiary),
+            const Icon(
+              Icons.autorenew,
+              size: 20,
+              color: ObsidianPalette.tertiary,
+            ),
             Text('My Active Subscriptions', style: text.titleLarge),
           ],
         ),
@@ -144,9 +147,7 @@ class _WalletSelector extends StatelessWidget {
           const Icon(Icons.account_balance_wallet_outlined, size: 18),
           Text(
             'My Wallet',
-            style: Theme.of(context)
-                .textTheme
-                .labelMedium
+            style: Theme.of(context).textTheme.labelMedium
                 ?.copyWith(letterSpacing: 0),
           ),
           const Icon(Icons.expand_more, size: 18),
@@ -191,21 +192,19 @@ class _PeriodSelector extends StatelessWidget {
                       ? BoxDecoration(
                           color: ObsidianPalette.surfaceContainerHigh,
                           borderRadius: BorderRadius.circular(Radii.full),
-                          border:
-                              Border.all(color: ObsidianPalette.cardStroke),
+                          border: Border.all(color: ObsidianPalette.cardStroke),
                         )
                       : null,
                   child: FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Text(
                       periods[i],
-                      style:
-                          Theme.of(context).textTheme.labelMedium?.copyWith(
-                                letterSpacing: 0,
-                                color: i == selected
-                                    ? ObsidianPalette.onSurface
-                                    : ObsidianPalette.onSurfaceVariant,
-                              ),
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        letterSpacing: 0,
+                        color: i == selected
+                            ? ObsidianPalette.onSurface
+                            : ObsidianPalette.onSurfaceVariant,
+                      ),
                     ),
                   ),
                 ),
@@ -268,8 +267,11 @@ class _ForecastCard extends StatelessWidget {
                 Row(
                   spacing: 12,
                   children: [
-                    const Icon(Icons.trending_up, size: 20,
-                        color: ObsidianPalette.tertiary),
+                    const Icon(
+                      Icons.trending_up,
+                      size: 20,
+                      color: ObsidianPalette.tertiary,
+                    ),
                     Text('Algorithmic Forecast', style: text.titleLarge),
                   ],
                 ),
@@ -277,20 +279,23 @@ class _ForecastCard extends StatelessWidget {
                 Text(
                   'Compared with the previous period, your spending this '
                   'month %9.1 increased.',
-                  style: text.bodySmall
-                      ?.copyWith(color: ObsidianPalette.onSurfaceVariant),
+                  style: text.bodySmall?.copyWith(
+                    color: ObsidianPalette.onSurfaceVariant,
+                  ),
                 ),
                 const SizedBox(height: Spacing.stackSm),
                 Text(
                   'Highest-spending category: Asset Purchase.',
-                  style: text.bodySmall
-                      ?.copyWith(color: ObsidianPalette.onSurfaceVariant),
+                  style: text.bodySmall?.copyWith(
+                    color: ObsidianPalette.onSurfaceVariant,
+                  ),
                 ),
                 const SizedBox(height: Spacing.stackSm),
                 Text(
                   'Your net savings rate this month: %-2.5.',
-                  style: text.bodySmall
-                      ?.copyWith(color: ObsidianPalette.onSurfaceVariant),
+                  style: text.bodySmall?.copyWith(
+                    color: ObsidianPalette.onSurfaceVariant,
+                  ),
                 ),
                 const SizedBox(height: Spacing.stackMd),
                 const Divider(),
@@ -299,8 +304,9 @@ class _ForecastCard extends StatelessWidget {
                   'Based on the last 3 months of statistics, you are expected '
                   'to have 359.843,69 ₺ left at the end of this month; you '
                   'could consider putting it toward an investment.',
-                  style: text.bodySmall
-                      ?.copyWith(color: ObsidianPalette.onSurfaceVariant),
+                  style: text.bodySmall?.copyWith(
+                    color: ObsidianPalette.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
@@ -342,8 +348,11 @@ class _HealthScoreCard extends StatelessWidget {
           Row(
             spacing: 12,
             children: [
-              const Icon(Icons.monitor_heart_outlined, size: 20,
-                  color: ObsidianPalette.primary),
+              const Icon(
+                Icons.monitor_heart_outlined,
+                size: 20,
+                color: ObsidianPalette.primary,
+              ),
               Text('Financial Health Score', style: text.titleLarge),
             ],
           ),
@@ -355,8 +364,9 @@ class _HealthScoreCard extends StatelessWidget {
             children: [
               Text(
                 '72',
-                style: text.displayLarge
-                    ?.copyWith(color: ObsidianPalette.tertiary),
+                style: text.displayLarge?.copyWith(
+                  color: ObsidianPalette.tertiary,
+                ),
               ),
               Text('Good', style: text.bodyLarge),
             ],
@@ -409,20 +419,21 @@ class _SubscriptionCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.autorenew, size: 18,
-                  color: ObsidianPalette.tertiary),
+              const Icon(
+                Icons.autorenew,
+                size: 18,
+                color: ObsidianPalette.tertiary,
+              ),
               const SizedBox(width: Spacing.stackSm),
               Expanded(
                 child: Text(
                   name,
-                  style: text.bodyMedium
-                      ?.copyWith(fontWeight: FontWeight.w600),
+                  style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
                 ),
               ),
               Text(
                 amount,
-                style: text.bodyMedium
-                    ?.copyWith(fontWeight: FontWeight.w700),
+                style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
               ),
             ],
           ),
@@ -431,8 +442,9 @@ class _SubscriptionCard extends StatelessWidget {
             padding: const EdgeInsets.only(left: 26),
             child: Text(
               renews,
-              style: text.bodySmall
-                  ?.copyWith(color: ObsidianPalette.onSurfaceVariant),
+              style: text.bodySmall?.copyWith(
+                color: ObsidianPalette.onSurfaceVariant,
+              ),
             ),
           ),
           const SizedBox(height: Spacing.stackSm),

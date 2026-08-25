@@ -266,11 +266,15 @@ ThemeData obsidianPrimeTheme() {
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(Radii.md),
-        borderSide: const BorderSide(color: ObsidianPalette.surfaceContainerHigh),
+        borderSide: const BorderSide(
+          color: ObsidianPalette.surfaceContainerHigh,
+        ),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(Radii.md),
-        borderSide: const BorderSide(color: ObsidianPalette.surfaceContainerHigh),
+        borderSide: const BorderSide(
+          color: ObsidianPalette.surfaceContainerHigh,
+        ),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(Radii.md),

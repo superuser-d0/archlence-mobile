@@ -8,18 +8,28 @@ class ToolsScreen extends StatelessWidget {
   const ToolsScreen({super.key});
 
   static const _tools = <_Tool>[
-    _Tool('Monthly\nBudget', Icons.calendar_month_outlined,
-        ObsidianPalette.primary),
+    _Tool(
+      'Monthly\nBudget',
+      Icons.calendar_month_outlined,
+      ObsidianPalette.primary,
+    ),
     _Tool('Calendar', Icons.event_note_outlined, ObsidianPalette.tertiary),
     _Tool('Calculator', Icons.calculate_outlined, ObsidianPalette.primary),
     _Tool('Interest\nReturn', Icons.percent, ObsidianPalette.secondary),
     _Tool('Compound\nInterest', Icons.trending_up, ObsidianPalette.tertiary),
-    _Tool('Loan\nCalculator', Icons.account_balance_outlined,
-        ObsidianPalette.error),
+    _Tool(
+      'Loan\nCalculator',
+      Icons.account_balance_outlined,
+      ObsidianPalette.error,
+    ),
     _Tool('Savings\nGoal', Icons.savings_outlined, ObsidianPalette.secondary),
     _Tool('What-If\nSandbox', Icons.explore_outlined, ObsidianPalette.primary),
-    _Tool('Reset\nData', Icons.delete_outline, ObsidianPalette.error,
-        destructive: true),
+    _Tool(
+      'Reset\nData',
+      Icons.delete_outline,
+      ObsidianPalette.error,
+      destructive: true,
+    ),
   ];
 
   @override
@@ -40,8 +50,9 @@ class ToolsScreen extends StatelessWidget {
         const SizedBox(height: Spacing.stackSm),
         Text(
           'Explore calculators and planners to optimize your finances.',
-          style: text.bodyMedium
-              ?.copyWith(color: ObsidianPalette.onSurfaceVariant),
+          style: text.bodyMedium?.copyWith(
+            color: ObsidianPalette.onSurfaceVariant,
+          ),
         ),
         const SizedBox(height: Spacing.stackLg),
         GridView.builder(
@@ -97,10 +108,10 @@ class _ToolCard extends StatelessWidget {
           Text(
             tool.label,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: tool.destructive
-                      ? ObsidianPalette.error
-                      : ObsidianPalette.onSurface,
-                ),
+              color: tool.destructive
+                  ? ObsidianPalette.error
+                  : ObsidianPalette.onSurface,
+            ),
           ),
         ],
       ),

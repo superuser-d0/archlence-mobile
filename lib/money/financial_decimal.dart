@@ -90,9 +90,7 @@ Decimal quantizeFinancial(
 
   if (remainder < halfStep) return truncated;
 
-  final awayFromZero = decimal.sign >= 0
-      ? truncated + step
-      : truncated - step;
+  final awayFromZero = decimal.sign >= 0 ? truncated + step : truncated - step;
   if (remainder > halfStep) return awayFromZero;
 
   // Exactly halfway: keep whichever neighbour ends in an even digit.

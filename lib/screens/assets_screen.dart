@@ -30,8 +30,9 @@ class _AssetsScreenState extends State<AssetsScreen> {
       ),
       children: [
         Padding(
-          padding:
-              const EdgeInsets.symmetric(horizontal: Spacing.containerMargin),
+          padding: const EdgeInsets.symmetric(
+            horizontal: Spacing.containerMargin,
+          ),
           child: const SummaryRow(
             stats: [
               SummaryStat(
@@ -44,18 +45,16 @@ class _AssetsScreenState extends State<AssetsScreen> {
                 value: '₺1.397.034,10',
                 tone: SummaryTone.negative,
               ),
-              SummaryStat(
-                label: 'Net Balance',
-                value: '+₺237.868,50',
-              ),
+              SummaryStat(label: 'Net Balance', value: '+₺237.868,50'),
             ],
           ),
         ),
         const SizedBox(height: Spacing.stackLg),
 
         Padding(
-          padding:
-              const EdgeInsets.symmetric(horizontal: Spacing.containerMargin),
+          padding: const EdgeInsets.symmetric(
+            horizontal: Spacing.containerMargin,
+          ),
           child: Text('Details', style: text.titleLarge),
         ),
         const SizedBox(height: Spacing.stackMd),
@@ -82,51 +81,58 @@ class _AssetsScreenState extends State<AssetsScreen> {
         const SizedBox(height: Spacing.stackLg),
 
         Padding(
-          padding:
-              const EdgeInsets.symmetric(horizontal: Spacing.containerMargin),
+          padding: const EdgeInsets.symmetric(
+            horizontal: Spacing.containerMargin,
+          ),
           child: const _DistributionCard(),
         ),
         const SizedBox(height: Spacing.stackMd),
 
         Padding(
-          padding:
-              const EdgeInsets.symmetric(horizontal: Spacing.containerMargin),
+          padding: const EdgeInsets.symmetric(
+            horizontal: Spacing.containerMargin,
+          ),
           child: const _TrendCard(),
         ),
         const SizedBox(height: Spacing.stackMd),
 
         Padding(
-          padding:
-              const EdgeInsets.symmetric(horizontal: Spacing.containerMargin),
+          padding: const EdgeInsets.symmetric(
+            horizontal: Spacing.containerMargin,
+          ),
           child: const _TotalAssetsCard(),
         ),
         const SizedBox(height: Spacing.stackMd),
 
         Padding(
-          padding:
-              const EdgeInsets.symmetric(horizontal: Spacing.containerMargin),
+          padding: const EdgeInsets.symmetric(
+            horizontal: Spacing.containerMargin,
+          ),
           child: const _EmergencyFundCard(),
         ),
         const SizedBox(height: Spacing.sectionGap),
 
         Padding(
-          padding:
-              const EdgeInsets.symmetric(horizontal: Spacing.containerMargin),
+          padding: const EdgeInsets.symmetric(
+            horizontal: Spacing.containerMargin,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  const Icon(Icons.trending_up, size: 20,
-                      color: ObsidianPalette.tertiary),
+                  const Icon(
+                    Icons.trending_up,
+                    size: 20,
+                    color: ObsidianPalette.tertiary,
+                  ),
                   const SizedBox(width: Spacing.stackSm),
                   Expanded(
                     child: Text('My Active Assets', style: text.titleLarge),
                   ),
                   IconButton(
                     onPressed: () {},
-                    icon: const Icon(Icons.add,
-                        color: ObsidianPalette.primary),
+                    icon: const Icon(Icons.add, color: ObsidianPalette.primary),
                   ),
                 ],
               ),
@@ -189,11 +195,11 @@ class _PeriodChip extends StatelessWidget {
         child: Text(
           label,
           style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                letterSpacing: 0,
-                color: selected
-                    ? ObsidianPalette.onPrimary
-                    : ObsidianPalette.onSurfaceVariant,
-              ),
+            letterSpacing: 0,
+            color: selected
+                ? ObsidianPalette.onPrimary
+                : ObsidianPalette.onSurfaceVariant,
+          ),
         ),
       ),
     );
@@ -287,8 +293,9 @@ class _DistributionCard extends StatelessWidget {
                   ),
                   Text(
                     '%${slice.percent.toStringAsFixed(1)}',
-                    style: text.bodySmall
-                        ?.copyWith(color: ObsidianPalette.onSurfaceVariant),
+                    style: text.bodySmall?.copyWith(
+                      color: ObsidianPalette.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ),
@@ -303,19 +310,41 @@ class _TrendCard extends StatelessWidget {
   const _TrendCard();
 
   static const _income = <double>[
-    95, 88, 92, 80, 60, 55, 65, 70, 58, 62, 60, 60,
+    95,
+    88,
+    92,
+    80,
+    60,
+    55,
+    65,
+    70,
+    58,
+    62,
+    60,
+    60,
   ];
   static const _expense = <double>[
-    70, 65, 90, 95, 78, 100, 105, 85, 60, 95, 110, 60,
+    70,
+    65,
+    90,
+    95,
+    78,
+    100,
+    105,
+    85,
+    60,
+    95,
+    110,
+    60,
   ];
   static const _months = ['Sep\'25', 'Jan\'26', 'May\'26', 'Aug\'26'];
 
   List<FlSpot> _spots(List<double> values) => [
-        // The source series is "distance below the top", so invert it into
-        // a value that rises with the figure it represents.
-        for (var i = 0; i < values.length; i++)
-          FlSpot(i.toDouble(), 120 - values[i]),
-      ];
+    // The source series is "distance below the top", so invert it into
+    // a value that rises with the figure it represents.
+    for (var i = 0; i < values.length; i++)
+      FlSpot(i.toDouble(), 120 - values[i]),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -327,8 +356,7 @@ class _TrendCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              _LegendDot(
-                  color: ObsidianPalette.tertiary, label: 'Income'),
+              _LegendDot(color: ObsidianPalette.tertiary, label: 'Income'),
               const SizedBox(width: Spacing.stackMd),
               _LegendDot(color: ObsidianPalette.error, label: 'Expense'),
             ],
@@ -362,8 +390,7 @@ class _TrendCard extends StatelessWidget {
                     dotData: const FlDotData(show: false),
                     belowBarData: BarAreaData(
                       show: true,
-                      color:
-                          ObsidianPalette.tertiary.withValues(alpha: 0.12),
+                      color: ObsidianPalette.tertiary.withValues(alpha: 0.12),
                     ),
                   ),
                   LineChartBarData(
@@ -415,9 +442,9 @@ class _LegendDot extends StatelessWidget {
         Text(
           label,
           style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                letterSpacing: 0,
-                color: ObsidianPalette.onSurfaceVariant,
-              ),
+            letterSpacing: 0,
+            color: ObsidianPalette.onSurfaceVariant,
+          ),
         ),
       ],
     );
@@ -436,8 +463,9 @@ class _TotalAssetsCard extends StatelessWidget {
         children: [
           Text(
             'Total Assets',
-            style: text.bodySmall
-                ?.copyWith(color: ObsidianPalette.onSurfaceVariant),
+            style: text.bodySmall?.copyWith(
+              color: ObsidianPalette.onSurfaceVariant,
+            ),
           ),
           const SizedBox(height: 6),
           Row(
@@ -458,10 +486,7 @@ class _TotalAssetsCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: Spacing.stackSm),
-          const TrendChip(
-            label: '+₺7.858,53 (+1.52%) Today',
-            positive: true,
-          ),
+          const TrendChip(label: '+₺7.858,53 (+1.52%) Today', positive: true),
         ],
       ),
     );
@@ -481,12 +506,13 @@ class _EmergencyFundCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.savings_outlined, size: 20,
-                  color: ObsidianPalette.tertiary),
-              const SizedBox(width: Spacing.stackSm),
-              Expanded(
-                child: Text('Emergency Fund', style: text.titleLarge),
+              const Icon(
+                Icons.savings_outlined,
+                size: 20,
+                color: ObsidianPalette.tertiary,
               ),
+              const SizedBox(width: Spacing.stackSm),
+              Expanded(child: Text('Emergency Fund', style: text.titleLarge)),
               Text(
                 '%74',
                 style: text.bodyMedium?.copyWith(
@@ -503,8 +529,7 @@ class _EmergencyFundCard extends StatelessWidget {
               value: 0.74,
               minHeight: 6,
               backgroundColor: ObsidianPalette.surfaceContainerHigh,
-              valueColor:
-                  AlwaysStoppedAnimation(ObsidianPalette.tertiary),
+              valueColor: AlwaysStoppedAnimation(ObsidianPalette.tertiary),
             ),
           ),
           const SizedBox(height: Spacing.stackSm),
@@ -554,8 +579,9 @@ class _Amount extends StatelessWidget {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     return Column(
-      crossAxisAlignment:
-          alignEnd ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      crossAxisAlignment: alignEnd
+          ? CrossAxisAlignment.end
+          : CrossAxisAlignment.start,
       children: [
         Text(
           label,
@@ -612,8 +638,10 @@ class _HoldingTile extends StatelessWidget {
             alignment: Alignment.center,
             child: Text(
               symbol,
-              style: text.bodyLarge
-                  ?.copyWith(fontWeight: FontWeight.w700, color: tone),
+              style: text.bodyLarge?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: tone,
+              ),
             ),
           ),
           const SizedBox(width: 12),
@@ -625,8 +653,7 @@ class _HoldingTile extends StatelessWidget {
                   name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: text.bodyMedium
-                      ?.copyWith(fontWeight: FontWeight.w600),
+                  style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 2),
                 Text(

@@ -51,7 +51,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               // with an ellipsis, which hides WHERE the key is stored and how
               // well it is protected — the one line on this screen a user most
               // needs to read in full.
-              subtitle: 'owner-only file — OS key store unavailable; key kept '
+              subtitle:
+                  'owner-only file — OS key store unavailable; key kept '
                   'in a local file with 0600 permissions.',
               subtitleMaxLines: 3,
               onTap: () {},
@@ -198,17 +199,15 @@ class _SettingsTile extends StatelessWidget {
               width: 36,
               height: 36,
               decoration: BoxDecoration(
-                color: (danger
-                        ? ObsidianPalette.error
-                        : ObsidianPalette.primary)
-                    .withValues(alpha: 0.10),
+                color:
+                    (danger ? ObsidianPalette.error : ObsidianPalette.primary)
+                        .withValues(alpha: 0.10),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 icon,
                 size: 18,
-                color:
-                    danger ? ObsidianPalette.error : ObsidianPalette.primary,
+                color: danger ? ObsidianPalette.error : ObsidianPalette.primary,
               ),
             ),
             const SizedBox(width: 12),
@@ -216,10 +215,7 @@ class _SettingsTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    title,
-                    style: text.bodyMedium?.copyWith(color: tint),
-                  ),
+                  Text(title, style: text.bodyMedium?.copyWith(color: tint)),
                   if (subtitle != null) ...[
                     const SizedBox(height: 2),
                     Text(

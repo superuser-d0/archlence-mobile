@@ -144,4 +144,3 @@ class _GlassHeader extends StatelessWidget implements PreferredSizeWidget {
     );
   }
 }
-

@@ -42,9 +42,7 @@ class BalanceRing extends StatelessWidget {
         alignment: Alignment.center,
         children: [
           Positioned.fill(
-            child: CustomPaint(
-              painter: _RingPainter(progress: progress),
-            ),
+            child: CustomPaint(painter: _RingPainter(progress: progress)),
           ),
           Padding(
             // Keep the label block clear of the stroke on both sides.
@@ -54,31 +52,26 @@ class BalanceRing extends StatelessWidget {
               children: [
                 Text(
                   'Total Balance',
-                  style: text.bodySmall
-                      ?.copyWith(color: ObsidianPalette.onSurfaceVariant),
+                  style: text.bodySmall?.copyWith(
+                    color: ObsidianPalette.onSurfaceVariant,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 FittedBox(
                   fit: BoxFit.scaleDown,
-                  child: Text(
-                    amount,
-                    maxLines: 1,
-                    style: text.displayLarge,
-                  ),
+                  child: Text(amount, maxLines: 1, style: text.displayLarge),
                 ),
                 const SizedBox(height: 8),
-                TrendChip(
-                  label: changeLabel,
-                  positive: changeIsPositive,
-                ),
+                TrendChip(label: changeLabel, positive: changeIsPositive),
                 const SizedBox(height: 6),
                 Text(
                   periodLabel,
                   style: text.labelMedium?.copyWith(
                     fontSize: 10,
                     letterSpacing: 0,
-                    color: ObsidianPalette.onSurfaceVariant
-                        .withValues(alpha: 0.7),
+                    color: ObsidianPalette.onSurfaceVariant.withValues(
+                      alpha: 0.7,
+                    ),
                   ),
                 ),
               ],

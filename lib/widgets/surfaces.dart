@@ -54,11 +54,7 @@ class AppCard extends StatelessWidget {
 /// the app header and the bottom navigation. This is the one place the blur
 /// earns its cost, because there is genuinely something moving behind it.
 class GlassBar extends StatelessWidget {
-  const GlassBar({
-    super.key,
-    required this.child,
-    this.border,
-  });
+  const GlassBar({super.key, required this.child, this.border});
 
   final Widget child;
   final Border? border;
@@ -82,19 +78,14 @@ class GlassBar extends StatelessWidget {
 
 /// Pill-shaped semantic badge: emerald for gains, rose for losses.
 class TrendChip extends StatelessWidget {
-  const TrendChip({
-    super.key,
-    required this.label,
-    required this.positive,
-  });
+  const TrendChip({super.key, required this.label, required this.positive});
 
   final String label;
   final bool positive;
 
   @override
   Widget build(BuildContext context) {
-    final color =
-        positive ? ObsidianPalette.tertiary : ObsidianPalette.error;
+    final color = positive ? ObsidianPalette.tertiary : ObsidianPalette.error;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
@@ -106,9 +97,7 @@ class TrendChip extends StatelessWidget {
         children: [
           Text(
             label,
-            style: Theme.of(context)
-                .textTheme
-                .labelMedium
+            style: Theme.of(context).textTheme.labelMedium
                 ?.copyWith(color: color),
           ),
           const SizedBox(width: 2),
@@ -154,9 +143,9 @@ class GradientButton extends StatelessWidget {
               label,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: ObsidianPalette.onPrimary,
-                  ),
+                fontWeight: FontWeight.w600,
+                color: ObsidianPalette.onPrimary,
+              ),
             ),
           ),
         ),
@@ -176,9 +165,7 @@ class SectionLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       text.toUpperCase(),
-      style: Theme.of(context)
-          .textTheme
-          .labelMedium
+      style: Theme.of(context).textTheme.labelMedium
           ?.copyWith(color: ObsidianPalette.onSurfaceVariant),
     );
   }

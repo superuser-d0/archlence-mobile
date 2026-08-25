@@ -53,17 +53,17 @@ class _StatTile extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     final (fill, valueColor) = switch (stat.tone) {
       SummaryTone.positive => (
-          ObsidianPalette.tertiary.withValues(alpha: 0.10),
-          ObsidianPalette.tertiary,
-        ),
+        ObsidianPalette.tertiary.withValues(alpha: 0.10),
+        ObsidianPalette.tertiary,
+      ),
       SummaryTone.negative => (
-          ObsidianPalette.error.withValues(alpha: 0.10),
-          ObsidianPalette.error,
-        ),
+        ObsidianPalette.error.withValues(alpha: 0.10),
+        ObsidianPalette.error,
+      ),
       SummaryTone.neutral => (
-          ObsidianPalette.surfaceContainer,
-          ObsidianPalette.onSurface,
-        ),
+        ObsidianPalette.surfaceContainer,
+        ObsidianPalette.onSurface,
+      ),
     };
 
     return AppCard(
