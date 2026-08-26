@@ -33,6 +33,15 @@ migrate_working_dir/
 /build/
 /coverage/
 
+# Release signing. `android/.gitignore` already covers `key.properties` and
+# any keystore under `android/`; these two catch one dropped anywhere else in
+# the tree, which is the case that would otherwise go unnoticed. The keystore
+# is the app's identity — whoever holds it can publish an update over an
+# installed Archlence, and losing it means no future version can ever update
+# one. `android/key.properties.example` is checked in and carries no secrets.
+*.jks
+*.keystore
+
 # Symbolication related
 app.*.symbols
 

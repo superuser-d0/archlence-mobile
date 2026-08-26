@@ -1,7 +1,25 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+}
+
+// Where the release signing details come from.
+//
+// NOT in the repository, and `.gitignore` keeps it that way along with the
+// keystore itself. That file is the app's IDENTITY: Android decides whether an
+// update may replace an installed app by comparing signatures, so anyone
+// holding it can publish something that overwrites this app on a user's phone,
+// and losing it means no future version can ever update the installed one.
+//
+// `android/key.properties.example` lists the four keys and how to make the
+// keystore.
+val keystorePropertiesFile = rootProject.file("key.properties")
+val keystoreProperties = Properties()
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.inputStream().use(keystoreProperties::load)
 }
 
 android {
@@ -15,7 +33,6 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.archlence.archlence_mobile"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
@@ -29,14 +46,73 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        // Declared only when there is something to declare. A config pointing
+        // at a keystore that is not there fails deep inside AGP with a message
+        // about a missing file; the check below fails early and says what to
+        // do instead.
+        if (keystorePropertiesFile.exists()) {
+            create("release") {
+                storeFile = file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            // Null when `key.properties` is absent, and the guard below turns
+            // that into a refusal.
+            //
+            // What this REPLACED is the point: the Flutter template signs
+            // release builds with the DEBUG key so that `flutter run --release`
+            // works out of the box. The debug key is a well-known one that
+            // ships with the SDK and is identical on every machine — an APK
+            // carrying it can be replaced by anything anyone else builds, can
+            // never be updated by a real key afterwards, and Play refuses it.
+            // It is the one failure here that looks like success.
+            signingConfig = signingConfigs.findByName("release")
         }
     }
 }
+
+// Refuse to build a release that is not properly signed.
+//
+// The alternative is an APK that installs and runs and is quietly worthless —
+// either unsigned, or carrying the SDK's debug key. Both are discovered at the
+// moment someone tries to ship an update, which is the worst moment to find
+// out. `assembleDebug` is untouched: development does not need any of this.
+tasks.matching { it.name.matches(Regex("^(assemble|bundle).*Release$")) }
+    .configureEach {
+        doFirst {
+            if (!keystorePropertiesFile.exists()) {
+                throw GradleException(
+                    "A release build needs android/key.properties, which is " +
+                        "not in the repository. See " +
+                        "android/key.properties.example — it lists the four " +
+                        "keys and the keytool command that makes the keystore."
+                )
+            }
+            val missing = listOf(
+                "storeFile", "storePassword", "keyAlias", "keyPassword"
+            ).filter { keystoreProperties.getProperty(it).isNullOrBlank() }
+            if (missing.isNotEmpty()) {
+                throw GradleException(
+                    "android/key.properties is missing: " +
+                        missing.joinToString(", ")
+                )
+            }
+            val store = file(keystoreProperties.getProperty("storeFile"))
+            if (!store.exists()) {
+                throw GradleException(
+                    "storeFile in android/key.properties points at " +
+                        "${store.absolutePath}, which does not exist."
+                )
+            }
+        }
+    }
 
 kotlin {
     compilerOptions {

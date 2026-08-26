@@ -1,0 +1,35 @@
+# Copy to `android/key.properties` and fill in. That copy is NOT in the
+# repository, and neither is the keystore it points at — see `.gitignore`.
+#
+# WHY IT MATTERS MORE THAN IT LOOKS. Android decides whether an update may
+# replace an installed app by comparing signatures. Whoever holds this keystore
+# can publish something that overwrites Archlence on a user's phone; and if it
+# is lost, no future version can ever update an already-installed one. There is
+# no recovery for either. Back it up somewhere that is not this machine, and
+# not beside the source.
+#
+# Make one (validity in days — 10000 is a little over 27 years, which is what
+# Play wants; a certificate that expires strands the app):
+#
+#   keytool -genkey -v \
+#     -keystore ~/archlence-release.jks \
+#     -keyalg RSA -keysize 2048 -validity 10000 \
+#     -alias archlence
+#
+# No `-storetype`: JDK 9 and later default to PKCS12, and asking for the old
+# JKS format only earns a warning telling you to migrate. One consequence —
+# a PKCS12 store has ONE password, so `storePassword` and `keyPassword` below
+# are the same value.
+#
+# It will ask for that password and for a name and organisation. The password
+# is yours; nothing in this repository should ever contain it.
+#
+# Then check what you made, and keep the fingerprint somewhere:
+#
+#   keytool -list -v -keystore ~/archlence-release.jks -alias archlence
+
+# An absolute path, or one relative to `android/app/`.
+storeFile=/home/you/archlence-release.jks
+storePassword=
+keyAlias=archlence
+keyPassword=

@@ -35,6 +35,13 @@ detail — see "What i18n did not cover".
 mark, the label under it says Archlence rather than `archlence_mobile`, and a
 cold start opens on the app's own dark instead of a white flash.
 
+**Release builds are signed properly, or refused.** The debug-key fallback the
+Flutter template ships with is gone. What is NOT done — because it cannot be,
+by anyone but the person shipping — is the keystore itself: there is no
+release key on this machine yet, so no installable release APK exists yet
+either. `android/key.properties.example` carries the one command that makes
+one.
+
 **What it cannot do yet:** show a live price.
 
 579 unit tests and 12 device tests pass. `flutter analyze` is clean, no
@@ -44,10 +51,12 @@ control in the app is inert, and it runs on the emulator.
 
 In priority order. Each of these is a self-contained next session.
 
-**1. Release signing.** The icon and the launch screen are done; what is left
-is a keystore, `key.properties`, and a `signingConfigs` block — after which
-`flutter build apk --release` produces something installable by someone else.
-Nothing above waits on it.
+**1. Make the release keystore.** Five minutes and one `keytool` command,
+written out in `android/key.properties.example`. It is first because
+everything else is written and waiting on it: the moment that file exists,
+`flutter build apk --release` produces something another person can install.
+It is not a coding task, and it is not one to delegate — the keystore is the
+app's identity and its password should never be typed into this repository.
 
 **2. `key_recovery_service.py`.** The one piece of the backup work deliberately
 left out — see "What the backup work did NOT port". It matters for someone who
@@ -207,7 +216,7 @@ Long, and grouped roughly by layer rather than by date:
 | Backup | The backup's cryptographic core · The package around it · Restoring |
 | Security | The screen lock |
 | Language | i18n · What i18n did NOT cover |
-| Shipping | The icon and the launch screen · What running it caught |
+| Shipping | The icon and the launch screen · What running it caught · Release signing |
 | Screens | The screen–service join · The wired tabs · Every control is live or visibly unavailable · Screens (as first built) |
 | Write flows | The first write flow · Recording a transaction · Buying and selling a holding · Savings goals (sheets) · A budget line · Managing a subscription · Paying card debt · The first run · Backup & Restore |
 
@@ -859,6 +868,66 @@ Ayarlar tab`. What it CANNOT catch is a label that was never given a key at
 all — nothing but reading can — and that limit is worth knowing rather than
 trusting the green.
 
+### Release signing — `android/app/build.gradle.kts`
+
+**What this replaced is the whole point.** The Flutter template signs release
+builds with the DEBUG key, so that `flutter run --release` works out of the
+box, and leaves a `TODO` above it. That is the one failure here that looks
+like success: the APK builds, installs and runs.
+
+The debug key is a well-known one that ships with the SDK and is byte-identical
+on every machine that has Android Studio. An APK carrying it can be replaced by
+anything anyone else builds; it can never be updated by a real key afterwards,
+because Android compares signatures before allowing an update; and Play refuses
+it outright. All three are discovered at the moment someone tries to ship — the
+worst moment to find out.
+
+Measured, not assumed. `apksigner verify --print-certs` on what the old
+configuration produced:
+
+    Signer #1 certificate DN: C=US, O=Android, CN=Android Debug
+
+**Now:** `signingConfigs` reads `android/key.properties`, which is outside the
+repository, and is declared ONLY when that file exists — a config pointing at a
+missing keystore fails deep inside AGP with a message about a file path, where
+this fails early and says what to do.
+
+**And a release without it is refused, not downgraded.** A `doFirst` guard on
+every `assemble*Release` / `bundle*Release` task checks that the file exists,
+that all four keys are filled in, and that `storeFile` points at something
+real. Falling back to an unsigned or debug-signed APK would put the discovery
+back where it was. `assembleDebug` is untouched: development needs none of it.
+
+**The keystore is not created here, and must not be.** It is a credential, it
+belongs to whoever ships the app, and its password has no business being typed
+into this repository or into a session with a tool that logs its commands.
+`android/key.properties.example` carries the `keytool` line, the reasons the
+file matters more than it looks (whoever holds it can publish an update over an
+installed Archlence; losing it strands every installed copy for good), and the
+PKCS12 note — JDK 9 and later default to it, and it has ONE password, so
+`storePassword` and `keyPassword` are the same value.
+
+`.gitignore` gets `*.jks` and `*.keystore` at the ROOT. `android/.gitignore`
+already covered `key.properties` and both extensions under `android/`; the root
+pair catches a keystore dropped anywhere else in the tree, which is the case
+that would otherwise go unnoticed.
+
+**How it was proven,** both directions, because a guard that never fires and a
+config that never signs look identical from the outside:
+
+* With no `key.properties`, `flutter build apk --release` fails with the guard's
+  own message naming the example file — not with an AGP stack trace, and not
+  with a build that succeeds. `flutter build appbundle --release` was run too,
+  and fails the same way on `bundleRelease`: the Play path is the one that
+  would matter most and it would have been easy to leave uncovered.
+* With a throwaway PKCS12 keystore wired in, it builds, and
+  `apksigner verify --print-certs` reports that certificate rather than
+  `CN=Android Debug`.
+
+The throwaway keystore and the release APK it signed were both deleted
+afterwards. Neither was ever in the repository, and nothing signed with a
+disposable key should be left where it could be mistaken for a build to ship.
+
 ### Paying card debt — `lib/screens/pay_debt_sheet.dart`
 
 The last write flow. Two things it gets right by refusing rather than
@@ -1359,8 +1428,16 @@ small change once the source exists.
 
 ### 2. Shipping
 
-Release signing and a Play Store listing. The icon and the launch screen are
-done — see "The icon and the launch screen". The listing is not engineering.
+The icon, the launch screen and the signing configuration are done — see
+"The icon and the launch screen" and "Release signing". What is left is the
+keystore (item 1 above) and a Play Store listing, which is not engineering.
+
+Not attempted, and worth naming so it is not mistaken for finished: R8 is not
+enabled for release builds. `isMinifyEnabled` is off, as it is in the Flutter
+template, so the release APK is 63.7MB of unshrunk code. Turning it on is a
+one-line change and a real risk — it needs keep rules for the plugins and a
+run on a device before it can be trusted, which makes it its own session
+rather than a line in this one.
 
 ### 3. Not yet considered at all
 

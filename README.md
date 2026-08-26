@@ -32,7 +32,12 @@ specifies and the desktop stores, not a translation.
 
 **It looks like itself on the home screen.** The launcher icon is the desktop
 app's own mark, and a cold start opens on the app's dark rather than a white
-flash. What is left before someone else can install it is release signing.
+flash.
+
+**Release builds are signed properly or refused** — the Flutter template's
+debug-key fallback is gone. Creating the keystore is the one step left, and it
+belongs to whoever ships the app; `android/key.properties.example` has the
+command.
 
 One thing it cannot do yet: **live prices** need a data source chosen, so
 holdings are shown at what they cost and labelled as such.
@@ -54,6 +59,14 @@ flutter run -d <device>
 Both generators' output is checked in, so a fresh clone builds without running
 either. `flutter run` and `flutter test` re-run `gen-l10n` on their own; the
 command above is for when you want the regenerated class before either.
+
+A release build needs `android/key.properties` and the keystore it names.
+Without them the build is refused rather than quietly signed with the SDK's
+debug key — see `android/key.properties.example`:
+
+```bash
+flutter build apk --release
+```
 
 Device tests need an emulator or handset. They exercise the real Android
 Keystore, the real database file and the real screens — the things an
