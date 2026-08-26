@@ -19,34 +19,36 @@ disabled for want of one.
 encryption, the database schema — and the whole service layer on top:
 accounts, the ledger, holdings, recurring payments, the budget, savings.
 
-**What it cannot do yet:** make a backup, show a live price, or speak Turkish
-in its labels. The first of those is the sharpest, because onboarding tells
-the user backups are their responsibility.
+**And it can move its data.** Settings writes a verified backup package and
+hands it to the share sheet; it reads one back — including a package the
+desktop app wrote — replacing the database and the encryption key under a
+journal that survives the process being killed. Proven in both directions
+against `services/backup_service.py` itself.
 
-516 unit tests and 12 device tests pass. `flutter analyze` is clean, no
+**What it cannot do yet:** show a live price, or speak Turkish in its labels.
+
+568 unit tests and 12 device tests pass. `flutter analyze` is clean, no
 control in the app is inert, and it runs on the emulator.
 
 ## Pick up here
 
 In priority order. Each of these is a self-contained next session.
 
-**1. Finish backup and restore.** Half done: the cryptographic core is ported
-and proven against the desktop's own output (see "The backup's cryptographic
-core"). What is left is the package around it — writing a ZIP with a
-SQLite-level database copy, reading one back through the staging bounds, and
-restoring with the desktop's journal-and-rollback design. The bounds are the
-security-critical part: **a backup file is untrusted input.** Open work 1
-lists them.
-
-**2. i18n.** The numbers are already Turkish-formatted; the labels are English
+**1. i18n.** The numbers are already Turkish-formatted; the labels are English
 strings sitting in widgets. The desktop's `ui/i18n.py` has the full map, so
 this is mechanical — but it touches every screen, and it is the difference
-between an app for its author and an app for its users.
+between an app for its author and an app for its users. `error_messages.dart`
+was written for exactly this.
 
-**3. Icon, launch screen, release signing.** Small and mechanical, and nothing
+**2. Icon, launch screen, release signing.** Small and mechanical, and nothing
 above waits on them.
 
-Open work 2 (price fetching) needs a DECISION before it needs code, and open
+**3. `key_recovery_service.py`.** The one piece of the backup work deliberately
+left out — see "What the backup work did NOT port". It matters for someone who
+still has their database but has lost the key, which a whole backup package
+does not help with.
+
+Open work 1 (price fetching) needs a DECISION before it needs code, and open
 work 3 lists what has not been considered at all.
 
 ## Settled decisions
@@ -136,10 +138,10 @@ Long, and grouped roughly by layer rather than by date:
 | --- | --- |
 | Foundations | Money · Encryption · Database · The REAL column's drift |
 | Services | Accounts · Transactions · Holdings · Recurring payments · The monthly budget · Savings goals |
-| Backup | The backup's cryptographic core |
+| Backup | The backup's cryptographic core · The package around it · Restoring |
 | Security | The screen lock |
 | Screens | The screen–service join · The wired tabs · Every control is live or visibly unavailable · Screens (as first built) |
-| Write flows | The first write flow · Recording a transaction · Buying and selling a holding · Savings goals (sheets) · A budget line · Managing a subscription · Paying card debt · The first run |
+| Write flows | The first write flow · Recording a transaction · Buying and selling a holding · Savings goals (sheets) · A budget line · Managing a subscription · Paying card debt · The first run · Backup & Restore |
 
 Each section says what the thing does, which departures from the desktop or
 the mockup were deliberate, and how the claim was checked — including, where
@@ -388,6 +390,196 @@ user to different places.
 The cost is deliberate. PBKDF2 at 600 000 rounds takes seconds on a phone —
 that is what a KDF is for — and it must not run on the UI isolate.
 
+### The package around it — `lib/backup/backup_package.dart`
+
+The ZIP a backup travels in, and **the bounds it is read under**. This is the
+only parser in the app fed input the app did not write: a backup arrives from
+the user's storage, a cloud folder or a chat app, and nothing about it has been
+proven when this code first looks at it.
+
+Decided from the CENTRAL DIRECTORY, before a byte is decompressed — the cheap
+half, and the half that stops a bomb from ever being paid for: at most four
+members, only the four allowed names, no duplicates, no directory entry, no
+ZIP-level encryption, no symbolic link, deflate or stored only, 256 MB for
+`finance.db` and 4 MB for the rest, and a compression-ratio ceiling of 200.
+Then, while extracting: a SECOND counter over the bytes ACTUALLY PRODUCED,
+because a header is written by whoever built the file and can lie.
+
+Three departures from the desktop, all tightenings:
+
+1. **Every member is checked against its CRC and its declared size.** Deflate
+   is not self-checking — decoding damaged bits mostly yields damaged bytes
+   rather than an error — and it was measured: with the check removed, a
+   package with 32 bytes flipped inside `config.json` staged CLEANLY and left
+   64 KB of garbage on disk. The other three members are separately
+   authenticated (the database by its SHA-256, the metadata by its HMAC, the
+   recovery material by its own GCM tag); `config.json` is covered by nothing
+   else, which is exactly why the check belongs here.
+2. **bzip2 is refused** rather than decompressed. The desktop never writes it,
+   and the decoder available here has no bounded mode.
+3. **A directory entry is recognised by its ATTRIBUTES too**, not only a
+   trailing `/`. A name ending in `/` is not one of the four allowed names, so
+   the allowed-names check rejects it first and the trailing-slash test can
+   never fire; the reachable shape is an entry named exactly `config.json`
+   with `S_IFDIR` set.
+
+`package:archive`'s own streaming helper is deliberately NOT used for the
+extraction. Its `decodeStream` collects every decompressed chunk in memory and
+hands them over only at close, so a bound applied to its output is applied
+after the memory has already been spent — and its `decodeBytes` path
+decompresses a member whole. dart:io's zlib is driven directly instead, a
+chunk at a time, so the byte counter can abandon a member mid-stream.
+
+**Proof:** 22 tests, each a hostile file built in the test rather than
+described. Every bound was checked for teeth by removing it and requiring the
+matching test to fail; **three had none** and were fixed rather than excused:
+
+- the directory-entry test was being rejected by the allowed-names check, so
+  the directory check itself was decoration — hence departure 3 above;
+- the over-size test was ALSO caught by the extraction counter, so it could
+  not tell the two layers apart; the header-only gate is now exercised on its
+  own, because which layer refuses a 250 MB member decides whether it is ever
+  decompressed;
+- the catch-all that converts a ZIP reader's own exceptions had no test that
+  reached it. Rather than engineering one input per exception type, a valid
+  package is now mangled **400 different ways** from a fixed seed, and every
+  one has to come back as a backup error and nothing else.
+
+### Restoring — `lib/backup/backup_service.dart`
+
+Writing a package: a SQLite-level copy of the database through sqlite3's own
+online-backup API (not a copy of the file's bytes, which would catch a write
+in progress), `PRAGMA integrity_check`, `PRAGMA foreign_key_check`, then every
+AEAD field opened with the key that is about to travel with it. The package is
+read back through the public entry point BEFORE this returns — a backup that
+cannot be restored is worse than none, because it is believed.
+
+Reading one: the metadata's HMAC first, since everything below it reads the
+metadata; then the database's SHA-256, the key unwrapped from the recovery
+material, its fingerprint against the metadata's, SQLite's integrity check,
+and finally every AEAD field opened with that key and the count compared with
+the one recorded.
+
+**A wrong passphrase and a tampered file are told apart.** The metadata tag
+fails identically for both, so on a mismatch the recovery material — which
+carries its own GCM tag and a bounded round count — is tried with the same
+passphrase. If it opens, the passphrase was right and the metadata was
+altered. The extra derivation costs seconds and only on a path that has
+already failed.
+
+**The restore is journalled, and the KEY IS SWAPPED LAST.** That is the one
+real design change from the desktop, and it exists because the desktop's order
+loses data on a phone. The desktop replaces the key in the middle and its
+journal never records the old one, so a restore killed after that step and
+rolled back at the next start brings the OLD database back under the NEW key —
+which opens nothing. Android kills apps as a matter of routine.
+
+Moving the swap to the end makes every earlier state unambiguous: the old key
+is still in the store, so rolling the database back restores a generation that
+still opens. The database is verified with the incoming key held IN MEMORY,
+before that key is anywhere near the store. Writing the old key to disk for
+the duration would have worked too, and was rejected: on a device with a
+Keystore, the key's whole value is that it is not a file.
+
+One state cannot be decided from its name — the process died inside the key
+store's own write — so the journal records the SHA-256 of both possible keys
+before the swap begins, and recovery asks the store which one it holds. A
+store holding neither is not guessed at; it fails closed. Fingerprints, not
+keys: a hash of a 32-byte random key tells an attacker nothing.
+
+SQLite's sidecar files (`-journal`, `-wal`, `-shm`) move with the database they
+belong to and come back with it. The desktop does not do this. A stale
+rollback journal left beside a restored database is one SQLite would replay
+into the new file.
+
+**Proof:** 23 tests. The cross-app ones are the point:
+`test/desktop_backup.archlence-backup` was written by
+`services/backup_service.py`'s own `create_backup` over a database built by
+its own `initialize_database()`, and the assertion is that this app recovers
+THE KNOWN KEY inside it — not merely that something 32 bytes long came out.
+The other direction was checked by hand and is repeatable with
+`tool/emit_mobile_backup.dart`: a package written here, restored by the
+desktop, whose `initialize_database()` then accepted the schema unchanged and
+decrypted the rows.
+
+Every step of the restore is driven into failure in turn and the previous
+database, key and settings are required back each time; a killed process is
+reproduced by snapshotting the whole profile mid-flight and running recovery
+over the snapshot, which is what the next start of the app actually sees.
+Mutation-checking the verification found two tests without teeth: the
+"metadata altered" test was changing a field the record-count check ALSO
+looked at, so it passed with the signature check deleted, and nothing isolated
+the key fingerprint at all — a substituted key is normally caught when it
+fails to open a row, but a profile with nothing encrypted has no row to fail
+on, and that is the case the fingerprint is for.
+
+**A defect this found in the app, not the port:** `ArchlenceDatabase` declared
+`schemaVersion = 1` while `database/init_db.py` stamps `SCHEMA_VERSION = 2`.
+Every schema comparison passed — the SHAPE was right, only the number was
+wrong — and the cost was that a database restored from a desktop backup looked
+to drift like a file from a future it had no migration for, so **the app
+refused to open its own data.** Nothing but actually restoring a desktop
+backup could have caught it.
+
+### What the backup work did NOT port
+
+`key_recovery_service.py`, deliberately, and for two different reasons.
+
+`export_recovery_package` / `import_recovery_package` — a passphrase-wrapped
+copy of just the key, without the database — is worth having and is item 3 in
+"Pick up here". It answers a case a whole backup does not: still having the
+data, having lost the key.
+
+`rotate_encryption_key` is a different matter. It refuses to run until the
+desktop's legacy CBC migration has finished, and that migration is explicitly
+not coming here; a rotation is also the one operation that can make every row
+unreadable at once. Neither belongs in a first mobile release.
+
+### The Backup & Restore screen — `lib/screens/backup_screen.dart`
+
+Where the engine above becomes something a user can reach. Two sentences on it
+are pinned by tests, because they are the difference between a user who keeps
+their data and one who does not: **the passphrase is not stored anywhere**, and
+**restoring replaces everything** — followed immediately by what is kept, since
+"replaced" and "gone" are different and the difference is the backup the app
+writes first.
+
+The file leaves and arrives through the platform's own pickers, not a folder
+this app writes into. Since Android 11 an app cannot hand another app a path,
+and a backup that cannot be moved off the phone is not a backup. The chooser
+is opened with no type filter: `.archlence-backup` maps to no MIME type, and a
+filter would grey out the only file the user came for.
+
+A restore cannot happen underneath a running app — it replaces the database
+file, and a drift connection still holding the old one would write into a file
+that is no longer the app's data. So the screen asks the root, through
+`AppRestartScope`, to close the graph, run the restore against a profile
+nothing has open, and build everything again. The rebuild happens in a
+`finally`: a restore that fails has already rolled itself back, and the app
+has to come up on the previous data rather than sit on a closed database.
+
+`share_plus` and `file_selector` are the two new dependencies. `file_picker`
+was tried first and abandoned: its current release needs `win32: ^6`, which
+`flutter_secure_storage` 9 forbids through its Windows sibling — and that
+sibling is compiled even for an Android build, so the conflict is real rather
+than theoretical. Resolving it meant moving the key store to
+`flutter_secure_storage` 11, which is a change to where the encryption key
+LIVES and does not belong in a change about backups.
+
+**Proof:** widget tests for the wording and both gates, and the whole flow
+walked on the emulator — onboarding, Settings, a package created and handed to
+the share sheet, that package pulled off the device and restored by the
+desktop app, and the desktop's own fixture restored onto the phone with the
+app coming back up on 1.500,00 ₺ of somebody else's data.
+
+**Two defects the emulator found and no test had:** a fresh install that had
+opened an account but recorded nothing had a database and NO KEY — nothing on
+that path encrypts anything, so nothing had ever asked for one — and Backup &
+Restore answered "there is no encryption key to back up" at exactly the moment
+a user is most likely to make their first backup. The key is now created with
+the profile, in `AppServices.open`. The other was `GradientButton`; see "Every
+control is live or visibly unavailable".
+
 ### The screen lock — `lib/security/screen_lock.dart`
 
 **A UI gate, not cryptography, and the app says so.** The database key lives
@@ -553,6 +745,20 @@ the exact opposite of the truth — the worst thing on that screen to be wrong
 about. An unknown store reports "not known" rather than assuming the best
 case. Its two dead switches went too: they moved local state and nothing else,
 so a user could turn Dark Mode off and watch nothing happen.
+
+It later gained its first row with a DESTINATION — Backup & Restore — and with
+it a third shape the tile had to learn: available and tappable (a chevron),
+available and static (neither chevron nor chip), unavailable (the chip). A
+build with no profile behind it says so on the row itself rather than opening
+a screen that then reports it can do nothing.
+
+**And a defect that had been sitting in the shared primary button all along.**
+`GradientButton` painted its gradient at full strength whatever `onPressed`
+held, so a button waiting on a field the user had not filled was
+indistinguishable from one that would work. Every widget test was asserting
+`onPressed` — correctly null the whole time — and passing. It was invisible in
+the source and obvious the moment the backup screen was opened on the
+emulator. The tests now assert both halves.
 
 **Proof:** `test/screens/dead_controls_test.dart` holds the rule for the whole
 app rather than per screen, so a new dead control cannot arrive with a screen
@@ -891,28 +1097,7 @@ surfaced only that way:
 
 ## Open work
 
-### 1. Backup and restore
-
-The cryptographic core is ported and proven against the desktop's own output
-(see above). What is left is the package around it:
-
-- **Writing one.** A ZIP of `finance.db`, `metadata.json`,
-  `key.recovery.json` and optionally `config.json`, with a SQLite-level copy
-  of the database rather than a file copy, an integrity check, and the key
-  verified against the data before the package is published.
-- **Reading one.** The staging bounds are the security-critical part and must
-  be ported faithfully: at most 4 members, only the allowed names, 256 MB for
-  the database and 4 MB for the rest, a compression ratio ceiling of 200, and
-  rejection of any member whose name could escape the extraction directory.
-  A backup file is untrusted input.
-- **Restoring.** The desktop journals the operation and can roll back. That
-  design exists because a half-restored database is worse than no restore, and
-  it should be ported rather than simplified.
-
-`key_recovery_service.py` belongs with this work: a passphrase-derived key
-cannot responsibly exist without a recovery path.
-
-### 2. Price fetching — needs a decision
+### 1. Price fetching — needs a decision
 
 The desktop runs `services/asset_price_worker.py` as a **subprocess**
 (`asset_service.py:700`). That architecture does not work on Android: there is
@@ -926,7 +1111,7 @@ is a deliberate holding position, not an oversight: `AssetService.calculatePnl`
 already takes a current price as a plain argument, so wiring a feed in is a
 small change once the source exists.
 
-### 3. i18n
+### 2. i18n
 
 The desktop has `ui/i18n.py` with a full Turkish/English map. Here the NUMBERS
 are already Turkish-formatted — `lib/ui/money_format.dart` — while the labels
@@ -937,12 +1122,12 @@ Mechanical, but it touches every screen, and `error_messages.dart` was written
 for exactly this: the services raise codes and one file turns them into
 sentences, so the wording moves without a rule moving with it.
 
-### 4. Shipping
+### 3. Shipping
 
 App icon, launch screen, release signing, Play Store listing. The last of
 those is not engineering.
 
-### 5. Not yet considered at all
+### 4. Not yet considered at all
 
 Widening beyond a phone (tablet layouts), accessibility beyond what Material
 gives by default, and anything to do with more than one user or device.
@@ -957,13 +1142,16 @@ is fully accounted for. What has not been ported is not forgotten:
   chip rather than invented figures.
 - **Migration engines** (`migration_service`, `savings_migration`,
   `crypto_migration_service`, `startup_recovery`). A fresh mobile install has
-  nothing to migrate from; these matter only once restoring a desktop backup
-  works, which is item 1.
+  nothing to migrate from. Restoring a desktop backup now works, so the
+  question is live — and the answer is that a desktop database is migrated BY
+  THE DESKTOP before it is backed up. A database stamped at a schema version
+  this app does not know is refused with a message saying to open it on the
+  desktop once; see "The package around it".
 - **Price machinery** (`price_service`, `price_providers`, `price_guard`,
   `asset_price_worker`, `crypto_top100`, `brand_icon_service`, `logo_service`).
-  Item 2.
-- **Backup service.** Half ported — the cryptographic core is done, the
-  package around it is item 1. `key_recovery_service.py` goes with it.
+  Item 1.
+- **Backup service.** Ported. `key_recovery_service.py` is the exception —
+  see "What the backup work did NOT port".
 - **`background_task_manager`.** Flutter has its own answer; the desktop's
   thread pool does not port.
 
@@ -997,8 +1185,21 @@ each reads that project's own modules:
 | Script | Regenerates |
 | --- | --- |
 | `tool/emit_backup_vectors.py` | `test/backup_vectors.txt` |
+| `tool/emit_backup_package.py` | `test/desktop_backup.archlence-backup` |
 | `tool/emit_default_categories.py` | `lib/data/default_categories.dart` |
 | `tool/emit_aead_vectors.dart` | the Dart-written AEAD envelopes the desktop reads back |
+| `tool/emit_mobile_backup.dart` | a package for the desktop to read back |
+
+The last two run the other way — this app writes, the desktop reads — and are
+run by hand, because the assertion lives in the desktop checkout. Each file's
+doc comment carries the exact command and the fixed key to check the answer
+against. `emit_mobile_backup.dart` goes through `flutter test`, which is the
+only runner that has this package's Flutter dependencies.
+
+`keyring` is deliberately absent from `aeadvenv`: without it the desktop's
+`create_platform_key_provider` falls back to its file provider, so the key a
+generator writes is the key its encryption uses. With a Secret Service
+available it would pick up whatever the developer's session keyring holds.
 
 Nothing that claims parity is transcribed by hand. A generator kept outside
 the repository is a generator that does not exist the next time it is needed.
@@ -1012,8 +1213,16 @@ not.
 in the source: the tab scroll offsets, the clipped card name, the floating
 button covering a switch, `setState` handed a closure returning a `Future`, a
 change chip drawn empty so a green pill with an upward arrow read as a gain,
-and `ServicesScope` placed below the Navigator where no pushed route could
-reach it.
+`ServicesScope` placed below the Navigator where no pushed route could reach
+it, a primary button that painted itself enabled whatever its callback held,
+and a profile whose encryption key did not exist until something happened to
+need one.
+
+The last two are worth a second look, because both had passing tests over the
+exact code that was wrong. The button's tests asserted `onPressed` — correctly
+null — and never asked what the user could SEE. The key's absence needed a real
+profile that had written an account and nothing else, which no test built and
+every fresh install does.
 
 **A finder matching is not a user reaching.** A lazy list builds a cache
 extent beyond the viewport, so a widget can be in the tree and still off
