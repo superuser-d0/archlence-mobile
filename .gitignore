@@ -44,6 +44,10 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
+# Gradle's own scratch, which appeared once a plugin with an Android build was
+# added. `/build/` above only covers the repository root.
+/android/build/
+
 # Widget Preview related
 .widget_preview/
 

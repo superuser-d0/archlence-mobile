@@ -13,10 +13,18 @@
 library;
 
 import 'dart:convert';
+import 'dart:isolate';
 import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:cryptography/cryptography.dart';
+
+import 'backup_errors.dart';
+
+// The two error types this file raises live in `backup_errors.dart` with the
+// rest of them, and are re-exported so a caller that only needs the recovery
+// material does not have to know that.
+export 'backup_errors.dart' show BackupFormatError, WrongPassphraseError;
 
 /// The KDF name written into the package. Anything else is refused rather
 /// than guessed at.
@@ -46,28 +54,6 @@ final Uint8List authContext = Uint8List.fromList(
 
 /// The shortest passphrase this app will write or accept.
 const int minPassphraseLength = 12;
-
-class BackupFormatError implements Exception {
-  const BackupFormatError(this.message);
-
-  final String message;
-
-  @override
-  String toString() => 'BackupFormatError: $message';
-}
-
-/// Raised when a passphrase does not open a package.
-///
-/// Distinct from [BackupFormatError] on purpose: "you typed the wrong
-/// passphrase" and "this file is not a backup" need different reactions, and
-/// collapsing them tells a user to go looking for a corrupt file when they
-/// simply mistyped.
-class WrongPassphraseError implements Exception {
-  const WrongPassphraseError();
-
-  @override
-  String toString() => 'WrongPassphraseError';
-}
 
 /// The `key.recovery.json` payload.
 class RecoveryMaterial {
@@ -205,19 +191,15 @@ Future<String> backupAuthTag(
     throw const BackupFormatError('The backup metadata salt is not base64.');
   }
 
-  final key =
-      await Pbkdf2(
-        macAlgorithm: Hmac.sha256(),
-        iterations: recoveryIterations,
-        bits: 256,
-      ).deriveKeyFromPassword(
-        password: passphrase,
-        nonce: Uint8List.fromList([...authContext, ...salt]),
-      );
+  final key = await _pbkdf2(
+    passphrase,
+    Uint8List.fromList([...authContext, ...salt]),
+    recoveryIterations,
+  );
 
   final mac = await Hmac.sha256().calculateMac(
     utf8.encode(canonicalJson(material)),
-    secretKey: key,
+    secretKey: SecretKey(key),
   );
   return mac.bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
 }
@@ -251,13 +233,27 @@ Future<Uint8List> _deriveWrappingKey(
   String passphrase,
   Uint8List salt,
   int iterations,
-) async {
-  final key = await Pbkdf2(
-    macAlgorithm: Hmac.sha256(),
-    iterations: iterations,
-    bits: 256,
-  ).deriveKeyFromPassword(password: passphrase, nonce: salt);
-  return Uint8List.fromList(await key.extractBytes());
+) => _pbkdf2(passphrase, salt, iterations);
+
+/// PBKDF2-HMAC-SHA256, run on a BACKGROUND ISOLATE.
+///
+/// 600 000 rounds take a second or two on a desktop and longer on a phone —
+/// that is exactly what a KDF is for — and that long on the UI isolate is an
+/// app that has stopped drawing. Spawning an isolate costs a few milliseconds
+/// against a multi-second derivation, so there is no threshold to decide and
+/// no fast path to get wrong: every derivation goes off the UI isolate.
+///
+/// Only bytes cross the boundary. The key store is a platform channel and
+/// could not be reached from here even if it were wanted.
+Future<Uint8List> _pbkdf2(String password, Uint8List nonce, int iterations) {
+  return Isolate.run(() async {
+    final key = await Pbkdf2(
+      macAlgorithm: Hmac.sha256(),
+      iterations: iterations,
+      bits: 256,
+    ).deriveKeyFromPassword(password: password, nonce: nonce);
+    return Uint8List.fromList(await key.extractBytes());
+  });
 }
 
 int _requireIterations(Object? value) {
