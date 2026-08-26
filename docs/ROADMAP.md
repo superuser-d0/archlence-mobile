@@ -20,7 +20,7 @@ launches a budget screen and a savings screen that do too. Settings still
 renders literals, and nothing in the app WRITES except the two card switches
 on the Cards tab.
 
-502 unit tests and 12 device tests pass. `flutter analyze` is clean, and the
+516 unit tests and 12 device tests pass. `flutter analyze` is clean, and the
 app runs on the emulator.
 
 ## Pick up here
@@ -328,6 +328,38 @@ did: on a device whose store is unavailable it says the key is a file and that
 this is weaker, rather than implying Keystore protection that is not there.
 Verified on the emulator, where it reads "Android Keystore — held by the
 operating system".
+
+### The backup's cryptographic core — `lib/backup/recovery_material.dart`
+
+The first half of backup: the passphrase-wrapped copy of the encryption key
+that travels inside a package, and the HMAC that authenticates its metadata.
+
+**THIS IS A WIRE FORMAT.** A package written by either app must open in the
+other, so the KDF, the round count, the field lengths and the exact JSON the
+tag is computed over are all fixed by the desktop and not ours to tidy. The
+canonical serialiser is written out by hand because `jsonEncode` does not sort
+keys, and the tag is over those exact bytes — key order is format, not style.
+
+**Proof:** `test/backup_vectors.txt` was produced by running
+`services/backup_service.py`'s OWN functions, not by re-deriving what they
+ought to produce. 14 tests, including every key the desktop wrapped and every
+tag it computed.
+
+One mutation exposed a hole in the vectors rather than in the code: every
+vector used the default 600 000 rounds, so a port that ignored the count a
+package DECLARES and always used its own passed all of them. The generator now
+emits a payload at 150 000 rounds — still through the module's own code path,
+with the constant swapped rather than the algorithm — and the test refuses to
+run without one.
+
+Bounds on a round count read from a package are load-bearing: a crafted backup
+naming one round has its passphrase brute-forced in seconds, and one naming a
+billion hangs the phone. A wrong passphrase is reported as WRONG rather than
+as corruption, because "you mistyped" and "this file is not a backup" send a
+user to different places.
+
+The cost is deliberate. PBKDF2 at 600 000 rounds takes seconds on a phone —
+that is what a KDF is for — and it must not run on the UI isolate.
 
 ### The screen lock — `lib/security/screen_lock.dart`
 
@@ -834,13 +866,24 @@ surfaced only that way:
 
 ### 1. Backup and restore
 
-Onboarding tells the user that backups are on them, which makes this the
-largest gap between what the app says and what it can do.
-`services/backup_service.py` is 995 lines: an encrypted package, streamed
-hashing, size limits, and a format that is a contract with the desktop. The
-parity work is the expensive part, and `key_recovery_service.py` belongs with
-it — a passphrase-derived key (below) cannot responsibly exist without a
-recovery path.
+The cryptographic core is ported and proven against the desktop's own output
+(see above). What is left is the package around it:
+
+- **Writing one.** A ZIP of `finance.db`, `metadata.json`,
+  `key.recovery.json` and optionally `config.json`, with a SQLite-level copy
+  of the database rather than a file copy, an integrity check, and the key
+  verified against the data before the package is published.
+- **Reading one.** The staging bounds are the security-critical part and must
+  be ported faithfully: at most 4 members, only the allowed names, 256 MB for
+  the database and 4 MB for the rest, a compression ratio ceiling of 200, and
+  rejection of any member whose name could escape the extraction directory.
+  A backup file is untrusted input.
+- **Restoring.** The desktop journals the operation and can roll back. That
+  design exists because a half-restored database is worse than no restore, and
+  it should be ported rather than simplified.
+
+`key_recovery_service.py` belongs with this work: a passphrase-derived key
+cannot responsibly exist without a recovery path.
 
 ### 2. Price fetching — needs a decision
 
