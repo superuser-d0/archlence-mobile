@@ -9,34 +9,45 @@ Every claim here was verified against the code on `main` before being written.
 
 ## Where things stand
 
-**Done:** the toolchain, all five screens, the three layers underneath them
-that are hardest to get right — money, encryption, and the database schema —
-and the whole service layer on top: accounts, the ledger, holdings (portfolio
-CRUD, buying, selling), recurring payments, the monthly budget and savings
-goals. Live price fetching is the one piece left out — see open work 2.
+**The app is usable.** A fresh install walks through onboarding, opens its
+first account, and from there records transactions, buys and sells holdings,
+plans a budget, opens and funds savings goals, pays down a card and manages
+subscriptions. Every service call has a form behind it and no control is
+disabled for want of one.
 
-**Wired so far:** Home, Cards and Assets read real data, and the Tools grid
-launches a budget screen and a savings screen that do too. Settings still
-renders literals, and nothing in the app WRITES except the two card switches
-on the Cards tab.
+**Underneath:** the three layers that are hardest to get right — money,
+encryption, the database schema — and the whole service layer on top:
+accounts, the ledger, holdings, recurring payments, the budget, savings.
 
-516 unit tests and 12 device tests pass. `flutter analyze` is clean, and the
-app runs on the emulator.
+**What it cannot do yet:** make a backup, show a live price, or speak Turkish
+in its labels. The first of those is the sharpest, because onboarding tells
+the user backups are their responsibility.
+
+516 unit tests and 12 device tests pass. `flutter analyze` is clean, no
+control in the app is inert, and it runs on the emulator.
 
 ## Pick up here
 
 In priority order. Each of these is a self-contained next session.
 
-**1. Backup and restore.** The largest thing left, and the one the app most
-needs: onboarding tells the user backups are on them, and there is no way to
-make one. `services/backup_service.py` is 995 lines and security-sensitive —
-an encrypted package, streamed hashing, size limits — and its format is a
-contract with the desktop, so the parity work is the expensive part.
+**1. Finish backup and restore.** Half done: the cryptographic core is ported
+and proven against the desktop's own output (see "The backup's cryptographic
+core"). What is left is the package around it — writing a ZIP with a
+SQLite-level database copy, reading one back through the staging bounds, and
+restoring with the desktop's journal-and-rollback design. The bounds are the
+security-critical part: **a backup file is untrusted input.** Open work 1
+lists them.
 
 **2. i18n.** The numbers are already Turkish-formatted; the labels are English
-strings sitting in widgets. The desktop's `ui/i18n.py` has the full map.
+strings sitting in widgets. The desktop's `ui/i18n.py` has the full map, so
+this is mechanical — but it touches every screen, and it is the difference
+between an app for its author and an app for its users.
 
-Open work 2 below (price fetching) needs a decision before it needs code.
+**3. Icon, launch screen, release signing.** Small and mechanical, and nothing
+above waits on them.
+
+Open work 2 (price fetching) needs a DECISION before it needs code, and open
+work 3 lists what has not been considered at all.
 
 ## Settled decisions
 
@@ -118,6 +129,22 @@ names `#0A0A0A` / `#10B981` / `#F43F5E`, the tokens say `#131313` / `#4edea3` /
 screens follow it. Reading a colour off the prose introduces a second green.
 
 ## Done, and how it was proven
+
+Long, and grouped roughly by layer rather than by date:
+
+| Layer | Sections |
+| --- | --- |
+| Foundations | Money · Encryption · Database · The REAL column's drift |
+| Services | Accounts · Transactions · Holdings · Recurring payments · The monthly budget · Savings goals |
+| Backup | The backup's cryptographic core |
+| Security | The screen lock |
+| Screens | The screen–service join · The wired tabs · Every control is live or visibly unavailable · Screens (as first built) |
+| Write flows | The first write flow · Recording a transaction · Buying and selling a holding · Savings goals (sheets) · A budget line · Managing a subscription · Paying card debt · The first run |
+
+Each section says what the thing does, which departures from the desktop or
+the mockup were deliberate, and how the claim was checked — including, where
+it happened, what a mutation revealed that the tests had missed.
+
 
 Parity with the desktop is asserted against output from the desktop's own
 modules, never against expectations derived by hand. A parity test that always
@@ -899,12 +926,26 @@ is a deliberate holding position, not an oversight: `AssetService.calculatePnl`
 already takes a current price as a plain argument, so wiring a feed in is a
 small change once the source exists.
 
-### 3. Not yet considered
+### 3. i18n
 
-Backup and restore, i18n (the desktop has `ui/i18n.py` with a full Turkish/
-English map; the mobile screens are English-only strings in the widgets, while
-the NUMBERS are already Turkish-formatted — see `lib/ui/money_format.dart`),
-app icon and launch screen, release signing, Play Store listing.
+The desktop has `ui/i18n.py` with a full Turkish/English map. Here the NUMBERS
+are already Turkish-formatted — `lib/ui/money_format.dart` — while the labels
+are English strings sitting in widgets, which is the wrong way round for a
+Turkish user reading `1.234,56 ₺` under the word "Cash".
+
+Mechanical, but it touches every screen, and `error_messages.dart` was written
+for exactly this: the services raise codes and one file turns them into
+sentences, so the wording moves without a rule moving with it.
+
+### 4. Shipping
+
+App icon, launch screen, release signing, Play Store listing. The last of
+those is not engineering.
+
+### 5. Not yet considered at all
+
+Widening beyond a phone (tablet layouts), accessibility beyond what Material
+gives by default, and anything to do with more than one user or device.
 
 ### What is NOT coming from the desktop
 
@@ -916,12 +957,13 @@ is fully accounted for. What has not been ported is not forgotten:
   chip rather than invented figures.
 - **Migration engines** (`migration_service`, `savings_migration`,
   `crypto_migration_service`, `startup_recovery`). A fresh mobile install has
-  nothing to migrate from; these matter only if restoring a desktop backup
-  becomes a feature, which is item 4.
+  nothing to migrate from; these matter only once restoring a desktop backup
+  works, which is item 1.
 - **Price machinery** (`price_service`, `price_providers`, `price_guard`,
   `asset_price_worker`, `crypto_top100`, `brand_icon_service`, `logo_service`).
   Item 2.
-- **Backup service.** Item 3.
+- **Backup service.** Half ported — the cryptographic core is done, the
+  package around it is item 1. `key_recovery_service.py` goes with it.
 - **`background_task_manager`.** Flutter has its own answer; the desktop's
   thread pool does not port.
 
@@ -941,9 +983,25 @@ Set up on this machine and verified working:
   The licences are accepted and builds work — the real check is that
   `flutter build apk` succeeds.
 
-Regenerating parity vectors needs `pycryptodome`, which is not installed
-system-wide. A venv was used:
-`python3 -m venv aeadvenv && ./aeadvenv/bin/pip install pycryptodome`.
+Regenerating parity vectors needs `pycryptodome` and `platformdirs`, neither
+installed system-wide. A venv in the DESKTOP checkout is used:
+
+```bash
+python3 -m venv aeadvenv
+./aeadvenv/bin/pip install pycryptodome platformdirs
+```
+
+The generators live in `tool/` and are run from the desktop checkout, because
+each reads that project's own modules:
+
+| Script | Regenerates |
+| --- | --- |
+| `tool/emit_backup_vectors.py` | `test/backup_vectors.txt` |
+| `tool/emit_default_categories.py` | `lib/data/default_categories.dart` |
+| `tool/emit_aead_vectors.dart` | the Dart-written AEAD envelopes the desktop reads back |
+
+Nothing that claims parity is transcribed by hand. A generator kept outside
+the repository is a generator that does not exist the next time it is needed.
 
 ## Working agreement
 

@@ -10,28 +10,19 @@ schema-compatible with the desktop's, so a backup can move between the two.
 
 ## Status
 
-Readable, not yet usable.
-
-The money, encryption and database layers are done, and so is the whole
-service layer above them — accounts, the ledger, holdings, recurring payments,
-budgets and savings goals. Home, Cards and Assets read real data; the Tools
-grid opens a budget screen and a savings screen that do too.
-
-Everything can be entered: accounts, transactions, holdings, savings goals,
-budget lines, card payments and changes to a subscription. No control in the
-app is disabled for want of a form.
-
-A fresh install opens on a first-run flow that explains the trade, reports
-where the encryption key actually ended up, and sets up the first account. An
-optional lock re-asks for the phone's own fingerprint or PIN after a minute
+Usable. A fresh install walks through onboarding, opens its first account, and
+from there records transactions, buys and sells holdings, plans a budget,
+opens and funds savings goals, pays down a card and manages subscriptions.
+Every service call has a form behind it and no control in the app is inert.
+An optional lock re-asks for the phone's own fingerprint or PIN after a minute
 away — it hides the screen, and says plainly that it adds no encryption.
 
-The largest thing still missing is backup and restore, which is awkward given
-that onboarding tells you backups are your responsibility. Live price fetching is an open decision, so holdings are shown at what
-they cost and labelled as such.
-
-Every control is either live or visibly unavailable — there is no button that
-looks tappable and does nothing.
+Three things it cannot do yet. **Backup and restore** is half built: the
+cryptographic core is ported and proven against the desktop's own output, and
+the package around it is not — which is awkward, since onboarding tells you
+backups are your responsibility. **Live prices** need a data source chosen, so
+holdings are shown at what they cost and labelled as such. And the **labels are
+English** while the numbers are already Turkish.
 
 **Start at [docs/ROADMAP.md](docs/ROADMAP.md)** — it opens with a "Pick up
 here" section listing the next steps in priority order, and records how each
@@ -66,11 +57,13 @@ roadmap.
 | `lib/money/` | Decimal amounts and the rounding rules, ported from the desktop |
 | `lib/crypto/` | AES-256-GCM, field-level encryption, the key provider |
 | `lib/data/` | Database connection and the desktop's schema, verbatim |
+| `lib/backup/` | The backup package's cryptographic core |
+| `lib/security/` | The resume lock |
 | `lib/services/` | Accounts, the ledger, holdings, recurring, budget, savings |
-| `lib/screens/` | The five tabs, plus the budget and savings screens |
-| `lib/ui/` | Money formatting and the loading/error/empty contract |
+| `lib/screens/` | The five tabs, onboarding, and the forms behind them |
+| `lib/ui/` | Money formatting, error wording, the loading/error/empty contract |
 | `lib/theme/` | Obsidian Prime design tokens |
-| `lib/widgets/` | Shared surfaces, the balance ring, the summary row |
+| `lib/widgets/` | Shared surfaces, the balance ring, the sheet frame |
 | `tool/` | Developer utilities for regenerating parity vectors |
 
 ## A note on the tests
