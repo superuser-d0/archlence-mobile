@@ -1165,7 +1165,13 @@ Set up on this machine and verified working:
 - Flutter 3.47.1 stable, Android SDK at `~/Android/Sdk` (platform 35 and 36,
   build-tools, NDK), `ANDROID_HOME` exported from `~/.config/fish/config.fish`.
 - Emulator AVD `archlence_pixel` (Pixel 7, Android 15).
-  Start: `emulator -avd archlence_pixel -no-snapshot -gpu swiftshader_indirect`
+  Start:
+  `$ANDROID_HOME/emulator/emulator -avd archlence_pixel -no-snapshot -gpu swiftshader_indirect`
+
+  The full path is not decoration: `config.fish` adds `cmdline-tools`,
+  `platform-tools` and `build-tools` to the PATH but NOT `emulator`, so the
+  bare command fails with "no such file". Either use the path above or add
+  `fish_add_path $ANDROID_HOME/emulator` to the config.
 - `flutter doctor` reports an Android licence warning. It is **cosmetic**: the
   AUR `android` CLI does not emit the output format `flutter doctor` parses.
   The licences are accepted and builds work — the real check is that
