@@ -13,6 +13,7 @@ import 'package:drift/drift.dart';
 import '../data/database.dart';
 import 'asset_service.dart' show Asset;
 import 'price_providers.dart';
+import 'shares_api_key.dart';
 import 'ticker_mapper.dart';
 
 /// One holding's current price, live or read back from the cache.
@@ -58,12 +59,19 @@ class LivePriceService {
     required this.db,
     HttpGet? httpGet,
     DateTime Function()? now,
+    SharesApiKey? sharesApiKey,
   }) : _httpGet = httpGet ?? httpGetDefault,
-       _now = now ?? DateTime.now;
+       _now = now ?? DateTime.now,
+       _sharesApiKey = sharesApiKey ?? SharesApiKey();
 
   final ArchlenceDatabase db;
   final HttpGet _httpGet;
   final DateTime Function() _now;
+
+  /// Where the user's own BIST key lives. Read fresh on every batch rather
+  /// than cached in a field: a key entered in Settings has to take effect on
+  /// the next pull-to-refresh, not on the next app start.
+  final SharesApiKey _sharesApiKey;
 
   /// Prices every holding it can. A holding this service has no way to price
   /// — shares, an unrecognised symbol, or a symbol neither the live fetch
@@ -86,7 +94,7 @@ class LivePriceService {
         case GoldPriceRequest():
           cryptoIds.add(goldCoinGeckoId);
         case CurrencyPriceRequest():
-        case UnsupportedSharesPriceRequest():
+        case SharesPriceRequest():
         case UnknownPriceRequest():
           break;
       }
@@ -101,8 +109,25 @@ class LivePriceService {
       if (cryptoIds.isNotEmpty) 'USD',
     };
 
+    final shareCodes = <String>{
+      for (final request in requests.values)
+        if (request is SharesPriceRequest) request.code,
+    };
+    // Read ONLY when there is a share to price. A portfolio of crypto and
+    // gold must not touch the secure store at all, and a key the user has
+    // not given is not an error — it is the documented default, and it means
+    // shares stay at cost exactly as they did before this existed.
+    final apiKey = shareCodes.isEmpty ? null : await _sharesApiKey.read();
+
     final usdPrices = await fetchCoinGeckoUsdPrices(cryptoIds, get: _httpGet);
     final tryRates = await fetchFrankfurterTryRates(currencyCodes, get: _httpGet);
+    final sharePrices = apiKey == null
+        ? const <String, Decimal>{}
+        : await fetchSharePricesTry(
+            shareCodes,
+            apiKey: apiKey,
+            get: _httpGet,
+          );
     final usdtry = tryRates['USD'];
     final fetchedAt = _now();
 
@@ -117,6 +142,7 @@ class LivePriceService {
         request: request,
         usdPrices: usdPrices,
         tryRates: tryRates,
+        sharePrices: sharePrices,
         usdtry: usdtry,
       );
       if (live != null) {
@@ -132,10 +158,13 @@ class LivePriceService {
         );
       } else if (request is CurrencyPriceRequest ||
           request is CryptoPriceRequest ||
-          request is GoldPriceRequest) {
-        // Priceable IN PRINCIPLE, just not by this fetch — a provider gap,
-        // not an unsupported kind (shares, unknown). The cache may still
-        // hold an earlier answer.
+          request is GoldPriceRequest ||
+          (request is SharesPriceRequest && apiKey != null)) {
+        // Priceable IN PRINCIPLE, just not by this fetch — a provider gap.
+        // A share counts only when a key exists: without one, nothing has
+        // ever priced it, so there is no cache row to find and no reason to
+        // look. WITH one, a share falls back like anything else, which is
+        // what keeps a portfolio readable when a monthly credit runs out.
         unresolvedCodes.add(request.code);
       }
     }
@@ -160,6 +189,7 @@ class LivePriceService {
     required PriceRequest request,
     required Map<String, Decimal> usdPrices,
     required Map<String, Decimal> tryRates,
+    required Map<String, Decimal> sharePrices,
     required Decimal? usdtry,
   }) {
     switch (request) {
@@ -188,7 +218,13 @@ class LivePriceService {
         if (rate == null) return null;
         return (price: rate, source: sourceFrankfurter);
 
-      case UnsupportedSharesPriceRequest():
+      case SharesPriceRequest(:final code):
+        // Already in lira — the only provider here that needs no conversion,
+        // because BIST trades in lira.
+        final price = sharePrices[code];
+        if (price == null) return null;
+        return (price: price, source: sourceNosyApi);
+
       case UnknownPriceRequest():
         return null;
     }

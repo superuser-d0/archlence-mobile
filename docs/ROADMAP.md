@@ -51,12 +51,17 @@ Wire-compatible with the desktop's, checked in both directions against
 
 **And holdings show a live price.** Crypto, gold and currency go through
 `LivePriceService` — CoinGecko and Frankfurter, called straight from the
-phone, no backend of ours. Shares stay at cost, because there is still no
-keyless BIST source; the tab says so, per holding, rather than leaving a
-blanket disclaimer that would be wrong for three-quarters of a portfolio the
-moment the other three kinds have an answer.
+phone, no backend of ours. Shares need an API key of the user's own, entered
+in Settings, because BIST data is commercial and a key in an APK is a public
+key; without one they stay at cost, and the tab says which it got per
+holding rather than carrying a blanket disclaimer that would be wrong for
+most of a portfolio.
 
-661 unit tests and 12 device tests pass. `flutter analyze` is clean, no
+The share provider is the one piece of the price layer whose live response
+has NOT been seen by this codebase — checking it needs a key that belongs to
+whoever signs up for it. See "Shares, on the user's own key".
+
+672 unit tests and 12 device tests pass. `flutter analyze` is clean, no
 control in the app is inert, and it runs on the emulator.
 
 ## Pick up here
@@ -67,9 +72,12 @@ and waiting on it: the moment that file exists, `flutter build apk --release`
 produces something another person can install. It is not a coding task, and
 it is not one to delegate — the keystore is the app's identity and its
 password should never be typed into this repository. It is the only thing
-left on this list; open work 2 has what has not been considered at all, and
-the user-supplied BIST key described under "Price fetching" is worth doing
-only once someone wants it enough to type an API key into Settings.
+left on this list; open work 2 has what has not been considered at all.
+
+One thing worth doing the first time a BIST key is entered: check that the
+share prices actually appear. That path is tested against canned responses
+but has never met the live API — see "Shares, on the user's own key" for
+what to look at if they stay at cost.
 
 ## Settled decisions
 
@@ -291,7 +299,7 @@ Long, and grouped roughly by layer rather than by date:
 | Layer | Sections |
 | --- | --- |
 | Foundations | Money · Encryption · Database · The REAL column's drift |
-| Services | Accounts · Transactions · Holdings · Recurring payments · The monthly budget · Savings goals · Price fetching |
+| Services | Accounts · Transactions · Holdings · Recurring payments · The monthly budget · Savings goals · Price fetching · Shares on the user's own key |
 | Backup | The backup's cryptographic core · The package around it · Restoring · The key on its own |
 | Security | The screen lock |
 | Language | i18n · What i18n did NOT cover |
@@ -1222,10 +1230,91 @@ lands in the same "just now" branch a small positive one does — the clamp
 was dead code, confirmed rather than assumed, and removed with a comment
 explaining why no clamp is needed at all instead of being restored.
 
-**What is still not here.** BIST, by decision — see "Prices come from the
-phone, from keyless sources". The user-supplied API key that would open it
-is listed in "Pick up here" as worth doing only once someone wants it enough
-to type a key into Settings, not before.
+**What came after this, in its own piece:** the user-supplied API key that
+opens BIST — see "Shares, on the user's own key" below.
+
+### Shares, on the user's own key — `lib/services/shares_api_key.dart`
+
+The exception the pricing decision named, built. Crypto, gold and currency
+stay keyless; BIST needs a key, and it is the USER'S key, entered in Settings
+and kept in the platform secure store.
+
+**Why a user's key rather than one in the app.** A key shipped in an APK is a
+public key — anyone can pull it out — so a shared one would be spent, abused,
+or revoked within days of anyone caring. And BIST data is commercial with no
+free tier worth building on (checked August 2026), so there is nothing to
+ship even if shipping one were safe. That leaves the person who wants live
+share prices bringing their own, which is friction, which is why it is
+optional and why the app works completely without it.
+
+**NosyAPI**, chosen for one reason above the others: its request and response
+shape is publicly documented, which mattered more here than anywhere else in
+the price layer — see "How far this is proven" below. Endpoint,
+`code=ASELS,THYAO` comma-separated so a whole portfolio is one request (the
+free plan bills per REQUEST, not per symbol), and `latest` as the price.
+
+`latest`, NOT `buying` or `selling`. Those are the two sides of a spread;
+valuing a portfolio at either one would report what somebody else would pay
+or charge rather than what the holding is worth.
+
+**The key goes in a header** (`X-NSYP`), never the query string, even though
+the API accepts `?apiKey=` too. Query strings reach server logs, proxy logs
+and `Referer` headers; a credential in one is a credential leaked. There is a
+test that fails if the key ever appears anywhere in the request URI.
+
+**Three things the design refuses to do:**
+
+* **Read the key store for a portfolio with no shares.** Proven by a test
+  that wires a key store which THROWS: if it were consulted, the test fails.
+* **Look in the cache for a share when there is no key.** Nothing has ever
+  priced it, so there is nothing to find, and asking would be a database read
+  on every refresh for an answer that cannot exist. WITH a key, a share falls
+  back like everything else — which is what keeps a portfolio readable when a
+  monthly credit runs out mid-month.
+* **Show the key.** Not in the row, not masked, and not prefilled into the
+  field that edits it. A displayed credential is one a shoulder can read, and
+  seeing it buys nothing that "a key is set" does not already say — if it is
+  wrong, the fix is pasting the right one, which works either way. The
+  mutation that prefills the field fails the suite.
+
+**`UnsupportedSharesPriceRequest` was renamed `SharesPriceRequest`.** The old
+name encoded a runtime fact — "nothing can price this" — into a
+classification that only ever asked what KIND of holding it is. Whether a
+share can be priced now depends on whether a key exists, which belongs to
+`LivePriceService`. The parity fixture and its tests were unaffected: the
+classification did not move, only its name.
+
+**One instance of the key store, not two.** `AppServices` hands the same
+`SharesApiKey` to both `LivePriceService` and the Settings row, so a key
+saved on one screen is the key the next fetch uses. Two stores over one entry
+would work by accident and break the moment either cached. `testServices()`
+wires it the same way, for the same reason.
+
+**The `HttpGet` seam grew headers.** It was `Future<String> Function(Uri)`;
+it is now `Future<String> Function(Uri, {Map<String, String> headers})`. One
+seam rather than a second one beside it, because "a GET with headers" is
+still a GET, and two would mean two things to fake in every test.
+
+**How far this is proven, and how far it is not.** The request shape, the
+batching, the header, the fallbacks and the refusals are all tested against
+canned responses, and every one of them has teeth — the key in the query
+string, a share fetched without a key, and `buying` read instead of `latest`
+each fail the suite.
+
+What is NOT proven is the live wire format. Checking it needs a real API key,
+a key belongs to the person who signs up for it, and creating one is not
+something to do on someone else's behalf. So the parsing above is written
+from NosyAPI's published documentation rather than from a response this
+codebase has actually seen — which is exactly the kind of gap the rest of
+this file closes by generating fixtures from the desktop's own modules, and
+cannot here.
+
+**What that means in practice:** the first person to enter a key is the first
+real test. The failure mode is mild by construction — a shape mismatch means
+`data` or `latest` does not parse, `finitePositivePrice` returns null, and
+the holding stays at cost exactly as it does with no key at all. Nothing
+breaks and no wrong number appears; the shares simply do not light up. If
+that happens, the response body is what to look at first.
 
 ### Paying card debt — `lib/screens/pay_debt_sheet.dart`
 

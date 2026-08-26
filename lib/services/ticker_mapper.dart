@@ -52,9 +52,14 @@ final class GoldPriceRequest extends PriceRequest {
   final Decimal? multiplier;
 }
 
-/// A share holding deliberately kept at purchase cost.
-final class UnsupportedSharesPriceRequest extends PriceRequest {
-  const UnsupportedSharesPriceRequest({
+/// A BIST share.
+///
+/// NOT "unsupported", which is what this was called when nothing could price
+/// one. Whether a share CAN be priced depends on whether the user has given
+/// the app an API key — a runtime fact that belongs to `LivePriceService`,
+/// not to a classification that only ever asked what kind of holding this is.
+final class SharesPriceRequest extends PriceRequest {
+  const SharesPriceRequest({
     required super.normalizedAssetType,
     required super.code,
   });
@@ -128,7 +133,7 @@ PriceRequest priceRequestForHolding(String? assetCode, String? assetType) {
     return UnknownPriceRequest(normalizedAssetType: kind, code: code);
   }
   if (kind == 'STOCK') {
-    return UnsupportedSharesPriceRequest(normalizedAssetType: kind, code: code);
+    return SharesPriceRequest(normalizedAssetType: kind, code: code);
   }
   if (kind == 'CRYPTO') {
     return CryptoPriceRequest(normalizedAssetType: kind, code: code);

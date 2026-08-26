@@ -2321,6 +2321,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Crypto, gold and currency holdings show a live price when one could be fetched. Shares are shown at cost, because there is no free BIST price source yet.'**
   String get assetsLivePricingNote;
+
+  /// No description provided for @settingsSharesKey.
+  ///
+  /// In en, this message translates to:
+  /// **'BIST share prices'**
+  String get settingsSharesKey;
+
+  /// No description provided for @settingsSharesKeyNotSet.
+  ///
+  /// In en, this message translates to:
+  /// **'Not set — shares are shown at cost'**
+  String get settingsSharesKeyNotSet;
+
+  /// No description provided for @settingsSharesKeySet.
+  ///
+  /// In en, this message translates to:
+  /// **'A key is set — shares are priced live'**
+  String get settingsSharesKeySet;
+
+  /// No description provided for @sharesKeySheetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'BIST share prices'**
+  String get sharesKeySheetTitle;
+
+  /// No description provided for @sharesKeyExplanation.
+  ///
+  /// In en, this message translates to:
+  /// **'Crypto, gold and currency need no key. Turkish share prices are the exception: there is no free source Archlence can ship, so pricing them needs an API key of your own from nosyapi.com.\n\nThe key is stored on this phone only. It is not in a backup, so restoring one somewhere else will not carry it — and it is sent to nosyapi.com and nowhere else.'**
+  String get sharesKeyExplanation;
+
+  /// No description provided for @sharesKeyField.
+  ///
+  /// In en, this message translates to:
+  /// **'API key'**
+  String get sharesKeyField;
+
+  /// No description provided for @sharesKeySave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save the key'**
+  String get sharesKeySave;
+
+  /// No description provided for @sharesKeyRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove the key'**
+  String get sharesKeyRemove;
+
+  /// No description provided for @sharesKeySaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved. Pull to refresh the Assets tab to price your shares.'**
+  String get sharesKeySaved;
+
+  /// No description provided for @sharesKeyRemoved.
+  ///
+  /// In en, this message translates to:
+  /// **'Removed. Shares go back to being shown at cost.'**
+  String get sharesKeyRemoved;
 }
 
 class _AppLocalizationsDelegate

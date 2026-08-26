@@ -11,15 +11,18 @@ import 'package:archlence_mobile/data/database.dart';
 import 'package:archlence_mobile/services/asset_service.dart';
 import 'package:archlence_mobile/services/live_price_service.dart';
 import 'package:archlence_mobile/services/price_providers.dart';
+import 'package:archlence_mobile/services/shares_api_key.dart';
 import 'package:decimal/decimal.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'support/fake_platform_auth.dart';
 
 /// A canned response keyed by which host it answers for, and a call counter
 /// so a test can assert how many round trips actually happened — the
 /// dedup behind fetching one CoinGecko id or one Frankfurter code once no
 /// matter how many holdings share it.
 class FakeProviders {
-  FakeProviders({this.coinGeckoBody, this.frankfurterBody});
+  FakeProviders({this.coinGeckoBody, this.frankfurterBody, this.sharesBody});
 
   String? coinGeckoBody;
   String? frankfurterBody;
@@ -27,7 +30,15 @@ class FakeProviders {
   int frankfurterCalls = 0;
   final List<Uri> requested = [];
 
-  Future<String> get(Uri uri) async {
+  /// What the shares endpoint answered with, and null to make it fail.
+  String? sharesBody;
+  int sharesCalls = 0;
+
+  /// Every header the shares request carried, so a test can prove the key
+  /// travelled in one rather than in the URL.
+  Map<String, String> sharesHeaders = const {};
+
+  Future<String> get(Uri uri, {Map<String, String> headers = const {}}) async {
     requested.add(uri);
     if (uri.host == 'api.coingecko.com') {
       coinGeckoCalls++;
@@ -38,6 +49,12 @@ class FakeProviders {
       frankfurterCalls++;
       if (frankfurterBody == null) throw const _NetworkFailure();
       return frankfurterBody!;
+    }
+    if (uri.host == 'www.nosyapi.com') {
+      sharesCalls++;
+      sharesHeaders = headers;
+      if (sharesBody == null) throw const _NetworkFailure();
+      return sharesBody!;
     }
     throw StateError('unexpected host: ${uri.host}');
   }
@@ -79,12 +96,25 @@ void main() {
 
   final fixedNow = DateTime.utc(2026, 8, 26, 12);
 
-  LivePriceService serviceWith(FakeProviders fake, {DateTime? now}) =>
-      LivePriceService(
-        db: db,
-        httpGet: fake.get,
-        now: () => now ?? fixedNow,
-      );
+  /// [apiKey] null means the user has given the app no BIST key, which is
+  /// the default state and the one most of these tests want.
+  LivePriceService serviceWith(
+    FakeProviders fake, {
+    DateTime? now,
+    String? apiKey,
+  }) => LivePriceService(
+    db: db,
+    httpGet: fake.get,
+    now: () => now ?? fixedNow,
+    // Injected rather than left to the real one: a plain `test()` has no
+    // Flutter binding, so the platform channel behind the secure store
+    // throws an Error the service is right not to catch.
+    sharesApiKey: SharesApiKey(
+      storage: FakeSecureStorage(
+        apiKey == null ? {} : {'archlence.shares-api-key': apiKey},
+      ),
+    ),
+  );
 
   group('live pricing', () {
     test('prices a crypto holding as usd price times usdtry', () async {
@@ -196,6 +226,146 @@ void main() {
       ]);
 
       expect(result.containsKey(1), isFalse);
+    });
+  });
+
+  group('shares, which need the user\'s own key', () {
+    const sharesBody =
+        '{"status":"success","rowCount":1,"data":['
+        '{"code":"ASELS","ShortName":"ASELSAN","latest":214.5,'
+        '"buying":214.4,"selling":214.6}]}';
+
+    test('with no key, a share is not priced and nothing is asked', () async {
+      // The default state, and the one the roadmap decision describes: the
+      // app is keyless out of the box and shares stay at cost.
+      final fake = FakeProviders(sharesBody: sharesBody);
+      final result = await serviceWith(fake).priceHoldings([
+        _asset(id: 1, code: 'ASELS', type: 'Hisse'),
+      ]);
+
+      expect(result.containsKey(1), isFalse);
+      expect(fake.sharesCalls, 0);
+    });
+
+    test('with a key, a share is priced in lira with no conversion', () async {
+      // BIST trades in lira, so this is the one provider whose number needs
+      // no USDTRY leg at all.
+      final fake = FakeProviders(sharesBody: sharesBody);
+      final result = await serviceWith(
+        fake,
+        apiKey: 'a-user-key',
+      ).priceHoldings([_asset(id: 1, code: 'ASELS', type: 'Hisse')]);
+
+      expect(result[1]!.pricePerUnit, Decimal.parse('214.5'));
+      expect(result[1]!.source, 'NosyAPI');
+      expect(fake.sharesCalls, 1);
+    });
+
+    test('the key travels in a header, never in the query string', () async {
+      // A credential in a URL reaches server logs, proxy logs and Referer.
+      final fake = FakeProviders(sharesBody: sharesBody);
+      await serviceWith(fake, apiKey: 'a-user-key').priceHoldings([
+        _asset(id: 1, code: 'ASELS', type: 'Hisse'),
+      ]);
+
+      expect(fake.sharesHeaders['X-NSYP'], 'a-user-key');
+      final shareUri = fake.requested.singleWhere(
+        (uri) => uri.host == 'www.nosyapi.com',
+      );
+      expect(shareUri.query, isNot(contains('a-user-key')));
+      expect(shareUri.toString(), isNot(contains('a-user-key')));
+    });
+
+    test('one request carries every share in the portfolio', () async {
+      // The endpoint takes a comma-separated list and the free plan bills
+      // per REQUEST, so batching is both the right shape and the cheap one.
+      final fake = FakeProviders(
+        sharesBody:
+            '{"data":[{"code":"ASELS","latest":214.5},'
+            '{"code":"THYAO","latest":312.25}]}',
+      );
+      final result = await serviceWith(fake, apiKey: 'k').priceHoldings([
+        _asset(id: 1, code: 'ASELS', type: 'Hisse'),
+        _asset(id: 2, code: 'THYAO', type: 'Hisse'),
+      ]);
+
+      expect(fake.sharesCalls, 1);
+      final shareUri = fake.requested.singleWhere(
+        (uri) => uri.host == 'www.nosyapi.com',
+      );
+      expect(shareUri.queryParameters['code'], 'ASELS,THYAO');
+      expect(result[1]!.pricePerUnit, Decimal.parse('214.5'));
+      expect(result[2]!.pricePerUnit, Decimal.parse('312.25'));
+    });
+
+    test('a rejected key leaves the share at cost, not an error', () async {
+      // A 401, an expired key, or a spent monthly credit all arrive here the
+      // same way, and all mean the same thing to a screen.
+      final fake = FakeProviders(sharesBody: null);
+      final result = await serviceWith(fake, apiKey: 'wrong').priceHoldings([
+        _asset(id: 1, code: 'ASELS', type: 'Hisse'),
+      ]);
+
+      expect(result.containsKey(1), isFalse);
+    });
+
+    test('with a key, a share falls back to the cache like anything else',
+        () async {
+      // The case a spent monthly credit actually produces: yesterday's price
+      // beats no price, as long as it says how old it is.
+      final earlier = fixedNow.subtract(const Duration(hours: 5));
+      await serviceWith(
+        FakeProviders(sharesBody: sharesBody),
+        now: earlier,
+        apiKey: 'k',
+      ).priceHoldings([_asset(id: 1, code: 'ASELS', type: 'Hisse')]);
+
+      final result = await serviceWith(
+        FakeProviders(sharesBody: null),
+        apiKey: 'k',
+      ).priceHoldings([_asset(id: 1, code: 'ASELS', type: 'Hisse')]);
+
+      expect(result[1]!.pricePerUnit, Decimal.parse('214.5'));
+      expect(result[1]!.asOf, earlier);
+    });
+
+    test('without a key, no cache lookup happens for a share at all', () async {
+      // Nothing has ever priced it, so there is nothing to find — and asking
+      // would be a database read on every refresh for no possible answer.
+      await serviceWith(
+        FakeProviders(sharesBody: sharesBody),
+        apiKey: 'k',
+      ).priceHoldings([_asset(id: 1, code: 'ASELS', type: 'Hisse')]);
+
+      final result = await serviceWith(
+        FakeProviders(sharesBody: sharesBody),
+      ).priceHoldings([_asset(id: 1, code: 'ASELS', type: 'Hisse')]);
+
+      expect(
+        result.containsKey(1),
+        isFalse,
+        reason: 'a cached row must not resurrect a share the user cannot price',
+      );
+    });
+
+    test('a portfolio with no shares never reads the key store', () async {
+      // Proven by giving it a key store that throws: if it were consulted,
+      // this would fail rather than pass.
+      final service = LivePriceService(
+        db: db,
+        httpGet: FakeProviders(
+          coinGeckoBody: _coinGeckoBody,
+          frankfurterBody: _frankfurterBody,
+        ).get,
+        now: () => fixedNow,
+        sharesApiKey: SharesApiKey(storage: const ThrowingSecureStorage()),
+      );
+
+      final result = await service.priceHoldings([
+        _asset(id: 1, code: 'BTC', type: 'Kripto'),
+      ]);
+
+      expect(result.containsKey(1), isTrue);
     });
   });
 

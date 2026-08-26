@@ -90,11 +90,11 @@ void main() {
       },
     );
 
-    test('the desktop stock classifications stay explicitly unsupported', () {
+    test('the desktop stock classifications produce typed share requests', () {
       for (final vector in vectors.where((vector) => vector.kind == 'STOCK')) {
         expect(
           _requestFor(vector),
-          isA<UnsupportedSharesPriceRequest>(),
+          isA<SharesPriceRequest>(),
           reason: vector.assetType,
         );
       }

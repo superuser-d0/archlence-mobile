@@ -14,7 +14,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// Hands back [body] for any URI, or throws [error] if one was given —
 /// standing in for a timeout, a DNS failure, or any other network exception.
 HttpGet fixedResponse(String body, {Object? error}) {
-  return (uri) async {
+  return (uri, {headers = const {}}) async {
     if (error != null) throw error;
     return body;
   };
@@ -85,7 +85,7 @@ void main() {
       var called = false;
       final prices = await fetchCoinGeckoUsdPrices(
         const {},
-        get: (uri) async {
+        get: (uri, {headers = const {}}) async {
           called = true;
           return '{}';
         },
@@ -170,7 +170,7 @@ void main() {
       var called = false;
       final rates = await fetchFrankfurterTryRates(
         const {},
-        get: (uri) async {
+        get: (uri, {headers = const {}}) async {
           called = true;
           return '{}';
         },

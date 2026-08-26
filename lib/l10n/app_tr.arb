@@ -369,5 +369,15 @@
   "priceDaysAgo": "{count} gün önce",
   "assetCurrent": "Güncel",
   "assetPnlAndAge": "{pnl} · {age}",
-  "assetsLivePricingNote": "Kripto, altın ve döviz varlıkları alınabildiğinde canlı fiyatla gösterilir. Hisseler maliyetiyle gösterilir; şimdilik ücretsiz bir BIST fiyat kaynağı yok."
+  "assetsLivePricingNote": "Kripto, altın ve döviz varlıkları alınabildiğinde canlı fiyatla gösterilir. Hisseler maliyetiyle gösterilir; şimdilik ücretsiz bir BIST fiyat kaynağı yok.",
+  "settingsSharesKey": "BIST hisse fiyatları",
+  "settingsSharesKeyNotSet": "Ayarlı değil — hisseler maliyetiyle gösteriliyor",
+  "settingsSharesKeySet": "Anahtar ayarlı — hisseler canlı fiyatlanıyor",
+  "sharesKeySheetTitle": "BIST hisse fiyatları",
+  "sharesKeyExplanation": "Kripto, altın ve döviz için anahtar gerekmez. Türk hisse fiyatları istisna: Archlence'in kutudan çıkarabileceği ücretsiz bir kaynak yok, bu yüzden onları fiyatlamak için nosyapi.com'dan kendi API anahtarın gerekiyor.\n\nAnahtar yalnızca bu telefonda saklanır. Yedeğe girmez, yani başka bir yerde yedek geri yüklersen taşınmaz — ve yalnızca nosyapi.com'a gönderilir.",
+  "sharesKeyField": "API anahtarı",
+  "sharesKeySave": "Anahtarı kaydet",
+  "sharesKeyRemove": "Anahtarı kaldır",
+  "sharesKeySaved": "Kaydedildi. Hisselerini fiyatlamak için Varlıklar sekmesini aşağı çekip yenile.",
+  "sharesKeyRemoved": "Kaldırıldı. Hisseler yeniden maliyetiyle gösterilecek."
 }

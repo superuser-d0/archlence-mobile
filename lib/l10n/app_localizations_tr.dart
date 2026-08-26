@@ -1263,4 +1263,39 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get assetsLivePricingNote =>
       'Kripto, altın ve döviz varlıkları alınabildiğinde canlı fiyatla gösterilir. Hisseler maliyetiyle gösterilir; şimdilik ücretsiz bir BIST fiyat kaynağı yok.';
+
+  @override
+  String get settingsSharesKey => 'BIST hisse fiyatları';
+
+  @override
+  String get settingsSharesKeyNotSet =>
+      'Ayarlı değil — hisseler maliyetiyle gösteriliyor';
+
+  @override
+  String get settingsSharesKeySet =>
+      'Anahtar ayarlı — hisseler canlı fiyatlanıyor';
+
+  @override
+  String get sharesKeySheetTitle => 'BIST hisse fiyatları';
+
+  @override
+  String get sharesKeyExplanation =>
+      'Kripto, altın ve döviz için anahtar gerekmez. Türk hisse fiyatları istisna: Archlence\'in kutudan çıkarabileceği ücretsiz bir kaynak yok, bu yüzden onları fiyatlamak için nosyapi.com\'dan kendi API anahtarın gerekiyor.\n\nAnahtar yalnızca bu telefonda saklanır. Yedeğe girmez, yani başka bir yerde yedek geri yüklersen taşınmaz — ve yalnızca nosyapi.com\'a gönderilir.';
+
+  @override
+  String get sharesKeyField => 'API anahtarı';
+
+  @override
+  String get sharesKeySave => 'Anahtarı kaydet';
+
+  @override
+  String get sharesKeyRemove => 'Anahtarı kaldır';
+
+  @override
+  String get sharesKeySaved =>
+      'Kaydedildi. Hisselerini fiyatlamak için Varlıklar sekmesini aşağı çekip yenile.';
+
+  @override
+  String get sharesKeyRemoved =>
+      'Kaldırıldı. Hisseler yeniden maliyetiyle gösterilecek.';
 }

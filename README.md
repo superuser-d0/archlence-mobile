@@ -49,8 +49,9 @@ command.
 **Holdings show a live price.** Crypto, gold and currency go through
 CoinGecko and Frankfurter, called straight from the phone — no backend, no
 API key shipped, matching the app's own "no account, no server" promise.
-Shares stay at cost, because there is no keyless BIST source yet; each tile
-says which it got, and how long ago.
+Shares need an API key of your own, entered in Settings — BIST data is
+commercial, and a key shipped inside an app is a public key. Without one they
+stay at cost. Each tile says which it got, and how long ago.
 
 **Start at [docs/ROADMAP.md](docs/ROADMAP.md)** — it opens with a "Pick up
 here" section listing the next steps in priority order, and records how each

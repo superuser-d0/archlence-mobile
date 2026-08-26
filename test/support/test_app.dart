@@ -10,10 +10,12 @@ import 'package:archlence_mobile/crypto/field_crypto.dart';
 import 'package:archlence_mobile/data/database.dart';
 import 'package:archlence_mobile/services/live_price_service.dart';
 import 'package:archlence_mobile/services/price_providers.dart';
+import 'package:archlence_mobile/services/shares_api_key.dart';
 import 'package:archlence_mobile/theme/obsidian_prime.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'fake_platform_auth.dart';
 import 'fixed_key_provider.dart';
 
 /// What every widget test's [LivePriceService] calls instead of a socket.
@@ -25,19 +27,40 @@ import 'fixed_key_provider.dart';
 /// whatever the cache holds (nothing, for a fresh in-memory database) — the
 /// same path a genuinely offline phone takes — so refusing here is not a
 /// special case for tests, it exercises a real one.
-Future<String> _refusingHttpGet(Uri uri) async =>
-    throw StateError('no network in tests: $uri');
+Future<String> _refusingHttpGet(
+  Uri uri, {
+  Map<String, String> headers = const {},
+}) async => throw StateError('no network in tests: $uri');
 
 /// A service graph over a fresh in-memory database.
 ///
 /// [httpGet] lets a test that specifically wants to drive live pricing hand
 /// in its own fake; every other test gets one that refuses to be called.
-AppServices testServices(ArchlenceDatabase db, {HttpGet? httpGet}) =>
-    AppServices.forDatabase(
-      db,
-      FieldCrypto(FixedKeyProvider.arbitrary()),
-      livePrices: LivePriceService(db: db, httpGet: httpGet ?? _refusingHttpGet),
-    );
+AppServices testServices(
+  ArchlenceDatabase db, {
+  HttpGet? httpGet,
+  SharesApiKey? sharesApiKey,
+}) {
+  // One instance, shared by the price service and the Settings row, exactly
+  // as production wires it. Two would let a test pass while the app it
+  // stands for saved a key one half of itself never saw.
+  //
+  // Empty by default, which is every widget test's correct starting state:
+  // no BIST key, so shares stay at cost. Injected so no test reaches the
+  // real secure store.
+  final keyStore =
+      sharesApiKey ?? SharesApiKey(storage: const FakeSecureStorage({}));
+  return AppServices.forDatabase(
+    db,
+    FieldCrypto(FixedKeyProvider.arbitrary()),
+    sharesApiKey: keyStore,
+    livePrices: LivePriceService(
+      db: db,
+      httpGet: httpGet ?? _refusingHttpGet,
+      sharesApiKey: keyStore,
+    ),
+  );
+}
 
 /// Records what a screen asked the language to be changed to.
 ///

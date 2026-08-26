@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import '../app_services.dart';
 import '../crypto/key_provider.dart';
 import '../l10n/app_localizations.dart';
+import '../services/shares_api_key.dart';
 import '../theme/obsidian_prime.dart';
 import '../ui/app_locale.dart';
 import '../widgets/not_yet.dart';
+import '../widgets/sheet_frame.dart';
 import '../widgets/surfaces.dart';
 import 'backup_screen.dart';
 
@@ -85,6 +87,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               title: l10n.settingsCategorySettings,
             ),
             const _LanguageTile(),
+            const _SharesKeyTile(),
             _SettingsTile(
               icon: Icons.vpn_key_outlined,
               title: l10n.settingsEncryptionKey,
@@ -360,6 +363,172 @@ String _keyProtectionSummary(AppLocalizations l10n, KeyProtectionStatus? status)
       l10n.keyWarningNoPlatformStore,
   };
   return warning == null ? where : '$where $warning';
+}
+
+/// The BIST API key row: whether one is set, and the sheet that changes it.
+///
+/// A [StatefulWidget] because it reads the secure store, and the row has to
+/// redraw the moment a key is saved or removed rather than on the next visit
+/// to Settings.
+///
+/// The key ITSELF is never shown, not even masked. A row that displayed one
+/// would put a credential on screen for a shoulder to read, and there is
+/// nothing a user can do with seeing it that "a key is set" does not already
+/// tell them — if it is wrong, the fix is to paste the right one, which the
+/// sheet allows either way.
+class _SharesKeyTile extends StatefulWidget {
+  const _SharesKeyTile();
+
+  @override
+  State<_SharesKeyTile> createState() => _SharesKeyTileState();
+}
+
+class _SharesKeyTileState extends State<_SharesKeyTile> {
+  Future<bool>? _isSet;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _isSet ??= _read();
+  }
+
+  Future<bool> _read() async =>
+      await ServicesScope.of(context).sharesApiKey.read() != null;
+
+  Future<void> _open() async {
+    final store = ServicesScope.of(context).sharesApiKey;
+    final changed = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: ObsidianPalette.surfaceContainer,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.xl)),
+      ),
+      builder: (_) => _SharesKeySheet(store: store),
+    );
+    if (changed != true || !mounted) return;
+    // A block body, not an arrow: `setState(() => x = f())` hands Flutter a
+    // callback returning a Future, which it asserts on and swallows, leaving
+    // the state unchanged. See `test/no_async_set_state_test.dart`.
+    setState(() {
+      _isSet = _read();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return FutureBuilder<bool>(
+      future: _isSet,
+      builder: (context, snapshot) {
+        final isSet = snapshot.data ?? false;
+        return _SettingsTile(
+          icon: Icons.show_chart,
+          title: l10n.settingsSharesKey,
+          subtitle: isSet
+              ? l10n.settingsSharesKeySet
+              : l10n.settingsSharesKeyNotSet,
+          subtitleMaxLines: 2,
+          available: true,
+          onTap: _open,
+        );
+      },
+    );
+  }
+}
+
+/// The sheet behind the row. Pops `true` when the stored key changed.
+class _SharesKeySheet extends StatefulWidget {
+  const _SharesKeySheet({required this.store});
+
+  final SharesApiKey store;
+
+  @override
+  State<_SharesKeySheet> createState() => _SharesKeySheetState();
+}
+
+class _SharesKeySheetState extends State<_SharesKeySheet> {
+  final _controller = TextEditingController();
+  bool _working = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _write(String? key, String note) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    setState(() => _working = true);
+    await widget.store.write(key);
+    if (!mounted) return;
+    navigator.pop(true);
+    messenger.showSnackBar(SnackBar(content: Text(note)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    final l10n = context.l10n;
+    final typed = _controller.text.trim();
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(Spacing.containerMargin),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: ObsidianPalette.cardStroke,
+                  borderRadius: BorderRadius.circular(Radii.full),
+                ),
+              ),
+            ),
+            const SizedBox(height: Spacing.stackLg),
+            Text(l10n.sharesKeySheetTitle, style: text.headlineMedium),
+            const SizedBox(height: Spacing.stackMd),
+            Text(
+              l10n.sharesKeyExplanation,
+              style: text.bodySmall?.copyWith(
+                color: ObsidianPalette.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: Spacing.stackLg),
+            SheetField(
+              controller: _controller,
+              label: l10n.sharesKeyField,
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: Spacing.stackLg),
+            GradientButton(
+              label: l10n.sharesKeySave,
+              onPressed: _working || typed.isEmpty
+                  ? null
+                  : () => _write(typed, l10n.sharesKeySaved),
+            ),
+            const SizedBox(height: Spacing.stackSm),
+            OutlinedButton(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: ObsidianPalette.error,
+              ),
+              onPressed: _working
+                  ? null
+                  : () => _write(null, l10n.sharesKeyRemoved),
+              child: Text(l10n.sharesKeyRemove),
+            ),
+            const SizedBox(height: Spacing.stackMd),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 /// The language row, and what it opens.

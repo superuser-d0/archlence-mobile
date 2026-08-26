@@ -23,6 +23,7 @@ import 'services/budget_service.dart';
 import 'services/live_price_service.dart';
 import 'services/recurring_service.dart';
 import 'services/savings_service.dart';
+import 'services/shares_api_key.dart';
 import 'security/screen_lock.dart';
 import 'services/transaction_service.dart';
 import 'ui/app_locale.dart';
@@ -36,6 +37,7 @@ class AppServices {
     this.backup,
     this.keyRecovery,
     this.livePrices,
+    this.sharesApiKey,
   ) : accounts = AccountService(db, crypto),
       assets = AssetService(db, crypto),
       savings = SavingsService(db, crypto);
@@ -52,7 +54,9 @@ class AppServices {
     BackupService? backup,
     KeyRecoveryService? keyRecovery,
     LivePriceService? livePrices,
+    SharesApiKey? sharesApiKey,
   }) {
+    final keyStore = sharesApiKey ?? SharesApiKey();
     final services = AppServices._(
       db,
       crypto,
@@ -63,7 +67,8 @@ class AppServices {
       // Unlike `backup`/`keyRecovery`, this needs no disk path — an
       // in-memory database prices holdings exactly as well as a real one —
       // so it is never null. A test wanting a fake network passes its own.
-      livePrices ?? LivePriceService(db: db),
+      livePrices ?? LivePriceService(db: db, sharesApiKey: keyStore),
+      keyStore,
     );
     services.transactions = TransactionService(db, crypto, services.accounts);
     services.recurring = RecurringService(db, crypto, services.accounts);
@@ -153,6 +158,13 @@ class AppServices {
   /// present — see the constructor comment for why it does not follow
   /// [backup]'s nullability.
   final LivePriceService livePrices;
+
+  /// The user's own BIST API key, for Settings to read and change.
+  ///
+  /// The SAME instance [livePrices] reads, so a key saved on the Settings
+  /// screen is the key the next price fetch uses — two stores over one
+  /// entry would work by accident and break the moment one of them cached.
+  final SharesApiKey sharesApiKey;
 
   /// The key on its own — exporting it, and putting one back. Null in tests
   /// with no profile on disk, for the same reason [backup] is.

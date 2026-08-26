@@ -22,7 +22,13 @@ import 'price_guard.dart';
 /// test can hand back a recorded response — or a malformed one — without a
 /// socket ever opening. See `lib/backup/backup_service.dart` for the same
 /// idea applied to the file system instead of the network.
-typedef HttpGet = Future<String> Function(Uri uri);
+///
+/// [headers] exists for ONE reason and it is a security one: the shares
+/// provider authenticates with a key, and a key belongs in a header, never
+/// in the query string. Query strings end up in server logs, in proxy logs,
+/// and in `Referer`. The two keyless providers pass nothing here.
+typedef HttpGet =
+    Future<String> Function(Uri uri, {Map<String, String> headers});
 
 /// The default [HttpGet]: `dart:io`'s own client, with a bound on how long a
 /// price screen can be made to wait for a provider that never answers.
@@ -30,10 +36,14 @@ typedef HttpGet = Future<String> Function(Uri uri);
 /// Verified rather than assumed: `HttpClient.getUrl` follows the 3xx Location
 /// header on its own (`followRedirects` defaults to `true`), so the
 /// Frankfurter host's redirect to `.dev` needs no handling here.
-Future<String> httpGetDefault(Uri uri) async {
+Future<String> httpGetDefault(
+  Uri uri, {
+  Map<String, String> headers = const {},
+}) async {
   final client = HttpClient()..connectionTimeout = const Duration(seconds: 8);
   try {
     final request = await client.getUrl(uri);
+    headers.forEach(request.headers.set);
     final response = await request.close().timeout(const Duration(seconds: 8));
     if (response.statusCode != 200) {
       throw HttpException(
@@ -205,4 +215,63 @@ Future<Map<String, Decimal>> fetchFrankfurterTryRates(
     tryPerUnit[code] = inverted;
   }
   return tryPerUnit;
+}
+
+/// The share-price provider, and the only one that authenticates.
+///
+/// NosyAPI's BIST endpoint, chosen because its request and response shape is
+/// PUBLICLY DOCUMENTED — which is not a small thing here: this is the one
+/// provider in the app whose live response could not be checked while it was
+/// written, because doing so needs a key, and a key belongs to the person who
+/// signs up for it rather than to whoever happened to write the code. The
+/// shape below is from the published documentation. See the roadmap entry for
+/// what that means for how far this is proven.
+///
+/// The key goes in a HEADER (`X-NSYP`), never the query string, even though
+/// the API also accepts `?apiKey=`. Query strings reach server logs, proxy
+/// logs and `Referer`; a credential in one is a credential leaked.
+///
+/// One request for every share in the portfolio — the endpoint takes a
+/// comma-separated `code` list, and the free plan bills one credit per
+/// request rather than per symbol, so batching is both the correct shape and
+/// the cheap one.
+const String sourceNosyApi = 'NosyAPI';
+
+Future<Map<String, Decimal>> fetchSharePricesTry(
+  Set<String> codes, {
+  required String apiKey,
+  required HttpGet get,
+}) async {
+  if (codes.isEmpty) return const {};
+  final uri = Uri.https('www.nosyapi.com', '/apiv2/service/economy/bist/exchange-rate', {
+    'code': (codes.toList()..sort()).join(','),
+  });
+
+  final Object? payload;
+  try {
+    payload = jsonDecode(await get(uri, headers: {'X-NSYP': apiKey}));
+  } on Object {
+    // Includes a 401/403 from a key that is wrong, expired, or out of
+    // credit. Indistinguishable here from any other failure ON PURPOSE:
+    // every one of them means the same thing to the caller — no live share
+    // price this time — and the screen already knows how to show a holding
+    // at cost.
+    return const {};
+  }
+  if (payload is! Map<String, Object?>) return const {};
+  final rows = payload['data'];
+  if (rows is! List) return const {};
+
+  final prices = <String, Decimal>{};
+  for (final row in rows) {
+    if (row is! Map<String, Object?>) continue;
+    final code = row['code'];
+    if (code is! String) continue;
+    // `latest` is the last traded price. NOT `buying`/`selling`, which are
+    // the two sides of a spread — picking either would value a portfolio at
+    // what someone else would pay or charge rather than at what it is worth.
+    final price = finitePositivePrice(row['latest']);
+    if (price != null) prices[code.trim().toUpperCase()] = price;
+  }
+  return prices;
 }

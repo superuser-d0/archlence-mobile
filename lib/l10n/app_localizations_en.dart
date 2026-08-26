@@ -1269,4 +1269,37 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get assetsLivePricingNote =>
       'Crypto, gold and currency holdings show a live price when one could be fetched. Shares are shown at cost, because there is no free BIST price source yet.';
+
+  @override
+  String get settingsSharesKey => 'BIST share prices';
+
+  @override
+  String get settingsSharesKeyNotSet => 'Not set — shares are shown at cost';
+
+  @override
+  String get settingsSharesKeySet => 'A key is set — shares are priced live';
+
+  @override
+  String get sharesKeySheetTitle => 'BIST share prices';
+
+  @override
+  String get sharesKeyExplanation =>
+      'Crypto, gold and currency need no key. Turkish share prices are the exception: there is no free source Archlence can ship, so pricing them needs an API key of your own from nosyapi.com.\n\nThe key is stored on this phone only. It is not in a backup, so restoring one somewhere else will not carry it — and it is sent to nosyapi.com and nowhere else.';
+
+  @override
+  String get sharesKeyField => 'API key';
+
+  @override
+  String get sharesKeySave => 'Save the key';
+
+  @override
+  String get sharesKeyRemove => 'Remove the key';
+
+  @override
+  String get sharesKeySaved =>
+      'Saved. Pull to refresh the Assets tab to price your shares.';
+
+  @override
+  String get sharesKeyRemoved =>
+      'Removed. Shares go back to being shown at cost.';
 }

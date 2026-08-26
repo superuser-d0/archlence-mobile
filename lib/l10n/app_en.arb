@@ -758,5 +758,15 @@
     },
     "description": "Under the purchase line on a live-priced holding: the signed P&L percentage and how long ago the price was fetched."
   },
-  "assetsLivePricingNote": "Crypto, gold and currency holdings show a live price when one could be fetched. Shares are shown at cost, because there is no free BIST price source yet."
+  "assetsLivePricingNote": "Crypto, gold and currency holdings show a live price when one could be fetched. Shares are shown at cost, because there is no free BIST price source yet.",
+  "settingsSharesKey": "BIST share prices",
+  "settingsSharesKeyNotSet": "Not set — shares are shown at cost",
+  "settingsSharesKeySet": "A key is set — shares are priced live",
+  "sharesKeySheetTitle": "BIST share prices",
+  "sharesKeyExplanation": "Crypto, gold and currency need no key. Turkish share prices are the exception: there is no free source Archlence can ship, so pricing them needs an API key of your own from nosyapi.com.\n\nThe key is stored on this phone only. It is not in a backup, so restoring one somewhere else will not carry it — and it is sent to nosyapi.com and nowhere else.",
+  "sharesKeyField": "API key",
+  "sharesKeySave": "Save the key",
+  "sharesKeyRemove": "Remove the key",
+  "sharesKeySaved": "Saved. Pull to refresh the Assets tab to price your shares.",
+  "sharesKeyRemoved": "Removed. Shares go back to being shown at cost."
 }

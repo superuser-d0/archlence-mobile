@@ -13,7 +13,10 @@ import '../support/test_app.dart';
 /// Canned CoinGecko/Frankfurter bodies for the one test that drives a real
 /// price through this screen; every other test in this file keeps the
 /// network-refusing default from `testServices`.
-Future<String> _fakeLiveGet(Uri uri) async {
+Future<String> _fakeLiveGet(
+  Uri uri, {
+  Map<String, String> headers = const {},
+}) async {
   if (uri.host == 'api.coingecko.com') {
     return '{"bitcoin": {"usd": 78402}}';
   }

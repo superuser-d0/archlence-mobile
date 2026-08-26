@@ -15,6 +15,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:archlence_mobile/security/screen_lock.dart';
+import 'package:archlence_mobile/services/shares_api_key.dart';
 
 import '../support/fake_platform_auth.dart';
 import '../support/fixed_key_provider.dart';
@@ -194,19 +195,21 @@ void main() {
       const SettingsScreen(),
     );
 
-    // Eleven rows. Three do something real — the encryption key and the lock
-    // report state without going anywhere, and Language opens its picker —
-    // and Backup & Restore is unavailable here because this graph has no
-    // profile on disk behind it.
+    // Twelve rows. Four do something real — the encryption key and the lock
+    // report state without going anywhere, and Language and BIST share
+    // prices each open a sheet — and Backup & Restore is unavailable here
+    // because this graph has no profile on disk behind it. The count is
+    // unchanged from before the BIST row existed: it was ADDED and it is
+    // live, so it carries no chip of its own.
     expect(find.byType(NotYetChip), findsNWidgets(9));
     // Exactly one switch: the screen lock, which does something. The two that
     // used to be here moved local state and nothing else, so a user could
     // turn Dark Mode off and watch nothing happen.
     expect(find.byType(Switch), findsOneWidget);
     expect(find.text('Lock when I come back'), findsOneWidget);
-    // One chevron: Language. A chevron promises a destination, and with no
-    // backup service behind it that row has none.
-    expect(find.byIcon(Icons.chevron_right), findsOneWidget);
+    // Two chevrons: Language and BIST share prices. A chevron promises a
+    // destination, and with no backup service behind it that row has none.
+    expect(find.byIcon(Icons.chevron_right), findsNWidgets(2));
   });
 
   testWidgets('Backup & Restore opens when there is a profile behind it', (
@@ -221,9 +224,9 @@ void main() {
       const SettingsScreen(),
     );
 
-    // Two chevrons now: Language and Backup & Restore, the two rows that go
-    // somewhere.
-    expect(find.byIcon(Icons.chevron_right), findsNWidgets(2));
+    // Three chevrons now: Language, BIST share prices and Backup & Restore,
+    // the three rows that go somewhere.
+    expect(find.byIcon(Icons.chevron_right), findsNWidgets(3));
     expect(find.byType(NotYetChip), findsNWidgets(8));
 
     await tester.tap(find.text('Backup & Restore'));
@@ -285,6 +288,104 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(language.asked, isFalse);
+  });
+
+  testWidgets('the BIST row reports no key, and saving one changes that', (
+    tester,
+  ) async {
+    // The whole point of the row: it says which state the app is in, and
+    // the Assets tab's behaviour follows from that state.
+    final store = SharesApiKey(storage: FakeSecureStorage({}));
+    await pumpScreen(
+      tester,
+      AppServices.forDatabase(
+        db,
+        FieldCrypto(FixedKeyProvider.arbitrary()),
+        keyProtection: const KeyProtectionStatus(
+          KeyProtectionMethod.androidKeystore,
+          true,
+        ),
+        sharesApiKey: store,
+      ),
+      const SettingsScreen(),
+    );
+
+    expect(find.text('Not set — shares are shown at cost'), findsOneWidget);
+
+    await tester.tap(find.text('BIST share prices'));
+    await tester.pumpAndSettle();
+
+    // The sheet says where the key comes from and what happens to it.
+    expect(find.textContaining('nosyapi.com'), findsOneWidget);
+    expect(find.textContaining('It is not in a backup'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField), 'a-user-key');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save the key'));
+    await tester.pumpAndSettle();
+
+    expect(await store.read(), 'a-user-key');
+    expect(find.text('A key is set — shares are priced live'), findsOneWidget);
+  });
+
+  testWidgets('and removing it puts shares back at cost', (tester) async {
+    final store = SharesApiKey(
+      storage: FakeSecureStorage({'archlence.shares-api-key': 'an-old-key'}),
+    );
+    await pumpScreen(
+      tester,
+      AppServices.forDatabase(
+        db,
+        FieldCrypto(FixedKeyProvider.arbitrary()),
+        keyProtection: const KeyProtectionStatus(
+          KeyProtectionMethod.androidKeystore,
+          true,
+        ),
+        sharesApiKey: store,
+      ),
+      const SettingsScreen(),
+    );
+
+    expect(find.text('A key is set — shares are priced live'), findsOneWidget);
+
+    await tester.tap(find.text('BIST share prices'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Remove the key'));
+    await tester.pumpAndSettle();
+
+    expect(await store.read(), isNull);
+    expect(find.text('Not set — shares are shown at cost'), findsOneWidget);
+  });
+
+  testWidgets('the key itself is never put on screen', (tester) async {
+    // A row that displayed a credential would put one in front of whoever
+    // is looking over the user's shoulder, and seeing it buys nothing that
+    // "a key is set" does not already say.
+    await pumpScreen(
+      tester,
+      AppServices.forDatabase(
+        db,
+        FieldCrypto(FixedKeyProvider.arbitrary()),
+        keyProtection: const KeyProtectionStatus(
+          KeyProtectionMethod.androidKeystore,
+          true,
+        ),
+        sharesApiKey: SharesApiKey(
+          storage: FakeSecureStorage({
+            'archlence.shares-api-key': 'secret-key-value',
+          }),
+        ),
+      ),
+      const SettingsScreen(),
+    );
+
+    expect(find.textContaining('secret-key-value'), findsNothing);
+
+    await tester.tap(find.text('BIST share prices'));
+    await tester.pumpAndSettle();
+
+    // Not even prefilled into the field it would be edited in.
+    expect(find.textContaining('secret-key-value'), findsNothing);
   });
 
   testWidgets('and says so plainly when there is not', (tester) async {
