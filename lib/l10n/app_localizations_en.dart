@@ -1129,10 +1129,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get assetsMyActiveAssets => 'My Active Assets';
 
   @override
-  String get assetsAtCostNote =>
-      'Valued at purchase cost — no price source yet';
-
-  @override
   String get assetsNoHoldings =>
       'No holdings yet. Anything you buy shows here with what it cost.';
 
@@ -1243,4 +1239,34 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get recoveryVerifiedNothing =>
       'There was nothing encrypted here to check it against, so the key was accepted untested.';
+
+  @override
+  String get priceJustNow => 'just now';
+
+  @override
+  String priceMinutesAgo(int count) {
+    return '${count}m ago';
+  }
+
+  @override
+  String priceHoursAgo(int count) {
+    return '${count}h ago';
+  }
+
+  @override
+  String priceDaysAgo(int count) {
+    return '${count}d ago';
+  }
+
+  @override
+  String get assetCurrent => 'Current';
+
+  @override
+  String assetPnlAndAge(String pnl, String age) {
+    return '$pnl · $age';
+  }
+
+  @override
+  String get assetsLivePricingNote =>
+      'Crypto, gold and currency holdings show a live price when one could be fetched. Shares are shown at cost, because there is no free BIST price source yet.';
 }

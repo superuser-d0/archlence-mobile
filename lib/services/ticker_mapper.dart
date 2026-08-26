@@ -6,39 +6,46 @@ import 'package:decimal/decimal.dart';
 /// A lookup the price providers can understand without exposing provider IDs
 /// to the rest of the app.
 sealed class PriceRequest {
-  const PriceRequest({required this.normalizedAssetType});
+  const PriceRequest({required this.normalizedAssetType, required this.code});
 
   /// The desktop-compatible classification of the stored asset type.
   ///
   /// Keeping it on the request makes the data boundary auditable without
   /// turning a provider's identifier into part of the stored-holding model.
   final String normalizedAssetType;
+
+  /// The holding's own stored `asset_code`, trimmed and upper-cased.
+  ///
+  /// On the base class, not just the subtypes that look one up in a provider
+  /// table: `asset_price_cache.symbol` is keyed on this EXACT value for every
+  /// kind of holding, gold included, because that is what the desktop's own
+  /// `_store_cache` keys it on too — a cache is only compatible with the
+  /// other app's if a mobile-written row can sit beside a desktop-written one
+  /// under the same symbol.
+  final String code;
 }
 
 /// A crypto lookup by the holding's canonical code.
 final class CryptoPriceRequest extends PriceRequest {
   const CryptoPriceRequest({
     required super.normalizedAssetType,
-    required this.code,
+    required super.code,
   });
-
-  final String code;
 }
 
 /// A fiat-currency lookup by ISO-style code.
 final class CurrencyPriceRequest extends PriceRequest {
   const CurrencyPriceRequest({
     required super.normalizedAssetType,
-    required this.code,
+    required super.code,
   });
-
-  final String code;
 }
 
 /// A gold lookup, optionally scaled to a physical holding's gram weight.
 final class GoldPriceRequest extends PriceRequest {
   const GoldPriceRequest({
     required super.normalizedAssetType,
+    required super.code,
     required this.multiplier,
   });
 
@@ -49,20 +56,16 @@ final class GoldPriceRequest extends PriceRequest {
 final class UnsupportedSharesPriceRequest extends PriceRequest {
   const UnsupportedSharesPriceRequest({
     required super.normalizedAssetType,
-    required this.code,
+    required super.code,
   });
-
-  final String code;
 }
 
 /// A holding for which no live price should be requested.
 final class UnknownPriceRequest extends PriceRequest {
   const UnknownPriceRequest({
     required super.normalizedAssetType,
-    required this.code,
+    required super.code,
   });
-
-  final String code;
 }
 
 const _cryptoAssetTypes = <String>{
@@ -133,6 +136,7 @@ PriceRequest priceRequestForHolding(String? assetCode, String? assetType) {
   if (_goldInternalCodes.contains(code)) {
     return GoldPriceRequest(
       normalizedAssetType: kind,
+      code: code,
       multiplier: _goldMultipliers[code],
     );
   }

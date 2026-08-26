@@ -8,15 +8,36 @@ library;
 import 'package:archlence_mobile/app_services.dart';
 import 'package:archlence_mobile/crypto/field_crypto.dart';
 import 'package:archlence_mobile/data/database.dart';
+import 'package:archlence_mobile/services/live_price_service.dart';
+import 'package:archlence_mobile/services/price_providers.dart';
 import 'package:archlence_mobile/theme/obsidian_prime.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'fixed_key_provider.dart';
 
+/// What every widget test's [LivePriceService] calls instead of a socket.
+///
+/// Every screen that shows a holding now asks `LivePriceService` for a
+/// price, so leaving this unset would mean every such widget test opens a
+/// REAL connection the moment it pumps. `LivePriceService` already treats a
+/// thrown provider error as "nothing to price this fetch" and falls back to
+/// whatever the cache holds (nothing, for a fresh in-memory database) — the
+/// same path a genuinely offline phone takes — so refusing here is not a
+/// special case for tests, it exercises a real one.
+Future<String> _refusingHttpGet(Uri uri) async =>
+    throw StateError('no network in tests: $uri');
+
 /// A service graph over a fresh in-memory database.
-AppServices testServices(ArchlenceDatabase db) =>
-    AppServices.forDatabase(db, FieldCrypto(FixedKeyProvider.arbitrary()));
+///
+/// [httpGet] lets a test that specifically wants to drive live pricing hand
+/// in its own fake; every other test gets one that refuses to be called.
+AppServices testServices(ArchlenceDatabase db, {HttpGet? httpGet}) =>
+    AppServices.forDatabase(
+      db,
+      FieldCrypto(FixedKeyProvider.arbitrary()),
+      livePrices: LivePriceService(db: db, httpGet: httpGet ?? _refusingHttpGet),
+    );
 
 /// Records what a screen asked the language to be changed to.
 ///

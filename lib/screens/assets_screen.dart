@@ -6,6 +6,7 @@ import '../app_services.dart';
 import '../l10n/app_localizations.dart';
 import '../money/financial_decimal.dart';
 import '../services/asset_service.dart';
+import '../services/live_price_service.dart';
 import '../services/savings_service.dart';
 import '../services/transaction_service.dart';
 import '../theme/obsidian_prime.dart';
@@ -13,6 +14,7 @@ import '../ui/app_locale.dart';
 import '../ui/async_data.dart';
 import '../ui/money_format.dart';
 import '../ui/month_names.dart';
+import '../ui/price_freshness.dart';
 import '../widgets/savings_goal_card.dart';
 import 'asset_sheets.dart';
 import 'savings_sheets.dart';
@@ -21,10 +23,13 @@ import '../widgets/surfaces.dart';
 
 /// Portfolio: cash-flow distribution, savings goals and holdings.
 ///
-/// HOLDINGS ARE SHOWN AT COST. There is no price source yet (roadmap open
-/// question 3), so every figure here is what was paid, labelled as such. A
-/// cost basis presented as a market value is a lie the user cannot see
-/// through, and the mockup's "Current" column is exactly that.
+/// HOLDINGS ARE LIVE-PRICED WHERE THIS APP HAS A SOURCE. Crypto, gold and
+/// currency go through `LivePriceService`; shares stay at cost, because
+/// there is no keyless BIST source — see the roadmap's price-fetching
+/// decision. A holding this screen cannot price, for either reason, is drawn
+/// at what was paid and LABELLED as such: a cost basis presented as a market
+/// value is a lie the user cannot see through, and the mockup's "Current"
+/// column always claiming one is exactly that.
 class AssetsScreen extends StatefulWidget {
   const AssetsScreen({super.key});
 
@@ -40,6 +45,7 @@ class _AssetsData {
     required this.openingTotal,
     required this.holdings,
     required this.goals,
+    required this.livePrices,
   });
 
   final List<PeriodEntry> entries;
@@ -51,6 +57,12 @@ class _AssetsData {
 
   final List<Asset> holdings;
   final List<SavingsGoal> goals;
+
+  /// Live prices, keyed by holding id. A holding absent from this map is
+  /// drawn at cost — shares, an unrecognised symbol, or a symbol neither the
+  /// live fetch nor the cache could answer for. See
+  /// `lib/services/live_price_service.dart`.
+  final Map<int, CachedPrice> livePrices;
 
   Decimal get income {
     var total = Decimal.zero;
@@ -113,13 +125,21 @@ class _AssetsScreenState extends State<AssetsScreen> {
   Future<_AssetsData> _load() async {
     final services = ServicesScope.of(context);
     final period = _periods[_period];
+    final holdings = await services.assets.getAllAssets();
     return _AssetsData(
       entries: await services.transactions.getTransactionsByPeriod(period),
       openingTotal: await services.transactions.getOpeningBaselineByPeriod(
         period,
       ),
-      holdings: await services.assets.getAllAssets(),
+      holdings: holdings,
       goals: await services.savings.getGoals(),
+      // A network round trip, awaited alongside the local reads above rather
+      // than kicked off separately: a screen that drew at cost and then
+      // silently repainted itself with live figures a moment later would be
+      // more confusing than one load that takes slightly longer. A provider
+      // outage does not fail this call — see LivePriceService's own doc —
+      // so a holding this cannot price simply stays at cost.
+      livePrices: await services.livePrices.priceHoldings(holdings),
     );
   }
 
@@ -280,11 +300,14 @@ class _AssetsBody extends StatelessWidget {
                   ),
                 ],
               ),
-              // The mockup says "Last updated: 23:00" beside a live price.
-              // There is no price feed, so the honest line is what these
-              // figures actually are.
+              // The mockup says "Last updated: 23:00" beside a live price;
+              // this app has one now, for three of the four kinds of
+              // holding — see the roadmap's price-fetching decision for
+              // which and why. Each TILE says whether it is live or at
+              // cost, so this line only needs to set the expectation once
+              // rather than repeat a state that can differ row to row.
               Text(
-                context.l10n.assetsAtCostNote,
+                context.l10n.assetsLivePricingNote,
                 style: text.labelMedium?.copyWith(
                   letterSpacing: 0,
                   color: ObsidianPalette.onSurfaceVariant,
@@ -295,7 +318,11 @@ class _AssetsBody extends StatelessWidget {
                 NothingYet(message: context.l10n.assetsNoHoldings)
               else
                 for (final holding in data.holdings) ...[
-                  _HoldingTile(holding: holding, onChanged: onChanged),
+                  _HoldingTile(
+                    holding: holding,
+                    price: data.livePrices[holding.id],
+                    onChanged: onChanged,
+                  ),
                   const SizedBox(height: Spacing.stackMd),
                 ],
             ],
@@ -768,9 +795,15 @@ class _LegendDot extends StatelessWidget {
 /// What the portfolio cost, said plainly.
 ///
 /// The mockup shows a total with a "+₺7.858,53 (+1.52%) Today" chip beside
-/// it. Both need a price feed; without one the total is a cost basis and the
-/// change does not exist, so the chip is gone rather than filled with a
-/// figure that would look like a gain.
+/// it. That is not what this card shows — DELIBERATELY, even now that a
+/// price feed exists for three of the four holding kinds. This card sums
+/// PURCHASE PRICE across a portfolio that can hold shares at cost beside
+/// crypto at a live price at the same time; blending the two into one total
+/// would present a figure that is part market value and part cost basis
+/// under a single number with no way to tell which parts are which. Each
+/// [_HoldingTile] draws that distinction correctly, tile by tile; this card
+/// stays what it has always been; an honest cost total, not an approximate
+/// portfolio value.
 class _TotalHoldingsCard extends StatelessWidget {
   const _TotalHoldingsCard({required this.data});
 
@@ -847,22 +880,53 @@ class _SavingsGoals extends StatelessWidget {
   }
 }
 
-/// One holding, shown at what it cost.
+/// One holding, live-priced where a price was found and at cost otherwise.
 ///
 /// The mockup's right-hand column is "Current" with a live price and a
-/// green/red tone. Without a price feed there is no current value and no
-/// direction, so the column shows the cost of the position and carries no
-/// colour that would imply a gain or a loss.
+/// green/red tone, always. That is now true for three of the four kinds of
+/// holding this app knows — [price] is null for the fourth (shares) and for
+/// anything neither the live fetch nor the cache could answer — and for
+/// those the column stays exactly what it always was: the cost of the
+/// position, with no colour that would imply a gain or a loss that was never
+/// measured.
 class _HoldingTile extends StatelessWidget {
-  const _HoldingTile({required this.holding, required this.onChanged});
+  const _HoldingTile({
+    required this.holding,
+    required this.price,
+    required this.onChanged,
+  });
 
   final Asset holding;
+
+  /// Null means "show this at cost" — see the class doc for the two reasons
+  /// that happens.
+  final CachedPrice? price;
+
   final VoidCallback onChanged;
 
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final l10n = context.l10n;
     final cost = fiat(holding.purchasePrice * holding.quantity);
+    final live = price;
+    // `PnlSignal.error` is the same "could not be read" case
+    // `AsyncData`/`DataUnavailable` refuse to show as a figure elsewhere in
+    // this app — a price this method could not turn into a number is drawn
+    // exactly like having no price at all, never as a silent zero.
+    final pnl = live == null
+        ? null
+        : AssetService.calculatePnl(
+            currentPrice: live.pricePerUnit,
+            purchasePrice: holding.purchasePrice,
+            quantity: holding.quantity,
+          );
+    final priced = pnl != null && pnl.signal != PnlSignal.error;
+    final tone = switch (pnl?.signal) {
+      PnlSignal.profit => ObsidianPalette.tertiary,
+      PnlSignal.loss => ObsidianPalette.error,
+      _ => null,
+    };
 
     return AppCard(
       // No detail screen; tapping sells, which is the only thing there is to
@@ -899,7 +963,7 @@ class _HoldingTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  context.l10n.assetsHoldingName(
+                  l10n.assetsHoldingName(
                     holding.assetName,
                     holding.assetCode,
                   ),
@@ -909,7 +973,7 @@ class _HoldingTile extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  context.l10n.assetsPurchaseLine(
+                  l10n.assetsPurchaseLine(
                     formatLira(holding.purchasePrice),
                     '${holding.quantity}',
                   ),
@@ -920,6 +984,24 @@ class _HoldingTile extends StatelessWidget {
                     color: ObsidianPalette.onSurfaceVariant,
                   ),
                 ),
+                if (priced) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    l10n.assetPnlAndAge(
+                      formatPercent(pnl.pnlPct!, signed: true),
+                      priceAge(
+                        l10n,
+                        DateTime.now().toUtc().difference(live!.asOf.toUtc()),
+                      ),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: text.labelMedium?.copyWith(
+                      letterSpacing: 0,
+                      color: tone,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -928,7 +1010,7 @@ class _HoldingTile extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                context.l10n.assetsCost,
+                priced ? l10n.assetCurrent : l10n.assetsCost,
                 style: text.labelMedium?.copyWith(
                   letterSpacing: 0,
                   color: ObsidianPalette.onSurfaceVariant,
@@ -936,8 +1018,11 @@ class _HoldingTile extends StatelessWidget {
               ),
               const SizedBox(height: 2),
               Text(
-                formatLira(cost),
-                style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+                formatLira(priced ? pnl.totalValue! : cost),
+                style: text.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: priced ? tone : null,
+                ),
               ),
             ],
           ),

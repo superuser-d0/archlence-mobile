@@ -1123,10 +1123,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get assetsMyActiveAssets => 'Aktif Varlıklarım';
 
   @override
-  String get assetsAtCostNote =>
-      'Alış maliyeti üzerinden — henüz fiyat kaynağı yok';
-
-  @override
   String get assetsNoHoldings =>
       'Henüz varlık yok. Aldığın her şey, maliyetiyle birlikte burada görünür.';
 
@@ -1237,4 +1233,34 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get recoveryVerifiedNothing =>
       'Burada karşılaştırılacak şifreli bir şey yoktu; anahtar sınanmadan kabul edildi.';
+
+  @override
+  String get priceJustNow => 'az önce';
+
+  @override
+  String priceMinutesAgo(int count) {
+    return '$count dk önce';
+  }
+
+  @override
+  String priceHoursAgo(int count) {
+    return '$count sa önce';
+  }
+
+  @override
+  String priceDaysAgo(int count) {
+    return '$count gün önce';
+  }
+
+  @override
+  String get assetCurrent => 'Güncel';
+
+  @override
+  String assetPnlAndAge(String pnl, String age) {
+    return '$pnl · $age';
+  }
+
+  @override
+  String get assetsLivePricingNote =>
+      'Kripto, altın ve döviz varlıkları alınabildiğinde canlı fiyatla gösterilir. Hisseler maliyetiyle gösterilir; şimdilik ücretsiz bir BIST fiyat kaynağı yok.';
 }

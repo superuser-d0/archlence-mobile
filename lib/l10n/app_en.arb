@@ -619,7 +619,6 @@
   "assetsExpense": "Expense",
   "assetsNetBalance": "Net Balance",
   "assetsMyActiveAssets": "My Active Assets",
-  "assetsAtCostNote": "Valued at purchase cost — no price source yet",
   "assetsNoHoldings": "No holdings yet. Anything you buy shows here with what it cost.",
   "assetsOpeningBalance": "Opening Balance",
   "@assetsOpeningBalance": {
@@ -717,5 +716,47 @@
   "recoveryVerifiedNothing": "There was nothing encrypted here to check it against, so the key was accepted untested.",
   "@recoveryVerifiedNothing": {
     "description": "Appended when the import verified zero fields. 'Verified' and 'verified nothing' are not the same reassurance, and on a fresh profile any key at all would have passed."
-  }
+  },
+  "priceJustNow": "just now",
+  "priceMinutesAgo": "{count}m ago",
+  "@priceMinutesAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "priceHoursAgo": "{count}h ago",
+  "@priceHoursAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "priceDaysAgo": "{count}d ago",
+  "@priceDaysAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "assetCurrent": "Current",
+  "@assetCurrent": {
+    "description": "The holding-tile column label when a live price is shown, replacing 'Cost'."
+  },
+  "assetPnlAndAge": "{pnl} · {age}",
+  "@assetPnlAndAge": {
+    "placeholders": {
+      "pnl": {
+        "type": "String"
+      },
+      "age": {
+        "type": "String"
+      }
+    },
+    "description": "Under the purchase line on a live-priced holding: the signed P&L percentage and how long ago the price was fetched."
+  },
+  "assetsLivePricingNote": "Crypto, gold and currency holdings show a live price when one could be fetched. Shares are shown at cost, because there is no free BIST price source yet."
 }

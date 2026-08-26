@@ -112,6 +112,10 @@ void main() {
           vector.multiplier,
           reason: vector.symbol,
         );
+        // The cache key a live price gets written under. Without this on
+        // every request type, a gold holding's price would have nowhere of
+        // its own to be cached — see lib/services/live_price_service.dart.
+        expect(request.code, vector.symbol.toUpperCase(), reason: vector.symbol);
       }
     });
 

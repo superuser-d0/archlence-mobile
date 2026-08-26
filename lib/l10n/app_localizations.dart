@@ -2100,12 +2100,6 @@ abstract class AppLocalizations {
   /// **'My Active Assets'**
   String get assetsMyActiveAssets;
 
-  /// No description provided for @assetsAtCostNote.
-  ///
-  /// In en, this message translates to:
-  /// **'Valued at purchase cost — no price source yet'**
-  String get assetsAtCostNote;
-
   /// No description provided for @assetsNoHoldings.
   ///
   /// In en, this message translates to:
@@ -2285,6 +2279,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'There was nothing encrypted here to check it against, so the key was accepted untested.'**
   String get recoveryVerifiedNothing;
+
+  /// No description provided for @priceJustNow.
+  ///
+  /// In en, this message translates to:
+  /// **'just now'**
+  String get priceJustNow;
+
+  /// No description provided for @priceMinutesAgo.
+  ///
+  /// In en, this message translates to:
+  /// **'{count}m ago'**
+  String priceMinutesAgo(int count);
+
+  /// No description provided for @priceHoursAgo.
+  ///
+  /// In en, this message translates to:
+  /// **'{count}h ago'**
+  String priceHoursAgo(int count);
+
+  /// No description provided for @priceDaysAgo.
+  ///
+  /// In en, this message translates to:
+  /// **'{count}d ago'**
+  String priceDaysAgo(int count);
+
+  /// The holding-tile column label when a live price is shown, replacing 'Cost'.
+  ///
+  /// In en, this message translates to:
+  /// **'Current'**
+  String get assetCurrent;
+
+  /// Under the purchase line on a live-priced holding: the signed P&L percentage and how long ago the price was fetched.
+  ///
+  /// In en, this message translates to:
+  /// **'{pnl} · {age}'**
+  String assetPnlAndAge(String pnl, String age);
+
+  /// No description provided for @assetsLivePricingNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Crypto, gold and currency holdings show a live price when one could be fetched. Shares are shown at cost, because there is no free BIST price source yet.'**
+  String get assetsLivePricingNote;
 }
 
 class _AppLocalizationsDelegate

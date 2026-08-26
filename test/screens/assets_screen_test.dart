@@ -10,6 +10,19 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../support/test_app.dart';
 
+/// Canned CoinGecko/Frankfurter bodies for the one test that drives a real
+/// price through this screen; every other test in this file keeps the
+/// network-refusing default from `testServices`.
+Future<String> _fakeLiveGet(Uri uri) async {
+  if (uri.host == 'api.coingecko.com') {
+    return '{"bitcoin": {"usd": 78402}}';
+  }
+  if (uri.host == 'api.frankfurter.dev') {
+    return '{"rates": {"USD": 0.02079}}';
+  }
+  throw StateError('unexpected host: ${uri.host}');
+}
+
 void main() {
   late ArchlenceDatabase db;
   late AppServices services;
@@ -124,34 +137,88 @@ void main() {
     },
   );
 
-  testWidgets('holdings are shown at cost, with no invented current value', (
-    tester,
-  ) async {
-    await services.assets.insertAsset(
-      assetName: 'Euro',
-      assetCode: 'EURTRY=X',
-      assetType: 'Döviz',
-      purchasePrice: '37.80',
-      quantity: 400,
-    );
+  testWidgets(
+    'a symbol this app cannot classify is shown at cost, not invented',
+    (tester) async {
+      // 'EURTRY=X' is a Yahoo-style ticker, not the bare 3-letter code
+      // `ticker_mapper.dart` recognises — exactly the shape a restored
+      // desktop backup could carry. It must stay at cost rather than being
+      // guessed at.
+      await services.assets.insertAsset(
+        assetName: 'Euro',
+        assetCode: 'EURTRY=X',
+        assetType: 'Döviz',
+        purchasePrice: '37.80',
+        quantity: 400,
+      );
 
-    await pump(tester);
+      await pump(tester);
 
-    expect(find.text('Euro (EURTRY=X)'), findsOneWidget);
-    expect(find.text('Purchase: 37,80 ₺ × 400'), findsOneWidget);
-    expect(find.text('Cost'), findsOneWidget);
-    // Twice: once on the tile, once in the total above it. `findsWidgets`
-    // would pass on a tile showing the UNIT price, because the total would
-    // still carry the figure on its own.
-    expect(find.text('15.120,00 ₺'), findsNWidgets(2));
-    expect(find.text('Holdings at Cost'), findsOneWidget);
-    expect(
-      find.textContaining('no price source'),
-      findsOneWidget,
-      reason: 'the figures must say what they are',
-    );
-    expect(find.text('Current'), findsNothing);
-  });
+      expect(find.text('Euro (EURTRY=X)'), findsOneWidget);
+      expect(find.text('Purchase: 37,80 ₺ × 400'), findsOneWidget);
+      expect(find.text('Cost'), findsOneWidget);
+      // Twice: once on the tile, once in the total above it. `findsWidgets`
+      // would pass on a tile showing the UNIT price, because the total would
+      // still carry the figure on its own.
+      expect(find.text('15.120,00 ₺'), findsNWidgets(2));
+      expect(find.text('Holdings at Cost'), findsOneWidget);
+      expect(
+        find.textContaining('Shares are shown at cost'),
+        findsOneWidget,
+        reason: 'the section banner still has to set the expectation',
+      );
+      expect(find.text('Current'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'a holding the live fetch cannot reach also stays at cost',
+    (tester) async {
+      // A bare, recognised currency code — but `testServices` wires a
+      // network that refuses every call, the same as a phone with no
+      // connection. The row must fall back to cost rather than break.
+      await services.assets.insertAsset(
+        assetName: 'Dolar',
+        assetCode: 'USD',
+        assetType: 'Döviz',
+        purchasePrice: '37.80',
+        quantity: 400,
+      );
+
+      await pump(tester);
+
+      expect(find.text('Cost'), findsOneWidget);
+      expect(find.text('Current'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'a live-priced holding shows Current, not Cost, with its own gain and age',
+    (tester) async {
+      final live = testServices(db, httpGet: _fakeLiveGet);
+      await live.assets.insertAsset(
+        assetName: 'Bitcoin',
+        assetCode: 'BTC',
+        assetType: 'Kripto',
+        purchasePrice: '1000000',
+        quantity: '1',
+      );
+
+      await pumpScreen(tester, live, const AssetsScreen());
+
+      expect(find.text('Current'), findsOneWidget);
+      // No standalone 'Cost' tile label: the only holding is live-priced.
+      // The TOTAL card above it still reads 'Holdings at Cost' — a
+      // different string, on purpose, since it always sums at cost — so
+      // this checks the bare word is not ALSO sitting on the tile.
+      expect(find.text('Cost'), findsNothing);
+      expect(find.text('Holdings at Cost'), findsOneWidget);
+      // The tile's own gain line: a live price this far above the purchase
+      // price is a profit, so it carries a leading '+'.
+      expect(find.textContaining('+'), findsWidgets);
+      expect(find.textContaining('just now'), findsOneWidget);
+    },
+  );
 
   testWidgets('no holdings says so', (tester) async {
     await pump(tester);

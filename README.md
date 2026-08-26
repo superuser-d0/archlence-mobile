@@ -46,8 +46,11 @@ debug-key fallback is gone. Creating the keystore is the one step left, and it
 belongs to whoever ships the app; `android/key.properties.example` has the
 command.
 
-One thing it cannot do yet: **live prices** need a data source chosen, so
-holdings are shown at what they cost and labelled as such.
+**Holdings show a live price.** Crypto, gold and currency go through
+CoinGecko and Frankfurter, called straight from the phone — no backend, no
+API key shipped, matching the app's own "no account, no server" promise.
+Shares stay at cost, because there is no keyless BIST source yet; each tile
+says which it got, and how long ago.
 
 **Start at [docs/ROADMAP.md](docs/ROADMAP.md)** — it opens with a "Pick up
 here" section listing the next steps in priority order, and records how each
@@ -98,7 +101,7 @@ roadmap.
 | `lib/l10n/` | The Turkish and English label files, and the class generated from them |
 | `lib/backup/` | Backup packages: the bounded reader, the writer, the journalled restore |
 | `lib/security/` | The resume lock |
-| `lib/services/` | Accounts, the ledger, holdings, recurring, budget, savings |
+| `lib/services/` | Accounts, the ledger, holdings, recurring, budget, savings, live pricing |
 | `lib/screens/` | The five tabs, onboarding, and the forms behind them |
 | `lib/ui/` | Money formatting, error wording, the language choice, the loading/error/empty contract |
 | `lib/theme/` | Obsidian Prime design tokens |

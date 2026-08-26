@@ -49,28 +49,27 @@ the case a whole backup does not: the data is still here and the KEY is gone.
 Wire-compatible with the desktop's, checked in both directions against
 `services/key_recovery_service.py`.
 
-**What it cannot do yet:** show a live price.
+**And holdings show a live price.** Crypto, gold and currency go through
+`LivePriceService` — CoinGecko and Frankfurter, called straight from the
+phone, no backend of ours. Shares stay at cost, because there is still no
+keyless BIST source; the tab says so, per holding, rather than leaving a
+blanket disclaimer that would be wrong for three-quarters of a portfolio the
+moment the other three kinds have an answer.
 
-598 unit tests and 12 device tests pass. `flutter analyze` is clean, no
+661 unit tests and 12 device tests pass. `flutter analyze` is clean, no
 control in the app is inert, and it runs on the emulator.
 
 ## Pick up here
 
-In priority order. Each of these is a self-contained next session.
-
-**1. Make the release keystore.** Five minutes and one `keytool` command,
-written out in `android/key.properties.example`. It is first because
-everything else is written and waiting on it: the moment that file exists,
-`flutter build apk --release` produces something another person can install.
-It is not a coding task, and it is not one to delegate — the keystore is the
-app's identity and its password should never be typed into this repository.
-
-**2. Price fetching.** The decision is made — see "Prices come from the phone,
-from keyless sources" — so this is code now, and it is the only thing left on
-the list that changes what the app can tell a user. Open work 1 says what
-building it involves.
-
-Open work 3 lists what has not been considered at all.
+**Make the release keystore.** Five minutes and one `keytool` command,
+written out in `android/key.properties.example`. Everything else is written
+and waiting on it: the moment that file exists, `flutter build apk --release`
+produces something another person can install. It is not a coding task, and
+it is not one to delegate — the keystore is the app's identity and its
+password should never be typed into this repository. It is the only thing
+left on this list; open work 2 has what has not been considered at all, and
+the user-supplied BIST key described under "Price fetching" is worth doing
+only once someone wants it enough to type an API key into Settings.
 
 ## Settled decisions
 
@@ -250,14 +249,19 @@ nine dollars apart, which is the sanity check that the token is tracking the
 metal rather than drifting on its own. Gold therefore stays derived, but from
 `PAXG x USDTRY / 31.1034768` rather than from anything of Yahoo's.
 
-Two things measured while deciding, both of which the port has to handle:
+One thing measured while deciding:
 
-* `api.frankfurter.app` now answers **301** to `api.frankfurter.dev/v1/`. The
-  desktop never noticed because `requests` follows redirects; Dart's
-  `HttpClient` does not by default.
 * ECB rates are **daily**, not live — the response carries the previous
   business day's date. Fine for a personal ledger, and it has to be labelled
   rather than presented as a live quote.
+
+(`api.frankfurter.app` answers 301 to `api.frankfurter.dev/v1/`. Checked
+separately, with an actual request rather than by inspecting the library:
+`dart:io`'s `HttpClient` follows it by default — `followRedirects` defaults to
+`true` — the same as `requests`. An earlier version of this entry claimed the
+opposite from general expectation rather than a test and was wrong; the port
+needs no special handling for it, only the old host as a fallback base if the
+provider is ever queried directly without going through the redirect.)
 
 ### Obsidian Prime, with four deliberate deviations
 
@@ -287,7 +291,7 @@ Long, and grouped roughly by layer rather than by date:
 | Layer | Sections |
 | --- | --- |
 | Foundations | Money · Encryption · Database · The REAL column's drift |
-| Services | Accounts · Transactions · Holdings · Recurring payments · The monthly budget · Savings goals |
+| Services | Accounts · Transactions · Holdings · Recurring payments · The monthly budget · Savings goals · Price fetching |
 | Backup | The backup's cryptographic core · The package around it · Restoring · The key on its own |
 | Security | The screen lock |
 | Language | i18n · What i18n did NOT cover |
@@ -1085,6 +1089,144 @@ first, the recovery case last. And the l10n leak test grew a second case for
 this screen — it is pushed from Settings, so the tab walk never reaches it,
 and it carries more prose than any tab does.
 
+### Price fetching — `lib/services/price_providers.dart`, `live_price_service.dart`
+
+Built on top of `price_guard.dart` and `ticker_mapper.dart` (see those two
+entries above) and the decision recorded in "Prices come from the phone, from
+keyless sources". This entry is the rest: the two providers, the composition
+layer that turns a classified holding into a price, the cache, and the
+per-holding UI.
+
+**`price_providers.dart`** calls CoinGecko and Frankfurter through one seam,
+`HttpGet = Future<String> Function(Uri)`, so every test in this piece drives a
+canned response and no socket ever opens. NEITHER provider function throws —
+a network failure, a timeout, a malformed body, or one bad id inside an
+otherwise good response all come back as an absent key, matching
+`price_guard`'s own "one broken symbol does not sink the batch" rule one
+layer up. Frankfurter's rates are `TRY -> code`; every rate is INVERTED before
+it leaves this file, because the rest of the app deals in "how many lira is
+one unit" — the same direction `formatLira` and a stored purchase price
+already use — and nowhere downstream should have to remember which way one
+particular provider's numbers point.
+
+One correction on the way here, worth recording because it was stated
+confidently and checked only after the fact: the decision doc originally
+claimed `dart:io`'s `HttpClient` does not follow the Frankfurter redirect by
+default. A real request against `api.frankfurter.app` proved the opposite —
+`followRedirects` defaults to `true`, same as `requests` — and both mentions
+in this file were corrected rather than left standing. The lesson travels:
+a claim about a library's default behaviour is worth one real call before it
+goes in a decision record, not just a plausible guess.
+
+**`ticker_mapper.dart` gained one field it was missing.** Every `PriceRequest`
+subtype except `GoldPriceRequest` already carried the holding's own `code`;
+gold's classification runs on the CODE (`GOLD-CEYREK` etc.), not a
+provider-side lookup, so it had never needed to KEEP one. It does now — the
+cache is keyed on that exact code, matching the desktop's own `_store_cache`,
+and a gold holding needs somewhere of its own to be cached just as much as a
+crypto or currency one does. Promoted to the base class rather than added to
+one subtype, since all five needed it identically; the four that already had
+it lost a duplicate field apiece. The existing parity tests were re-run after
+the change and passed unmodified — the classification itself did not move,
+only where one already-computed value lives — and one more assertion was
+added pinning `request.code` against the fixture for every gold vector.
+
+**`live_price_service.dart`** is the composition point, and nothing above it
+in the call graph does the arithmetic or touches `asset_price_cache` on its
+own. For a whole batch of holdings it: classifies each one, gathers the
+CoinGecko ids and currency codes actually needed (adding PAXG the moment any
+gold holding exists, and `USD` the moment either crypto or gold does — both
+convert through USDTRY, even for a portfolio with no currency holding of its
+own), fetches each provider ONCE regardless of how many holdings share a
+symbol, computes a TRY-per-unit price for what it can, and falls back to
+`asset_price_cache` for whatever a provider gap left unpriced. A live figure
+and a cached one are written and read as the same `CachedPrice` — the caller
+never has to ask which kind it got, only how OLD it is.
+
+The one detail this table needed that no other table in the schema does:
+`updated_at` is written as `YYYY-MM-DDThh:mm:ss+03:00` — a FIXED Istanbul
+offset, not this app's usual `sqliteTimestamp`. The desktop writes the same
+shape (`datetime.astimezone(ISTANBUL).isoformat()`), and `MAX(updated_at)` is
+a plain TEXT comparison: after a restore, a mobile-written row and a
+desktop-written row for different symbols can sit in the same table, and
+mixing formats could make an older row read as newer than a fresher one, or
+the reverse. No timezone database is needed for this — Turkey has kept no
+daylight saving since September 2016, so `+03:00` never changes and three
+hours is the whole rule.
+
+**The screen.** `_HoldingTile` shows `Current` with the live total, a
+signed P&L percentage, and how long ago the price was fetched (`just now`,
+`3m ago`, `2h ago`, `9d ago` — `lib/ui/price_freshness.dart`, coarse on
+purpose) wherever a price was found; everywhere else it is unchanged —
+`Cost`, no colour, no claim. `_TotalHoldingsCard` was DELIBERATELY left
+alone: it sums purchase price across a portfolio that can hold a share at
+cost beside a crypto holding at a live price in the same list, and blending
+those into one number would present a figure that is part market value and
+part cost basis with no way to tell which parts are which from the total
+alone. The roadmap's own item 5 asked for this PER HOLDING, not as a new
+aggregate, and the tiles are where it landed.
+
+**Every widget test needed a seam it didn't have before.** The moment
+`AssetsScreen` calls `services.livePrices.priceHoldings(...)`, EVERY widget
+test that pumps it — or `AppShell`, which reaches it through the Assets tab —
+would open a real connection unless something stood in the way.
+`test/support/test_app.dart`'s `testServices()` now wires a `LivePriceService`
+whose `HttpGet` throws on every call; `LivePriceService` already treats a
+thrown provider error as "nothing to price this fetch" and falls back to
+whatever the cache holds, which is the same path a genuinely offline phone
+takes — so refusing here is not a special case invented for tests, it
+exercises a real one. A test that specifically wants to drive live pricing
+passes its own `httpGet` instead.
+
+**How it was proven.** `price_providers_test.dart` (19 cases) drives both
+provider functions through the fake seam only — malformed bodies, a
+numeric literal that overflows to `Infinity` on the way in (the same defect
+`price_guard` exists for, one layer up), a zero rate that would divide by
+zero if the guard had not already caught it, and the empty-request case that
+must make no call at all. `live_price_service_test.dart` (12 cases) runs
+against a REAL in-memory drift database — the crypto/currency/gold formulas,
+the dedup (one HTTP call per provider for a four-holding portfolio sharing
+symbols), shares and unknown symbols never touching a provider, a
+successful fetch surviving into the next read as a cache row, and the
+sharpest one: a provider gap falling back to a cache row that still reports
+its OWN stale timestamp rather than the moment of the failed retry.
+
+One of those cases exists because of a second self-caught mistake: a cache
+row with a `NULL source` — one written before that column existed — was
+being read back labelled `CoinGecko`, which this app has never called Yahoo
+through. The desktop's own reader resolves a null source to `Yahoo Finance`
+(`row["source"] or PRICE_SOURCE`, and `PRICE_SOURCE = "Yahoo Finance"` from
+back when it was the only provider there was), and that is the convention
+worth matching for a row the desktop actually wrote — not a guess at which of
+THIS app's two providers seemed more likely.
+
+`price_freshness_test.dart` (5 cases) pins the four buckets and the negative-
+duration case. `assets_screen_test.dart` grew from 12 tests to 14: the old
+blanket "no price source" assertion is gone with the banner it tested, split
+into a symbol-this-app-cannot-classify case and a provider-gap case, plus one
+new test proving a live-priced tile actually says `Current`.
+
+Checked for teeth. `live_price_service_test.dart` caught: the cache write
+skipped entirely, the gold multiplier ignored, the legacy-source fallback
+reverted to the wrong guess, and a cache-fallback price reporting the CURRENT
+time instead of the stale one it actually came from —
+the last of which was the point of building the fallback at all, and it is
+worth noting that this specific mutation is exactly the kind a less pointed
+test would let through, since the PRICE would still be numerically correct
+even with the wrong timestamp attached. `assets_screen_test.dart` caught the
+`Current`/`Cost` label always resolving to `Cost`. One mutation on
+`price_freshness.dart` came back GREEN and was investigated rather than
+dismissed: removing an explicit negative-duration clamp did not fail the
+suite, because any negative duration already satisfies `inMinutes < 1` and
+lands in the same "just now" branch a small positive one does — the clamp
+was dead code, confirmed rather than assumed, and removed with a comment
+explaining why no clamp is needed at all instead of being restored.
+
+**What is still not here.** BIST, by decision — see "Prices come from the
+phone, from keyless sources". The user-supplied API key that would open it
+is listed in "Pick up here" as worth doing only once someone wants it enough
+to type a key into Settings, not before.
+
 ### Paying card debt — `lib/screens/pay_debt_sheet.dart`
 
 The last write flow. Two things it gets right by refusing rather than
@@ -1436,8 +1578,11 @@ when a mutation comes back green: check that it actually mutated something.
 Port of the CRUD-and-arithmetic half of `services/asset_service.py` plus
 `services/asset_purchase_service.py` and `services/asset_sale_service.py`.
 The other half — `fetch_current_price`, the portfolio cache, the BIST100
-batch fetch, the warm-up thread — is NOT ported; see open work 2, which
-this doesn't need to be resolved to build.
+batch fetch, the warm-up thread — is NOT ported as the desktop wrote it, and
+did not need to be to reach it: `calculatePnl` took a current price as a
+plain argument from the start, and "Price fetching" further down builds what
+supplies one, on its own terms rather than a straight port of this file's
+other half.
 
 `calculatePnl` is arithmetic only: Decimal throughout, quantized only on the
 way out, and the signal decided from the unrounded ratio so a position up
@@ -1569,82 +1714,12 @@ surfaced only that way:
 
 ## Open work
 
-### 1. Price fetching — decided, not built
-
-WHERE the prices come from is settled: see "Prices come from the phone, from
-keyless sources". What is left is the building, and it is more than one HTTP
-call.
-
-**The shape.** The desktop runs `services/asset_price_worker.py` as a
-**subprocess** (`asset_service.py:700`), which has nowhere to go on Android:
-there is no second Python interpreter to spawn. It becomes an in-process
-background task. `AssetService.calculatePnl` already takes a current price as a
-plain argument, so the join at the far end is small; the work is everything
-before it.
-
-**What has to be written:**
-
-1. **A symbol mapper**, the port of `utils/ticker_mapper.py`: `BTC` to
-   `BTC-USD`, `USD` to `USDTRY=X`, `GOLD-CEYREK` to the ounce price with a
-   1.75 multiplier. It decides from `asset_type`, which is why those strings
-   are data and not labels. One deliberate divergence: where the desktop maps
-   gold to `GC=F`, this maps it to PAXG on CoinGecko — see the decision. The
-   gram divisor and the coin multipliers are unchanged.
-2. **`price_guard`**, first and regardless of provider. The desktop's own
-   defect is the argument: `float("inf") > 0` is TRUE, and `json.loads` parses
-   `Infinity` by default, so one broken response wrote an infinite price into
-   the cache and `inf * quantity` swallowed the entire portfolio total. It
-   rejects non-finite values, zero and negative, and `bool` — and it never
-   throws, because dropping a whole batch over one bad symbol is the failure
-   it exists to prevent.
-3. **The two providers**, CoinGecko and Frankfurter, called directly. Each in
-   its own try block: one failing must not block the other, and a partial
-   result beats none. Mind the Frankfurter redirect and that `dart:io`'s
-   `HttpClient` does not follow it by default. Nothing new in `pubspec.yaml` is
-   strictly needed — `dart:io` is enough — and adding `package:http` for
-   ergonomics is a judgement call to make then.
-4. **The cache.** `asset_price_cache(symbol, price, asset_type, updated_at,
-   source)` is ALREADY in the schema, shared with the desktop, and `source`
-   already exists to record which provider answered. Nothing needs adding; it
-   needs filling.
-5. **Saying when.** A price without its `updated_at` on screen breaks the same
-   rule the money layer keeps everywhere else — a figure presented as current
-   that is not is worse than one labelled stale. The Assets tab's existing
-   "Valued at purchase cost" line becomes per-holding: live with a timestamp,
-   or at cost.
-
-**What stays at cost:** shares. The tab must go on saying so for them while
-saying something different for the rest, which is a UI problem as much as a
-service one.
-
-**Not in this piece:** the user-supplied API key that would open BIST. It needs
-a Settings row, a secure-store entry and a second provider behind it, and it is
-worth doing only once the keyless path is proven.
-
-**Two approximations inherited from the desktop, worth knowing before they are
-shipped as figures.** Neither is a reason not to build this; both are reasons
-not to present the result as a quote:
-
-* **Gram gold is derived, not quoted, and the gap was measured.** With PAXG at
-  4612.05 USD and the ECB's 25 August TRY reference giving USDTRY 48.10, the
-  formula yields **7132 TL** a gram against **7198 TL** quoted in the Turkish
-  market the same day — about **0.9% low**. That gap is the local premium plus
-  the difference between the free-market lira rate and the ECB's daily
-  reference, and a live ounce against yesterday's reference rate is an
-  internally inconsistent pair to begin with. Close enough to be useful in a
-  portfolio total; not close enough to print beside the word "price" without
-  saying where it came from.
-* **The coin multipliers are weights, not prices.** 1.75, 3.5 and 7.0 are how
-  many grams a quarter, half and full coin contain. Minted gold carries a
-  workmanship premium over its metal content, so a coin valued this way is
-  valued low. The number is defensible as "the gold in it is worth this"; it is
-  not what the coin sells for.
-
-### 2. Shipping
+### 1. Shipping
 
 The icon, the launch screen and the signing configuration are done — see
 "The icon and the launch screen" and "Release signing". What is left is the
-keystore (item 1 above) and a Play Store listing, which is not engineering.
+keystore ("Pick up here", above) and a Play Store listing, which is not
+engineering.
 
 Not attempted, and worth naming so it is not mistaken for finished: R8 is not
 enabled for release builds. `isMinifyEnabled` is off, as it is in the Flutter
@@ -1653,7 +1728,7 @@ one-line change and a real risk — it needs keep rules for the plugins and a
 run on a device before it can be trusted, which makes it its own session
 rather than a line in this one.
 
-### 3. Not yet considered at all
+### 2. Not yet considered at all
 
 Widening beyond a phone (tablet layouts), accessibility beyond what Material
 gives by default, and anything to do with more than one user or device.

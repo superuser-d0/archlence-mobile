@@ -333,7 +333,6 @@
   "assetsExpense": "Gider",
   "assetsNetBalance": "Net Bakiye",
   "assetsMyActiveAssets": "Aktif Varlıklarım",
-  "assetsAtCostNote": "Alış maliyeti üzerinden — henüz fiyat kaynağı yok",
   "assetsNoHoldings": "Henüz varlık yok. Aldığın her şey, maliyetiyle birlikte burada görünür.",
   "assetsOpeningBalance": "Açılış Bakiyesi",
   "assetsNoDistribution": "Bu dönemde para hareket etmedi, dolayısıyla çizilecek bir dağılım da yok.",
@@ -363,5 +362,12 @@
   "recoveryImportedStored": "Anahtar yerine kondu. Onunla {records} şifreli alan açıldı.",
   "recoveryImportedReplaced": "Anahtar değiştirildi. Onunla {records} şifreli alan açıldı.",
   "recoveryImportedUnchanged": "Bu zaten bu telefondaki anahtar. Hiçbir şey değişmedi.",
-  "recoveryVerifiedNothing": "Burada karşılaştırılacak şifreli bir şey yoktu; anahtar sınanmadan kabul edildi."
+  "recoveryVerifiedNothing": "Burada karşılaştırılacak şifreli bir şey yoktu; anahtar sınanmadan kabul edildi.",
+  "priceJustNow": "az önce",
+  "priceMinutesAgo": "{count} dk önce",
+  "priceHoursAgo": "{count} sa önce",
+  "priceDaysAgo": "{count} gün önce",
+  "assetCurrent": "Güncel",
+  "assetPnlAndAge": "{pnl} · {age}",
+  "assetsLivePricingNote": "Kripto, altın ve döviz varlıkları alınabildiğinde canlı fiyatla gösterilir. Hisseler maliyetiyle gösterilir; şimdilik ücretsiz bir BIST fiyat kaynağı yok."
 }

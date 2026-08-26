@@ -6,13 +6,12 @@
 /// `services/asset_service.py` (`calculate_pnl`) that do not depend on live
 /// price fetching.
 ///
-/// PRICE FETCHING IS NOT PORTED. The desktop's `fetch_current_price`, its
-/// portfolio cache and its warm-up thread pull from `yfinance` in the
-/// background; the roadmap's open question records that this needs its own
-/// decision — Android has no second Python interpreter to spawn, and
-/// `yfinance` has no Dart equivalent. Holdings and profit/loss are usable
-/// without it: [calculatePnl] takes a current price as a plain argument,
-/// wherever the caller gets it from.
+/// LIVE PRICE FETCHING LIVES ELSEWHERE, deliberately not here.
+/// `LivePriceService` in `live_price_service.dart` is the one place that
+/// calls a provider or touches `asset_price_cache`; this file stays what it
+/// always was — CRUD and pure arithmetic. [calculatePnl] takes a current
+/// price as a plain argument precisely so the two could be built and tested
+/// apart, and now are.
 ///
 /// `get_pnl_color` is likewise not ported. It maps a [PnlSignal] to an RGBA
 /// list for the UI to paint with — a decision that belongs to whatever

@@ -20,6 +20,7 @@ import 'services/asset_purchase_service.dart';
 import 'services/asset_sale_service.dart';
 import 'services/asset_service.dart';
 import 'services/budget_service.dart';
+import 'services/live_price_service.dart';
 import 'services/recurring_service.dart';
 import 'services/savings_service.dart';
 import 'security/screen_lock.dart';
@@ -34,6 +35,7 @@ class AppServices {
     this.screenLock,
     this.backup,
     this.keyRecovery,
+    this.livePrices,
   ) : accounts = AccountService(db, crypto),
       assets = AssetService(db, crypto),
       savings = SavingsService(db, crypto);
@@ -49,6 +51,7 @@ class AppServices {
     ScreenLock? screenLock,
     BackupService? backup,
     KeyRecoveryService? keyRecovery,
+    LivePriceService? livePrices,
   }) {
     final services = AppServices._(
       db,
@@ -57,6 +60,10 @@ class AppServices {
       screenLock ?? ScreenLock(),
       backup,
       keyRecovery,
+      // Unlike `backup`/`keyRecovery`, this needs no disk path — an
+      // in-memory database prices holdings exactly as well as a real one —
+      // so it is never null. A test wanting a fake network passes its own.
+      livePrices ?? LivePriceService(db: db),
     );
     services.transactions = TransactionService(db, crypto, services.accounts);
     services.recurring = RecurringService(db, crypto, services.accounts);
@@ -141,6 +148,11 @@ class AppServices {
   /// that cannot back anything up has to SAY so, not draw a button that
   /// quietly does nothing.
   final BackupService? backup;
+
+  /// Fills a holding with a live price and the cache row behind it. Always
+  /// present — see the constructor comment for why it does not follow
+  /// [backup]'s nullability.
+  final LivePriceService livePrices;
 
   /// The key on its own — exporting it, and putting one back. Null in tests
   /// with no profile on disk, for the same reason [backup] is.
