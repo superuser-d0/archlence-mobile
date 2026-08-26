@@ -65,9 +65,10 @@ everything else is written and waiting on it: the moment that file exists,
 It is not a coding task, and it is not one to delegate — the keystore is the
 app's identity and its password should never be typed into this repository.
 
-**2. Price fetching.** Needs a DECISION before it needs code; open work 1 says
-what the decision is. It is now the only thing on the list that changes what
-the app can tell a user.
+**2. Price fetching.** The decision is made — see "Prices come from the phone,
+from keyless sources" — so this is code now, and it is the only thing left on
+the list that changes what the app can tell a user. Open work 1 says what
+building it involves.
 
 Open work 3 lists what has not been considered at all.
 
@@ -186,6 +187,77 @@ Turkish. Left alone, the Settings headings came out as `GÜVENLIK` and
 `GIZLILIK`. `localizedUpperCase` in `lib/ui/app_locale.dart` fixes the two
 Turkish i's and is used everywhere the app upper-cases its own text. It is
 never applied to text a user typed.
+
+### Prices come from the phone, from keyless sources
+
+The question had two axes and they are easy to conflate: WHERE the data comes
+from, and HOW the phone gets it. The second was decided first, because it
+decides the first.
+
+**The phone calls the provider itself.** No backend. The reason is not cost or
+effort — it is that `onboarding_screen.dart` tells the user "No account, no
+server. Nothing is uploaded and there is nothing to sign in to", and a price
+proxy would make that false: the phone would be telling a server of ours which
+symbols the user holds, which is a fair sketch of their portfolio. Fetching a
+whole index instead of named symbols would blunt that, and it would still leave
+an app that stops working when a server we run stops running.
+
+One consequence runs the other way from intuition and is worth writing down:
+these providers rate-limit **per IP**. Every phone therefore arrives with its
+own budget, where a proxy would concentrate every user onto one address and be
+throttled far sooner. For this workload, direct is not just more private, it
+is more robust.
+
+**No API key ships in the app.** A key in an APK is a public key — anyone can
+pull it out — so only keyless providers are usable by default. What that buys,
+and what it costs, is the next decision.
+
+**Crypto, currency and gold go live. BIST does NOT.** Checked in August 2026:
+Borsa İstanbul data is commercial. What exists is enterprise feeds, 15-minute
+delayed resellers, and pay-per-result scrapers; there is no free tier worth
+building on. So shares stay AT COST and the Assets tab goes on saying so —
+which is already true today and stays true rather than becoming a lie.
+
+**And the desktop's own source is rejected for a shipped app.** The desktop
+reaches BIST through `yfinance`, which drives endpoints Yahoo has never
+documented and shut its public API behind in 2017: undocumented limits, no
+service contract, and changes that break the library without notice. On one
+developer's machine that is a nuisance. On an app installed on other people's
+phones, one Yahoo change takes out every install at once, and it would be the
+single point of failure for the whole portfolio rather than for shares alone.
+
+**A key the USER supplies is the way BIST opens later.** Entered in Settings,
+kept in the platform secure store beside the screen-lock and language
+preferences, spending the user's own quota. It is friction most people will
+not accept, which is exactly why it is an addition and not the default: the
+app works keyless, and someone who wants live shares can pay that price
+themselves. Not built yet, and deliberately its own session.
+
+**The providers.** Two of them are the ones the desktop already proved, used
+the same way: **CoinGecko** for crypto in USD, **Frankfurter (ECB)** for a
+currency's lira value.
+
+Gold needed an answer of its own, and it is the one place this decision does
+not simply inherit the desktop's. The desktop takes the ounce from `GC=F` —
+Yahoo — which is exactly the source rejected two paragraphs up, and its own
+fallback module says in as many words that `GC=F` has no fallback. Keeping the
+formula while dropping Yahoo would have left gold with no source at all.
+
+The answer is **PAXG**, tokenised gold, from CoinGecko — the provider already
+being called, keyless, no new dependency, one ounce of allocated gold per
+token. Measured on 26 August 2026: PAXG 4612.05 USD and XAUT 4602.96 USD,
+nine dollars apart, which is the sanity check that the token is tracking the
+metal rather than drifting on its own. Gold therefore stays derived, but from
+`PAXG x USDTRY / 31.1034768` rather than from anything of Yahoo's.
+
+Two things measured while deciding, both of which the port has to handle:
+
+* `api.frankfurter.app` now answers **301** to `api.frankfurter.dev/v1/`. The
+  desktop never noticed because `requests` follows redirects; Dart's
+  `HttpClient` does not by default.
+* ECB rates are **daily**, not live — the response carries the previous
+  business day's date. Fine for a personal ledger, and it has to be labelled
+  rather than presented as a live quote.
 
 ### Obsidian Prime, with four deliberate deviations
 
@@ -1497,19 +1569,76 @@ surfaced only that way:
 
 ## Open work
 
-### 1. Price fetching — needs a decision
+### 1. Price fetching — decided, not built
 
-The desktop runs `services/asset_price_worker.py` as a **subprocess**
-(`asset_service.py:700`). That architecture does not work on Android: there is
-no second Python interpreter to spawn. It has to become an in-process
-background task, and the price source itself needs deciding — `yfinance` has
-no Dart equivalent, so this is either a direct HTTP call to a chosen provider
-or a backend of your own.
+WHERE the prices come from is settled: see "Prices come from the phone, from
+keyless sources". What is left is the building, and it is more than one HTTP
+call.
 
-Until it is settled, the Assets tab shows holdings AT COST and says so. That
-is a deliberate holding position, not an oversight: `AssetService.calculatePnl`
-already takes a current price as a plain argument, so wiring a feed in is a
-small change once the source exists.
+**The shape.** The desktop runs `services/asset_price_worker.py` as a
+**subprocess** (`asset_service.py:700`), which has nowhere to go on Android:
+there is no second Python interpreter to spawn. It becomes an in-process
+background task. `AssetService.calculatePnl` already takes a current price as a
+plain argument, so the join at the far end is small; the work is everything
+before it.
+
+**What has to be written:**
+
+1. **A symbol mapper**, the port of `utils/ticker_mapper.py`: `BTC` to
+   `BTC-USD`, `USD` to `USDTRY=X`, `GOLD-CEYREK` to the ounce price with a
+   1.75 multiplier. It decides from `asset_type`, which is why those strings
+   are data and not labels. One deliberate divergence: where the desktop maps
+   gold to `GC=F`, this maps it to PAXG on CoinGecko — see the decision. The
+   gram divisor and the coin multipliers are unchanged.
+2. **`price_guard`**, first and regardless of provider. The desktop's own
+   defect is the argument: `float("inf") > 0` is TRUE, and `json.loads` parses
+   `Infinity` by default, so one broken response wrote an infinite price into
+   the cache and `inf * quantity` swallowed the entire portfolio total. It
+   rejects non-finite values, zero and negative, and `bool` — and it never
+   throws, because dropping a whole batch over one bad symbol is the failure
+   it exists to prevent.
+3. **The two providers**, CoinGecko and Frankfurter, called directly. Each in
+   its own try block: one failing must not block the other, and a partial
+   result beats none. Mind the Frankfurter redirect and that `dart:io`'s
+   `HttpClient` does not follow it by default. Nothing new in `pubspec.yaml` is
+   strictly needed — `dart:io` is enough — and adding `package:http` for
+   ergonomics is a judgement call to make then.
+4. **The cache.** `asset_price_cache(symbol, price, asset_type, updated_at,
+   source)` is ALREADY in the schema, shared with the desktop, and `source`
+   already exists to record which provider answered. Nothing needs adding; it
+   needs filling.
+5. **Saying when.** A price without its `updated_at` on screen breaks the same
+   rule the money layer keeps everywhere else — a figure presented as current
+   that is not is worse than one labelled stale. The Assets tab's existing
+   "Valued at purchase cost" line becomes per-holding: live with a timestamp,
+   or at cost.
+
+**What stays at cost:** shares. The tab must go on saying so for them while
+saying something different for the rest, which is a UI problem as much as a
+service one.
+
+**Not in this piece:** the user-supplied API key that would open BIST. It needs
+a Settings row, a secure-store entry and a second provider behind it, and it is
+worth doing only once the keyless path is proven.
+
+**Two approximations inherited from the desktop, worth knowing before they are
+shipped as figures.** Neither is a reason not to build this; both are reasons
+not to present the result as a quote:
+
+* **Gram gold is derived, not quoted, and the gap was measured.** With PAXG at
+  4612.05 USD and the ECB's 25 August TRY reference giving USDTRY 48.10, the
+  formula yields **7132 TL** a gram against **7198 TL** quoted in the Turkish
+  market the same day — about **0.9% low**. That gap is the local premium plus
+  the difference between the free-market lira rate and the ECB's daily
+  reference, and a live ounce against yesterday's reference rate is an
+  internally inconsistent pair to begin with. Close enough to be useful in a
+  portfolio total; not close enough to print beside the word "price" without
+  saying where it came from.
+* **The coin multipliers are weights, not prices.** 1.75, 3.5 and 7.0 are how
+  many grams a quarter, half and full coin contain. Minted gold carries a
+  workmanship premium over its metal content, so a coin valued this way is
+  valued low. The number is defensible as "the gold in it is worth this"; it is
+  not what the coin sells for.
 
 ### 2. Shipping
 
