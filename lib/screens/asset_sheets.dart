@@ -17,6 +17,7 @@ import '../money/financial_decimal.dart';
 import '../services/account_service.dart';
 import '../services/asset_service.dart';
 import '../theme/obsidian_prime.dart';
+import '../ui/app_locale.dart';
 import '../ui/error_messages.dart';
 import '../ui/money_format.dart';
 import '../widgets/sheet_frame.dart';
@@ -79,10 +80,13 @@ class _BuyAssetSheetState extends State<_BuyAssetSheet> {
   }
 
   Future<void> _save() async {
+    // Read BEFORE the first await, so the `catch` does not reach for a
+    // context that may no longer be mounted.
+    final l10n = context.l10n;
     final price = parseAmountInput(_price.text);
     final quantity = parseAmountInput(_quantity.text);
     if (price == null || quantity == null) {
-      setState(() => _error = 'Enter a price and a quantity.');
+      setState(() => _error = l10n.errEnterPriceAndQuantity);
       return;
     }
 
@@ -112,13 +116,13 @@ class _BuyAssetSheetState extends State<_BuyAssetSheet> {
       if (!mounted) return;
       setState(() {
         _saving = false;
-        _error = assetErrorMessage(error);
+        _error = assetErrorMessage(l10n, error);
       });
     } on AccountError catch (error) {
       if (!mounted) return;
       setState(() {
         _saving = false;
-        _error = accountErrorMessage(error);
+        _error = accountErrorMessage(l10n, error);
       });
     }
   }
@@ -126,24 +130,29 @@ class _BuyAssetSheetState extends State<_BuyAssetSheet> {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final l10n = context.l10n;
     final price = parseAmountInput(_price.text);
     final quantity = parseAmountInput(_quantity.text);
 
     return SheetFrame(
-      title: 'New holding',
+      title: l10n.buyAssetTitle,
       error: _error,
       saving: _saving,
-      actionLabel: 'Add holding',
+      actionLabel: l10n.buyAssetAction,
       onSave: _save,
       children: [
-        SheetField(controller: _name, label: 'Name', hint: 'Gram Altın'),
+        SheetField(
+          controller: _name,
+          label: l10n.assetName,
+          hint: l10n.assetNameHint,
+        ),
         const SizedBox(height: Spacing.stackMd),
-        SheetField(controller: _code, label: 'Code', hint: 'GC=F'),
+        SheetField(controller: _code, label: l10n.assetCode, hint: 'GC=F'),
         const SizedBox(height: Spacing.stackMd),
         DropdownButtonFormField<String>(
           key: const Key('field-type'),
           initialValue: _type,
-          decoration: sheetDecoration('Kind'),
+          decoration: sheetDecoration(l10n.assetKind),
           items: [
             for (final type in assetTypes)
               DropdownMenuItem(value: type, child: Text(type)),
@@ -153,7 +162,7 @@ class _BuyAssetSheetState extends State<_BuyAssetSheet> {
         const SizedBox(height: Spacing.stackMd),
         SheetField(
           controller: _price,
-          label: 'Unit price',
+          label: l10n.assetUnitPrice,
           hint: '0,00',
           numeric: true,
           onChanged: (_) => setState(() {}),
@@ -161,7 +170,7 @@ class _BuyAssetSheetState extends State<_BuyAssetSheet> {
         const SizedBox(height: Spacing.stackMd),
         SheetField(
           controller: _quantity,
-          label: 'Quantity',
+          label: l10n.assetQuantity,
           hint: '1',
           numeric: true,
           onChanged: (_) => setState(() {}),
@@ -173,7 +182,7 @@ class _BuyAssetSheetState extends State<_BuyAssetSheet> {
           // thousand rather than a lira and a bit is a judgement the parser
           // makes on the user's behalf.
           Text(
-            'That is ${formatLira(fiat(price * quantity))} in total.',
+            l10n.assetTotalIs(formatLira(fiat(price * quantity))),
             style: text.labelMedium?.copyWith(
               letterSpacing: 0,
               color: ObsidianPalette.onSurfaceVariant,
@@ -186,9 +195,9 @@ class _BuyAssetSheetState extends State<_BuyAssetSheet> {
           contentPadding: EdgeInsets.zero,
           value: _alreadyOwned,
           onChanged: (value) => setState(() => _alreadyOwned = value),
-          title: Text('I already owned this', style: text.bodyMedium),
+          title: Text(l10n.assetAlreadyOwned, style: text.bodyMedium),
           subtitle: Text(
-            'Records the holding without taking the money from an account.',
+            l10n.assetAlreadyOwnedNote,
             style: text.labelMedium?.copyWith(
               letterSpacing: 0,
               color: ObsidianPalette.onSurfaceVariant,
@@ -207,22 +216,18 @@ class _BuyAssetSheetState extends State<_BuyAssetSheet> {
               ];
               if (accounts.isEmpty) {
                 return Text(
-                  'No cash account to pay from. Add one, or record this as '
-                  'something you already owned.',
+                  l10n.assetNoCashAccount,
                   style: text.bodySmall?.copyWith(color: ObsidianPalette.error),
                 );
               }
               return DropdownButtonFormField<int?>(
                 key: const Key('field-account'),
                 initialValue: _accountId,
-                decoration: sheetDecoration('Pay from'),
+                decoration: sheetDecoration(l10n.assetPayFrom),
                 items: [
-                  const DropdownMenuItem(
+                  DropdownMenuItem(
                     value: null,
-                    // The service picks the first account that can cover it,
-                    // and the richest one if none can. Saying so beats a
-                    // silent default.
-                    child: Text('Choose for me'),
+                    child: Text(l10n.assetChooseForMe),
                   ),
                   for (final account in accounts)
                     DropdownMenuItem(
@@ -276,15 +281,18 @@ class _SellAssetSheetState extends State<_SellAssetSheet> {
   }
 
   Future<void> _save() async {
+    // Read BEFORE the first await, so the `catch` does not reach for a
+    // context that may no longer be mounted.
+    final l10n = context.l10n;
     final price = parseAmountInput(_price.text);
     final quantity = parseAmountInput(_quantity.text);
     if (price == null || quantity == null) {
-      setState(() => _error = 'Enter a price and a quantity.');
+      setState(() => _error = l10n.errEnterPriceAndQuantity);
       return;
     }
     final accountId = _accountId;
     if (accountId == null) {
-      setState(() => _error = 'Choose where the money goes.');
+      setState(() => _error = l10n.errChooseDestination);
       return;
     }
 
@@ -306,7 +314,7 @@ class _SellAssetSheetState extends State<_SellAssetSheet> {
       if (!mounted) return;
       setState(() {
         _saving = false;
-        _error = assetErrorMessage(error);
+        _error = assetErrorMessage(l10n, error);
       });
     }
   }
@@ -314,20 +322,23 @@ class _SellAssetSheetState extends State<_SellAssetSheet> {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final l10n = context.l10n;
     final holding = widget.holding;
     final price = parseAmountInput(_price.text);
     final quantity = parseAmountInput(_quantity.text);
 
     return SheetFrame(
-      title: 'Sell ${holding.assetName}',
+      title: l10n.sellAssetTitle(holding.assetName),
       error: _error,
       saving: _saving,
-      actionLabel: 'Sell',
+      actionLabel: l10n.sellAssetAction,
       onSave: _save,
       children: [
         Text(
-          'You hold ${holding.quantity}, bought at '
-          '${formatLira(holding.purchasePrice)} each.',
+          l10n.sellAssetHoldingLine(
+            '${holding.quantity}',
+            formatLira(holding.purchasePrice),
+          ),
           style: text.bodySmall?.copyWith(
             color: ObsidianPalette.onSurfaceVariant,
           ),
@@ -335,7 +346,7 @@ class _SellAssetSheetState extends State<_SellAssetSheet> {
         const SizedBox(height: Spacing.stackMd),
         SheetField(
           controller: _price,
-          label: 'Sale price, per unit',
+          label: l10n.sellAssetPrice,
           hint: '0,00',
           numeric: true,
           onChanged: (_) => setState(() {}),
@@ -343,7 +354,7 @@ class _SellAssetSheetState extends State<_SellAssetSheet> {
         const SizedBox(height: Spacing.stackMd),
         SheetField(
           controller: _quantity,
-          label: 'Quantity to sell',
+          label: l10n.sellAssetQuantity,
           numeric: true,
           onChanged: (_) => setState(() {}),
         ),
@@ -356,9 +367,11 @@ class _SellAssetSheetState extends State<_SellAssetSheet> {
               final cost = fiat(holding.purchasePrice * quantity);
               final gain = proceeds - cost;
               return Text(
-                '${formatLira(proceeds)} in, against '
-                '${formatLira(cost)} paid — '
-                '${formatSignedLira(gain)}.',
+                l10n.sellAssetOutcome(
+                  formatLira(proceeds),
+                  formatLira(cost),
+                  formatSignedLira(gain),
+                ),
                 style: text.labelMedium?.copyWith(
                   letterSpacing: 0,
                   color: gain < Decimal.zero
@@ -377,7 +390,7 @@ class _SellAssetSheetState extends State<_SellAssetSheet> {
             final accounts = snapshot.data ?? const <Account>[];
             if (accounts.isEmpty) {
               return Text(
-                'No account to pay into.',
+                l10n.sellAssetNoAccount,
                 style: text.bodySmall?.copyWith(color: ObsidianPalette.error),
               );
             }
@@ -385,7 +398,7 @@ class _SellAssetSheetState extends State<_SellAssetSheet> {
             return DropdownButtonFormField<int>(
               key: const Key('field-account'),
               initialValue: _accountId,
-              decoration: sheetDecoration('Pay into'),
+              decoration: sheetDecoration(l10n.sellAssetPayInto),
               items: [
                 for (final account in accounts)
                   DropdownMenuItem(

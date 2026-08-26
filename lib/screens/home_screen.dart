@@ -5,6 +5,7 @@ import '../app_services.dart';
 import '../services/account_service.dart';
 import '../services/recurring_service.dart';
 import '../theme/obsidian_prime.dart';
+import '../ui/app_locale.dart';
 import '../ui/async_data.dart';
 import '../ui/money_format.dart';
 import '../widgets/balance_ring.dart';
@@ -98,7 +99,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 size: 20,
                 color: ObsidianPalette.tertiary,
               ),
-              Text('My Active Subscriptions', style: text.titleLarge),
+              Text(context.l10n.homeActiveSubscriptions, style: text.titleLarge),
             ],
           ),
           const SizedBox(height: Spacing.stackMd),
@@ -147,7 +148,7 @@ class _HomeBody extends StatelessWidget {
             // than a made-up one.
             changeLabel: '',
             changeIsPositive: worth.net >= Decimal.zero,
-            periodLabel: 'Net Worth',
+            periodLabel: context.l10n.homeNetWorth,
             progress: progress,
           ),
         ),
@@ -156,11 +157,14 @@ class _HomeBody extends StatelessWidget {
           spacing: Spacing.gutter,
           children: [
             Expanded(
-              child: _MiniStat(label: 'Cash', value: formatLira(worth.cash)),
+              child: _MiniStat(
+                label: context.l10n.homeCash,
+                value: formatLira(worth.cash),
+              ),
             ),
             Expanded(
               child: _MiniStat(
-                label: 'Card Debt',
+                label: context.l10n.homeCardDebt,
                 value: formatLira(worth.cardDebt),
               ),
             ),
@@ -180,11 +184,7 @@ class _Subscriptions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (payments.isEmpty) {
-      return const NothingYet(
-        message:
-            'Nothing recurring yet. A subscription paid by card is '
-            'noticed automatically and lands here.',
-      );
+      return NothingYet(message: context.l10n.homeNoSubscriptions);
     }
     return Column(
       children: [
@@ -207,7 +207,7 @@ class _SearchField extends StatelessWidget {
       // returns nothing is worse than one that plainly cannot be used.
       enabled: false,
       decoration: InputDecoration(
-        hintText: 'Search — not yet',
+        hintText: context.l10n.homeSearchDisabled,
         prefixIcon: const Icon(Icons.search, size: 20),
         fillColor: ObsidianPalette.surfaceContainerHigh,
         border: OutlineInputBorder(
@@ -246,7 +246,7 @@ class _WalletSelector extends StatelessWidget {
         children: [
           const Icon(Icons.account_balance_wallet_outlined, size: 18),
           Text(
-            'My Wallet',
+            context.l10n.homeMyWallet,
             style: Theme.of(context).textTheme.labelMedium
                 ?.copyWith(letterSpacing: 0),
           ),
@@ -301,13 +301,11 @@ class _ForecastCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const _PendingInsightCard(
+    return _PendingInsightCard(
       icon: Icons.trending_up,
       accent: ObsidianPalette.tertiary,
-      title: 'Algorithmic Forecast',
-      message:
-          'Spending trends and the month-end projection arrive with the '
-          'insight and projection services.',
+      title: context.l10n.homeForecastTitle,
+      message: context.l10n.homeForecastPending,
       showsGradientEdge: true,
     );
   }
@@ -324,13 +322,11 @@ class _HealthScoreCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const _PendingInsightCard(
+    return _PendingInsightCard(
       icon: Icons.monitor_heart_outlined,
       accent: ObsidianPalette.primary,
-      title: 'Financial Health Score',
-      message:
-          'Scoring needs savings rate, debt-to-income and expense '
-          'volatility, which the metrics service will supply.',
+      title: context.l10n.homeHealthScoreTitle,
+      message: context.l10n.homeHealthScorePending,
     );
   }
 }
@@ -436,7 +432,7 @@ class _SubscriptionCard extends StatelessWidget {
                 child: Text(
                   // A name that will not decrypt is said so, not replaced
                   // with a plausible-looking placeholder.
-                  name ?? 'Unreadable subscription',
+                  name ?? context.l10n.subscriptionUnreadableName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: text.bodyMedium?.copyWith(
@@ -448,7 +444,7 @@ class _SubscriptionCard extends StatelessWidget {
               ),
               if (amount == null)
                 Text(
-                  'unreadable',
+                  context.l10n.amountUnreadable,
                   style: text.bodySmall?.copyWith(
                     fontStyle: FontStyle.italic,
                     color: ObsidianPalette.error,
@@ -465,7 +461,9 @@ class _SubscriptionCard extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(left: 26),
             child: Text(
-              'Next on ${formatStoredDate(payment.nextDueDate)}',
+              context.l10n.subscriptionNextOn(
+                formatStoredDate(payment.nextDueDate),
+              ),
               style: text.bodySmall?.copyWith(
                 color: ObsidianPalette.onSurfaceVariant,
               ),
@@ -484,7 +482,7 @@ class _SubscriptionCard extends StatelessWidget {
                     );
                     if (changed ?? false) onChanged();
                   },
-                  child: const Text('MANAGE'),
+                  child: Text(context.l10n.subscriptionManage),
                 ),
               ],
             ),

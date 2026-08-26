@@ -18,17 +18,44 @@ import 'fixed_key_provider.dart';
 AppServices testServices(ArchlenceDatabase db) =>
     AppServices.forDatabase(db, FieldCrypto(FixedKeyProvider.arbitrary()));
 
+/// Records what a screen asked the language to be changed to.
+///
+/// Settings' language row is live only where something can actually change
+/// the language, so a test that left the scope out would be exercising the
+/// unavailable branch — a row with a NOT YET chip on it, which is not what
+/// the app draws.
+class LocaleChoice {
+  Locale? chosen;
+  bool asked = false;
+
+  Future<void> select(Locale? locale) async {
+    asked = true;
+    chosen = locale;
+  }
+}
+
 /// Wraps [child] in the app's theme and a [ServicesScope].
 ///
 /// The media query mirrors what `AppShell` hands its screens — they read the
 /// inset back through `MediaQuery.paddingOf` and would otherwise lay out
 /// against a zero inset that never occurs in the app.
-Widget testApp(AppServices services, Widget child) {
+///
+/// No `locale` is passed, which is what puts these tests in ENGLISH: the test
+/// binding reports an en-US device and an unset choice means the device
+/// decides. The Turkish labels are covered by `test/l10n_test.dart`.
+Widget testApp(
+  AppServices services,
+  Widget child, {
+  LocaleChoice? language,
+  Locale? locale,
+}) {
   // The real root, so the scope's placement above the Navigator is the one
   // production uses rather than a copy of it that could drift.
   return ArchlenceRoot(
     services: services,
     theme: obsidianPrimeTheme(),
+    selectLocale: (language ?? LocaleChoice()).select,
+    locale: locale,
     home: Scaffold(body: child),
   );
 }
@@ -45,11 +72,15 @@ Future<void> pumpScreen(
   AppServices services,
   Widget child, {
   Size size = const Size(800, 2400),
+  LocaleChoice? language,
+  Locale? locale,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
 
-  await tester.pumpWidget(testApp(services, child));
+  await tester.pumpWidget(
+    testApp(services, child, language: language, locale: locale),
+  );
   await tester.pumpAndSettle();
 }

@@ -6,9 +6,11 @@
 /// to match what the desktop writes byte for byte. These functions produce
 /// what a screen shows. Unifying the two would silently change stored data.
 ///
-/// Numbers are Turkish (`1.234,56 ₺`, `%12,5`) while the labels around them
-/// are still English — the app has no i18n layer yet, and the number format is
-/// not a translation but the one the design specifies and the desktop stores.
+/// Numbers are Turkish (`1.234,56 ₺`, `%12,5`) IN EITHER LANGUAGE. Nothing
+/// here reads a locale, and that is deliberate: the grouping is what the
+/// design specifies and what the desktop stores, not a translation. Switching
+/// the separators with the labels would make one balance read as two
+/// different amounts. See `lib/ui/app_locale.dart`.
 library;
 
 import 'package:decimal/decimal.dart';

@@ -13,6 +13,7 @@ library;
 
 import 'package:archlence_mobile/app_services.dart';
 import 'package:archlence_mobile/app_shell.dart';
+import 'package:archlence_mobile/crypto/key_provider.dart';
 import 'package:archlence_mobile/data/database.dart';
 import 'package:archlence_mobile/services/account_service.dart';
 import 'package:archlence_mobile/services/recurring_service.dart';
@@ -262,7 +263,14 @@ void main() {
       isNotNull,
       reason: 'the device build must know where its key is',
     );
-    expect(find.textContaining(services.keyProtection!.method), findsOneWidget);
+    // The emulator runs in en-US, so the row is drawn in English. What is
+    // being proven is that it names the store it ACTUALLY used rather than
+    // falling through to "Not known in this build".
+    final named = switch (services.keyProtection!.method) {
+      KeyProtectionMethod.androidKeystore => 'Android Keystore',
+      KeyProtectionMethod.ownerOnlyFile => 'owner-only file',
+    };
+    expect(find.textContaining(named), findsOneWidget);
     expect(find.textContaining('Not known in this build'), findsNothing);
   });
 

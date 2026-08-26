@@ -14,6 +14,7 @@ import '../app_services.dart';
 import '../services/account_service.dart';
 import '../services/transaction_service.dart';
 import '../theme/obsidian_prime.dart';
+import '../ui/app_locale.dart';
 import '../ui/error_messages.dart';
 import '../ui/money_format.dart';
 import '../widgets/surfaces.dart';
@@ -107,18 +108,17 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
   }
 
   Future<void> _save(List<Account> accounts) async {
+    // Read BEFORE the first await, so the `catch` does not reach for a
+    // context that may no longer be mounted.
+    final l10n = context.l10n;
     final amount = parseAmountInput(_amount.text);
     if (amount == null) {
-      setState(() => _error = 'Enter an amount.');
+      setState(() => _error = l10n.errEnterAnAmount);
       return;
     }
     final accountId = _accountId;
     if (accountId == null) {
-      setState(
-        () => _error =
-            'Add an account first — money has to come from '
-            'somewhere.',
-      );
+      setState(() => _error = l10n.addTransactionNoAccount);
       return;
     }
 
@@ -161,14 +161,14 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
       if (!mounted) return;
       setState(() {
         _saving = false;
-        _error = transactionErrorMessage(error);
+        _error = transactionErrorMessage(l10n, error);
       });
     } on AccountError catch (error) {
       // The spending rule — a frozen card, or a limit that will not stretch.
       if (!mounted) return;
       setState(() {
         _saving = false;
-        _error = accountErrorMessage(error);
+        _error = accountErrorMessage(l10n, error);
       });
     }
   }
@@ -176,6 +176,7 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final l10n = context.l10n;
 
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
@@ -207,20 +208,20 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
                   ),
                 ),
                 const SizedBox(height: Spacing.stackLg),
-                Text('New transaction', style: text.headlineMedium),
+                Text(l10n.addTransactionTitle, style: text.headlineMedium),
                 const SizedBox(height: Spacing.stackLg),
 
                 SegmentedButton<String>(
-                  segments: const [
+                  segments: [
                     ButtonSegment(
                       value: 'expense',
-                      label: Text('Expense'),
-                      icon: Icon(Icons.arrow_outward),
+                      label: Text(l10n.transactionTypeExpense),
+                      icon: const Icon(Icons.arrow_outward),
                     ),
                     ButtonSegment(
                       value: 'income',
-                      label: Text('Income'),
-                      icon: Icon(Icons.arrow_downward),
+                      label: Text(l10n.transactionTypeIncome),
+                      icon: const Icon(Icons.arrow_downward),
                     ),
                   ],
                   selected: {_type},
@@ -233,7 +234,7 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
 
                 if (accounts.isEmpty)
                   Text(
-                    'Add an account first — money has to come from somewhere.',
+                    l10n.addTransactionNoAccount,
                     style: text.bodySmall?.copyWith(
                       color: ObsidianPalette.error,
                     ),
@@ -244,7 +245,7 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
                     // label text hits the decoration, not the button.
                     key: const Key('field-account'),
                     initialValue: _accountId,
-                    decoration: _decoration('Account'),
+                    decoration: _decoration(l10n.fieldAccount),
                     items: [
                       for (final account in accounts)
                         DropdownMenuItem(
@@ -268,7 +269,7 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
                   key: const Key('field-category'),
                   initialValue: _category,
                   isExpanded: true,
-                  decoration: _decoration('Category'),
+                  decoration: _decoration(l10n.fieldCategory),
                   items: [
                     for (final category in categories)
                       DropdownMenuItem(
@@ -282,7 +283,7 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
 
                 TextField(
                   controller: _description,
-                  decoration: _decoration('Description (optional)'),
+                  decoration: _decoration(l10n.fieldDescriptionOptional),
                 ),
                 const SizedBox(height: Spacing.stackMd),
 
@@ -305,22 +306,23 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
                   DropdownButtonFormField<int?>(
                     key: const Key('field-installments'),
                     initialValue: _installments,
-                    decoration: _decoration('Instalments'),
+                    decoration: _decoration(l10n.fieldInstallments),
                     items: [
-                      const DropdownMenuItem(value: null, child: Text('None')),
+                      DropdownMenuItem(
+                        value: null,
+                        child: Text(l10n.installmentsNone),
+                      ),
                       for (var count = 2; count <= 12; count++)
                         DropdownMenuItem(
                           value: count,
-                          child: Text('$count months'),
+                          child: Text(l10n.installmentMonths(count)),
                         ),
                     ],
                     onChanged: (value) => setState(() => _installments = value),
                   ),
                   const SizedBox(height: Spacing.stackSm),
                   Text(
-                    'The whole amount is charged to the card now — that is '
-                    'what the bank blocks against your limit. The plan tracks '
-                    'the monthly split.',
+                    l10n.installmentNote,
                     style: text.labelMedium?.copyWith(
                       letterSpacing: 0,
                       color: ObsidianPalette.onSurfaceVariant,
@@ -353,7 +355,9 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
 
                 const SizedBox(height: Spacing.stackLg),
                 GradientButton(
-                  label: _saving ? 'Saving…' : 'Record',
+                  label: _saving
+                      ? l10n.savingInProgress
+                      : l10n.addTransactionAction,
                   onPressed: _saving || accounts.isEmpty
                       ? null
                       : () => _save(accounts),
@@ -396,7 +400,9 @@ class _AmountField extends StatelessWidget {
       inputFormatters: [
         FilteringTextInputFormatter.allow(RegExp(r'[0-9.,\s]')),
       ],
-      decoration: _decoration('Amount').copyWith(hintText: '0,00'),
+      decoration: _decoration(
+        context.l10n.fieldAmount,
+      ).copyWith(hintText: '0,00'),
     );
   }
 }
@@ -429,7 +435,7 @@ class _DateRow extends StatelessWidget {
           // money does not move yet, and the user would otherwise wonder why
           // their balance did not change.
           Text(
-            'Scheduled — it will not touch your balance until that day.',
+            context.l10n.transactionScheduledNote,
             style: text.labelMedium?.copyWith(
               letterSpacing: 0,
               color: ObsidianPalette.secondary,

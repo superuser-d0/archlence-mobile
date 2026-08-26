@@ -70,10 +70,16 @@ class ScreenLock {
   /// `biometricOnly: false` on purpose: a device credential — PIN, pattern,
   /// password — must work too, or a user with no fingerprint enrolled is
   /// locked out of an app they set up themselves.
-  Future<bool> authenticate() async {
+  ///
+  /// [reason] is the sentence the platform's OWN sheet shows, and it is
+  /// required rather than defaulted: this class has no `BuildContext` to read
+  /// the labels from, and a caller that forgot would leave an English line on
+  /// a Turkish phone at the one moment the user is reading closely. A missing
+  /// argument is a compile error instead.
+  Future<bool> authenticate({required String reason}) async {
     try {
       return await _auth.authenticate(
-        localizedReason: 'Unlock Archlence',
+        localizedReason: reason,
         biometricOnly: false,
         // Survives the prompt itself being backgrounded — otherwise a
         // fingerprint sheet interrupted by a notification counts as a

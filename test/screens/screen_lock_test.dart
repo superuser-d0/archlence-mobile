@@ -4,6 +4,8 @@ library;
 import 'package:archlence_mobile/data/database.dart';
 import 'package:archlence_mobile/screens/locked_screen.dart';
 import 'package:archlence_mobile/security/screen_lock.dart';
+import 'package:archlence_mobile/l10n/app_localizations.dart';
+import 'package:archlence_mobile/ui/app_locale.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -64,7 +66,7 @@ void main() {
     test('accepts a device credential, not only a fingerprint', () async {
       // `biometricOnly: true` would lock out anyone who has a PIN but no
       // fingerprint enrolled — out of an app they set up themselves.
-      await lock.authenticate();
+      await lock.authenticate(reason: 'Unlock Archlence');
       expect(auth.lastBiometricOnly, isFalse);
     });
   });
@@ -83,11 +85,16 @@ void main() {
     Future<void> pumpGate(WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          // The real delegates: `LockedScreen` reads its labels from them,
+          // and a bare `MaterialApp` would have none to give it.
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: supportedLocales,
           home: ScreenLockGate(
             lock: lock,
             now: () => clock,
             locked: (context, unlock) => LockedScreen(
-              onAuthenticate: lock.authenticate,
+              onAuthenticate: () =>
+                  lock.authenticate(reason: 'Unlock Archlence'),
               onUnlocked: unlock,
             ),
             child: const Scaffold(body: Text('the dashboard')),

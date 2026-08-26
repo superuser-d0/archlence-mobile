@@ -256,7 +256,7 @@ void main() {
         final migrating = MigratingKeyProvider(
           SecureStorageKeyProvider(storage: storage),
           fallback,
-          const KeyProtectionStatus('Android Keystore', true),
+          const KeyProtectionStatus(KeyProtectionMethod.androidKeystore, true),
         );
 
         expect(await migrating.loadKey(), legacy);
@@ -283,7 +283,7 @@ void main() {
             storage: _FakeSecureStorage(available: false),
           ),
           fallback,
-          const KeyProtectionStatus('Android Keystore', true),
+          const KeyProtectionStatus(KeyProtectionMethod.androidKeystore, true),
         );
 
         expect(migrating.loadKey(), throwsA(isA<KeyUnavailableError>()));
@@ -302,7 +302,11 @@ void main() {
         final migrating = MigratingKeyProvider(
           null,
           fallback,
-          const KeyProtectionStatus('owner-only file', false, 'no store'),
+          const KeyProtectionStatus(
+            KeyProtectionMethod.ownerOnlyFile,
+            false,
+            KeyProtectionWarning.platformHasNoKeyStore,
+          ),
         );
 
         final key = await migrating.getOrCreateKey();

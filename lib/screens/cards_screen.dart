@@ -5,6 +5,7 @@ import '../app_services.dart';
 import '../services/account_service.dart';
 import '../services/transaction_service.dart';
 import '../theme/obsidian_prime.dart';
+import '../ui/app_locale.dart';
 import '../ui/async_data.dart';
 import '../ui/money_format.dart';
 import 'add_account_sheet.dart';
@@ -153,6 +154,7 @@ class _CardsBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final l10n = context.l10n;
     const horizontal = EdgeInsets.symmetric(
       horizontal: Spacing.containerMargin,
     );
@@ -165,17 +167,17 @@ class _CardsBody extends StatelessWidget {
           child: SummaryRow(
             stats: [
               SummaryStat(
-                label: 'Cash',
+                label: l10n.homeCash,
                 value: formatLira(data.netWorth.cash),
                 tone: SummaryTone.positive,
               ),
               SummaryStat(
-                label: 'Card Debt',
+                label: l10n.homeCardDebt,
                 value: formatLira(data.netWorth.cardDebt),
                 tone: SummaryTone.negative,
               ),
               SummaryStat(
-                label: 'Net Worth',
+                label: l10n.homeNetWorth,
                 value: formatLira(data.netWorth.net),
               ),
             ],
@@ -187,9 +189,9 @@ class _CardsBody extends StatelessWidget {
           padding: horizontal,
           child: Row(
             children: [
-              Expanded(child: Text('My Cards', style: text.titleLarge)),
+              Expanded(child: Text(l10n.cardsMyCards, style: text.titleLarge)),
               GradientButton(
-                label: '+  ADD',
+                label: l10n.cardsAdd,
                 expand: false,
                 onPressed: () async {
                   final created = await showAddAccountSheet(context);
@@ -205,13 +207,9 @@ class _CardsBody extends StatelessWidget {
         const SizedBox(height: Spacing.stackMd),
 
         if (data.cards.isEmpty)
-          const Padding(
+          Padding(
             padding: horizontal,
-            child: NothingYet(
-              message:
-                  'No credit cards yet. Add one to track its limit and '
-                  'debt here.',
-            ),
+            child: NothingYet(message: l10n.cardsNoCards),
           )
         else ...[
           SizedBox(
@@ -247,29 +245,25 @@ class _CardsBody extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('My Accounts', style: text.titleLarge),
+              Text(l10n.cardsMyAccounts, style: text.titleLarge),
               const SizedBox(height: Spacing.stackMd),
               if (data.holdingsCount > 0) ...[
                 _AccountTile(
-                  name: 'My Active Assets',
+                  name: l10n.cardsActiveAssets,
                   // Cost, not value: see _CardsData.holdingsCost.
-                  meta: '${data.holdingsCount} holdings · at cost',
+                  meta: l10n.cardsHoldingsMeta(data.holdingsCount),
                   balance: formatLira(data.holdingsCost),
                   highlighted: true,
                 ),
                 const SizedBox(height: Spacing.stackMd),
               ],
               if (data.checkingAccounts.isEmpty)
-                const NothingYet(
-                  message:
-                      'No cash accounts yet. Everything else in Archlence '
-                      'needs one to move money into or out of.',
-                )
+                NothingYet(message: l10n.cardsNoCashAccounts)
               else
                 for (final account in data.checkingAccounts) ...[
                   _AccountTile(
                     name: account.name,
-                    meta: 'Cash / Checking',
+                    meta: l10n.cardsCashChecking,
                     balance: formatLira(account.balance),
                   ),
                   const SizedBox(height: Spacing.stackMd),
@@ -468,7 +462,7 @@ class _CardDetailState extends State<_CardDetail> {
                   borderRadius: BorderRadius.circular(Radii.full),
                 ),
                 child: Text(
-                  'CREDIT CARD',
+                  context.l10n.cardsCreditCardBadge,
                   style: text.labelMedium?.copyWith(
                     fontSize: 10,
                     color: ObsidianPalette.onSurfaceVariant,
@@ -485,13 +479,13 @@ class _CardDetailState extends State<_CardDetail> {
             children: [
               Expanded(
                 child: _Figure(
-                  label: 'Available Limit',
+                  label: context.l10n.cardsAvailableLimit,
                   value: formatLira(card.availableLimit),
                 ),
               ),
               Expanded(
                 child: _Figure(
-                  label: 'Current Debt',
+                  label: context.l10n.cardsCurrentDebt,
                   value: formatLira(card.debt),
                   color: ObsidianPalette.error,
                   alignEnd: true,
@@ -511,25 +505,25 @@ class _CardDetailState extends State<_CardDetail> {
           ),
           const SizedBox(height: Spacing.stackLg),
 
-          const SectionLabel('Card Controls'),
+          SectionLabel(context.l10n.cardsControls),
           const SizedBox(height: Spacing.stackSm),
           _ControlRow(
             icon: Icons.public,
-            title: 'Online Shopping Preference',
-            subtitle: 'Stored as a preference only',
+            title: context.l10n.cardsOnlineShopping,
+            subtitle: context.l10n.cardsOnlineShoppingNote,
             value: _pendingOnline ?? card.onlinePaymentsEnabled,
             onChanged: _setOnlinePayments,
           ),
           _ControlRow(
             icon: Icons.ac_unit,
-            title: 'Freeze Card',
-            subtitle: 'Blocks new spending, not debt payments',
+            title: context.l10n.cardsFreeze,
+            subtitle: context.l10n.cardsFreezeNote,
             value: _pendingFrozen ?? card.isFrozen,
             onChanged: _setFrozen,
           ),
           const SizedBox(height: Spacing.stackMd),
 
-          const SectionLabel('Recent Transactions'),
+          SectionLabel(context.l10n.cardsRecentTransactions),
           const SizedBox(height: Spacing.stackSm),
           _RecentTransactions(accountId: card.id),
           const SizedBox(height: Spacing.stackMd),
@@ -539,10 +533,10 @@ class _CardDetailState extends State<_CardDetail> {
             children: [
               // Statement has no screen yet; Pay Debt has
               // AccountService.payCreditCardDebt behind it and no form.
-              const Expanded(
+              Expanded(
                 child: OutlinedButton(
                   onPressed: null,
-                  child: Text('Statement'),
+                  child: Text(context.l10n.cardsStatement),
                 ),
               ),
               Expanded(
@@ -556,7 +550,7 @@ class _CardDetailState extends State<_CardDetail> {
                           if (paid ?? false) widget.onChanged();
                         }
                       : null,
-                  child: const Text('Pay Debt'),
+                  child: Text(context.l10n.cardsPayDebt),
                 ),
               ),
             ],
@@ -691,7 +685,7 @@ class _RecentTransactionsState extends State<_RecentTransactions> {
       placeholderHeight: 72,
       builder: (context, entries) {
         if (entries.isEmpty) {
-          return const NothingYet(message: 'Nothing on this card yet.');
+          return NothingYet(message: context.l10n.cardsNothingOnCard);
         }
         return Column(
           children: [for (final entry in entries) _TxRow(entry: entry)],
@@ -739,7 +733,7 @@ class _TxRow extends StatelessWidget {
             // Never a zero: this row's amount could not be decrypted, and
             // printing 0,00 ₺ would present that as a fact.
             Text(
-              'unreadable',
+              context.l10n.amountUnreadable,
               style: text.bodySmall?.copyWith(
                 fontStyle: FontStyle.italic,
                 color: ObsidianPalette.error,

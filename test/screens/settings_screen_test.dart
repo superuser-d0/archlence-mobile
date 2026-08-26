@@ -57,7 +57,7 @@ void main() {
   testWidgets('a hardware-backed key is reported as such', (tester) async {
     await pumpScreen(
       tester,
-      servicesWith(const KeyProtectionStatus('Android Keystore', true)),
+      servicesWith(const KeyProtectionStatus(KeyProtectionMethod.androidKeystore, true)),
       const SettingsScreen(),
     );
 
@@ -73,9 +73,9 @@ void main() {
       tester,
       servicesWith(
         const KeyProtectionStatus(
-          'owner-only file',
+          KeyProtectionMethod.ownerOnlyFile,
           false,
-          'The OS key store was unavailable.',
+          KeyProtectionWarning.osKeyStoreUnavailable,
         ),
       ),
       const SettingsScreen(),
@@ -83,7 +83,7 @@ void main() {
 
     expect(find.textContaining('NOT in an OS key store'), findsOneWidget);
     expect(
-      find.textContaining('The OS key store was unavailable.'),
+      find.textContaining('The OS key store is unavailable'),
       findsOneWidget,
     );
     expect(find.textContaining('held by the operating system'), findsNothing);
@@ -105,7 +105,7 @@ void main() {
     await pumpScreen(
       tester,
       servicesWith(
-        const KeyProtectionStatus('Android Keystore', true),
+        const KeyProtectionStatus(KeyProtectionMethod.androidKeystore, true),
         lockAvailable: false,
       ),
       const SettingsScreen(),
@@ -131,7 +131,7 @@ void main() {
       AppServices.forDatabase(
         db,
         FieldCrypto(FixedKeyProvider.arbitrary()),
-        keyProtection: const KeyProtectionStatus('Android Keystore', true),
+        keyProtection: const KeyProtectionStatus(KeyProtectionMethod.androidKeystore, true),
         screenLock: lock,
       ),
       const SettingsScreen(),
@@ -157,7 +157,7 @@ void main() {
       AppServices.forDatabase(
         db,
         FieldCrypto(FixedKeyProvider.arbitrary()),
-        keyProtection: const KeyProtectionStatus('Android Keystore', true),
+        keyProtection: const KeyProtectionStatus(KeyProtectionMethod.androidKeystore, true),
         screenLock: lock,
       ),
       const SettingsScreen(),
@@ -178,7 +178,7 @@ void main() {
     // "your data is protected" here would be a claim the app cannot back.
     await pumpScreen(
       tester,
-      servicesWith(const KeyProtectionStatus('Android Keystore', true)),
+      servicesWith(const KeyProtectionStatus(KeyProtectionMethod.androidKeystore, true)),
       const SettingsScreen(),
     );
 
@@ -190,22 +190,23 @@ void main() {
   ) async {
     await pumpScreen(
       tester,
-      servicesWith(const KeyProtectionStatus('Android Keystore', true)),
+      servicesWith(const KeyProtectionStatus(KeyProtectionMethod.androidKeystore, true)),
       const SettingsScreen(),
     );
 
-    // Eleven rows. Two report something real without going anywhere — the
-    // encryption key and the lock — and Backup & Restore is unavailable here
-    // because this graph has no profile on disk behind it.
-    expect(find.byType(NotYetChip), findsNWidgets(10));
+    // Eleven rows. Three do something real — the encryption key and the lock
+    // report state without going anywhere, and Language opens its picker —
+    // and Backup & Restore is unavailable here because this graph has no
+    // profile on disk behind it.
+    expect(find.byType(NotYetChip), findsNWidgets(9));
     // Exactly one switch: the screen lock, which does something. The two that
     // used to be here moved local state and nothing else, so a user could
     // turn Dark Mode off and watch nothing happen.
     expect(find.byType(Switch), findsOneWidget);
     expect(find.text('Lock when I come back'), findsOneWidget);
-    // No chevron anywhere — a chevron promises a destination, and with no
-    // backup service behind it this build has none.
-    expect(find.byIcon(Icons.chevron_right), findsNothing);
+    // One chevron: Language. A chevron promises a destination, and with no
+    // backup service behind it that row has none.
+    expect(find.byIcon(Icons.chevron_right), findsOneWidget);
   });
 
   testWidgets('Backup & Restore opens when there is a profile behind it', (
@@ -214,20 +215,76 @@ void main() {
     await pumpScreen(
       tester,
       servicesWith(
-        const KeyProtectionStatus('Android Keystore', true),
+        const KeyProtectionStatus(KeyProtectionMethod.androidKeystore, true),
         backup: backupService(),
       ),
       const SettingsScreen(),
     );
 
-    // The one chevron on the screen, on the one row that goes somewhere.
-    expect(find.byIcon(Icons.chevron_right), findsOneWidget);
-    expect(find.byType(NotYetChip), findsNWidgets(9));
+    // Two chevrons now: Language and Backup & Restore, the two rows that go
+    // somewhere.
+    expect(find.byIcon(Icons.chevron_right), findsNWidgets(2));
+    expect(find.byType(NotYetChip), findsNWidgets(8));
 
     await tester.tap(find.text('Backup & Restore'));
     await tester.pumpAndSettle();
 
     expect(find.byType(BackupScreen), findsOneWidget);
+  });
+
+  testWidgets('the language row offers a choice and reports it back', (
+    tester,
+  ) async {
+    // The row used to be a dead tile whose subtitle said "English" whatever
+    // the app was actually drawing.
+    final language = LocaleChoice();
+    await pumpScreen(
+      tester,
+      servicesWith(
+        const KeyProtectionStatus(KeyProtectionMethod.androidKeystore, true),
+      ),
+      const SettingsScreen(),
+      language: language,
+    );
+
+    // No explicit choice yet, so the row says it is following the phone.
+    expect(find.text('System language'), findsOneWidget);
+
+    await tester.tap(find.text('Language'));
+    await tester.pumpAndSettle();
+
+    // Each language is named in its OWN language, in either interface, so a
+    // reader stranded in one they cannot read can still find their way out.
+    expect(find.text('Türkçe'), findsOneWidget);
+    expect(find.text('English'), findsOneWidget);
+
+    await tester.tap(find.text('Türkçe'));
+    await tester.pumpAndSettle();
+
+    expect(language.asked, isTrue);
+    expect(language.chosen, const Locale('tr'));
+  });
+
+  testWidgets('a dismissed language sheet changes nothing', (tester) async {
+    // A sheet swiped away is not a choice of "follow the device", and
+    // treating it as one would silently undo a language the user had set.
+    final language = LocaleChoice();
+    await pumpScreen(
+      tester,
+      servicesWith(
+        const KeyProtectionStatus(KeyProtectionMethod.androidKeystore, true),
+      ),
+      const SettingsScreen(),
+      language: language,
+    );
+
+    await tester.tap(find.text('Language'));
+    await tester.pumpAndSettle();
+    // Outside the sheet: the barrier dismisses it.
+    await tester.tapAt(const Offset(400, 20));
+    await tester.pumpAndSettle();
+
+    expect(language.asked, isFalse);
   });
 
   testWidgets('and says so plainly when there is not', (tester) async {
@@ -236,7 +293,7 @@ void main() {
     // nowhere.
     await pumpScreen(
       tester,
-      servicesWith(const KeyProtectionStatus('Android Keystore', true)),
+      servicesWith(const KeyProtectionStatus(KeyProtectionMethod.androidKeystore, true)),
       const SettingsScreen(),
     );
 

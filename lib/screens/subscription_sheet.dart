@@ -16,6 +16,7 @@ import 'package:flutter/material.dart';
 import '../app_services.dart';
 import '../services/recurring_service.dart';
 import '../theme/obsidian_prime.dart';
+import '../ui/app_locale.dart';
 import '../ui/error_messages.dart';
 import '../ui/money_format.dart';
 import '../widgets/sheet_frame.dart';
@@ -60,6 +61,9 @@ class _SubscriptionSheetState extends State<_SubscriptionSheet> {
 
   /// Runs [action], closing the sheet only if it reported a change.
   Future<void> _run(Future<bool> Function(RecurringService) action) async {
+    // Read BEFORE the first await, so the `catch` does not reach for a
+    // context that may no longer be mounted.
+    final l10n = context.l10n;
     setState(() {
       _working = true;
       _error = null;
@@ -73,7 +77,7 @@ class _SubscriptionSheetState extends State<_SubscriptionSheet> {
         if (!mounted) return;
         setState(() {
           _working = false;
-          _error = 'This subscription is no longer active.';
+          _error = l10n.subscriptionNoLongerActive;
         });
         return;
       }
@@ -82,7 +86,7 @@ class _SubscriptionSheetState extends State<_SubscriptionSheet> {
       if (!mounted) return;
       setState(() {
         _working = false;
-        _error = recurringErrorMessage(error);
+        _error = recurringErrorMessage(l10n, error);
       });
     }
   }
@@ -90,7 +94,7 @@ class _SubscriptionSheetState extends State<_SubscriptionSheet> {
   Future<void> _savePrice() async {
     final amount = parseAmountInput(_amount.text);
     if (amount == null) {
-      setState(() => _error = 'Enter the new price.');
+      setState(() => _error = context.l10n.errEnterNewPrice);
       return;
     }
     await _run(
@@ -110,17 +114,18 @@ class _SubscriptionSheetState extends State<_SubscriptionSheet> {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final l10n = context.l10n;
     final payment = widget.payment;
 
     return SheetFrame(
-      title: payment.name ?? 'Subscription',
+      title: payment.name ?? l10n.subscriptionFallbackName,
       error: _error,
       saving: _working,
-      actionLabel: 'Save new price',
+      actionLabel: l10n.subscriptionSavePrice,
       onSave: _savePrice,
       children: [
         Text(
-          'Next on ${formatStoredDate(payment.nextDueDate)}',
+          l10n.subscriptionNextOn(formatStoredDate(payment.nextDueDate)),
           style: text.bodySmall?.copyWith(
             color: ObsidianPalette.onSurfaceVariant,
           ),
@@ -128,7 +133,7 @@ class _SubscriptionSheetState extends State<_SubscriptionSheet> {
         const SizedBox(height: Spacing.stackMd),
         SheetField(
           controller: _amount,
-          label: 'Price',
+          label: l10n.subscriptionPrice,
           hint: '0,00',
           numeric: true,
         ),
@@ -136,7 +141,7 @@ class _SubscriptionSheetState extends State<_SubscriptionSheet> {
         Text(
           // Why changing the price is not "delete and re-add": that would
           // reset the due history and the alignment of the next charge.
-          'Changing the price leaves the schedule where it is.',
+          l10n.subscriptionPriceNote,
           style: text.labelMedium?.copyWith(
             letterSpacing: 0,
             color: ObsidianPalette.onSurfaceVariant,
@@ -150,11 +155,11 @@ class _SubscriptionSheetState extends State<_SubscriptionSheet> {
         OutlinedButton.icon(
           onPressed: _working ? null : _skip,
           icon: const Icon(Icons.skip_next, size: 18),
-          label: const Text('Skip the next one'),
+          label: Text(l10n.subscriptionSkip),
         ),
         const SizedBox(height: 4),
         Text(
-          'Moves it on one period. The subscription keeps running.',
+          l10n.subscriptionSkipNote,
           style: text.labelMedium?.copyWith(
             letterSpacing: 0,
             color: ObsidianPalette.onSurfaceVariant,
@@ -168,11 +173,11 @@ class _SubscriptionSheetState extends State<_SubscriptionSheet> {
             foregroundColor: ObsidianPalette.error,
           ),
           icon: const Icon(Icons.stop_circle_outlined, size: 18),
-          label: const Text('Stop tracking it'),
+          label: Text(l10n.subscriptionStop),
         ),
         const SizedBox(height: 4),
         Text(
-          'Stops it for good. Past charges stay in your history.',
+          l10n.subscriptionStopNote,
           style: text.labelMedium?.copyWith(
             letterSpacing: 0,
             color: ObsidianPalette.onSurfaceVariant,
@@ -184,23 +189,25 @@ class _SubscriptionSheetState extends State<_SubscriptionSheet> {
 
   /// Stopping is the only irreversible thing on this sheet, so it asks.
   Future<void> _confirmStop() async {
+    final l10n = context.l10n;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Stop tracking this?'),
+        title: Text(l10n.subscriptionStopTitle),
         content: Text(
-          '${widget.payment.name ?? 'This subscription'} will stop being '
-          'tracked. Charges already recorded stay where they are.',
+          l10n.subscriptionStopBody(
+            widget.payment.name ?? l10n.subscriptionStopFallbackName,
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Keep it'),
+            child: Text(l10n.subscriptionKeep),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: TextButton.styleFrom(foregroundColor: ObsidianPalette.error),
-            child: const Text('Stop it'),
+            child: Text(l10n.subscriptionStopConfirm),
           ),
         ],
       ),

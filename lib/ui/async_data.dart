@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/obsidian_prime.dart';
 import '../widgets/surfaces.dart';
+import 'app_locale.dart';
 
 class AsyncData<T> extends StatelessWidget {
   const AsyncData({
@@ -73,7 +74,7 @@ class DataUnavailable extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'This could not be read',
+                  context.l10n.couldNotBeRead,
                   style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 4),

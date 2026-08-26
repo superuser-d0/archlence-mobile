@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../app_services.dart';
 import '../crypto/key_provider.dart';
+import '../l10n/app_localizations.dart';
 import '../theme/obsidian_prime.dart';
+import '../ui/app_locale.dart';
 import '../widgets/not_yet.dart';
 import '../widgets/surfaces.dart';
 import 'backup_screen.dart';
@@ -42,9 +44,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _setLock(bool enabled) async {
     final lock = ServicesScope.of(context).screenLock;
+    final reason = context.l10n.unlockPrompt;
     // Asked for BEFORE turning it on. A lock switched on by someone who
     // cannot then pass it is a lock on the owner's own data.
-    if (enabled && !await lock.authenticate()) return;
+    if (enabled && !await lock.authenticate(reason: reason)) return;
     await lock.setEnabled(enabled);
     if (!mounted) return;
     // A block body, not an arrow. `setState(() => x = f())` returns the
@@ -60,6 +63,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final l10n = context.l10n;
     final keyProtection = ServicesScope.of(context).keyProtection;
     final inset = MediaQuery.paddingOf(context);
 
@@ -72,27 +76,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
         inset.bottom + Spacing.stackLg,
       ),
       children: [
-        const SectionLabel('Account & Preferences'),
+        SectionLabel(l10n.settingsSectionAccount),
         const SizedBox(height: Spacing.stackSm),
         _SettingsGroup(
           children: [
-            const _SettingsTile(
+            _SettingsTile(
               icon: Icons.sell_outlined,
-              title: 'Category Settings',
+              title: l10n.settingsCategorySettings,
             ),
-            const _SettingsTile(
-              icon: Icons.language,
-              title: 'Language',
-              subtitle: 'English',
-            ),
+            const _LanguageTile(),
             _SettingsTile(
               icon: Icons.vpn_key_outlined,
-              title: 'Encryption Key',
+              title: l10n.settingsEncryptionKey,
               // Deliberately allowed to wrap. The reference truncates this
               // with an ellipsis, which hides WHERE the key is stored and how
               // well it is protected — the one line on this screen a user most
               // needs to read in full.
-              subtitle: _keyProtectionSummary(keyProtection),
+              subtitle: _keyProtectionSummary(l10n, keyProtection),
               subtitleMaxLines: 3,
               danger: keyProtection != null && !keyProtection.secureStore,
               available: true,
@@ -111,7 +111,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         const SizedBox(height: Spacing.sectionGap),
 
-        const SectionLabel('Security'),
+        SectionLabel(l10n.settingsSectionSecurity),
         const SizedBox(height: Spacing.stackSm),
         FutureBuilder<(bool, bool)>(
           future: _lockState,
@@ -130,17 +130,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         const SizedBox(height: Spacing.sectionGap),
 
-        const SectionLabel('Your Data'),
+        SectionLabel(l10n.settingsSectionYourData),
         const SizedBox(height: Spacing.stackSm),
         _SettingsGroup(
           children: [
             _SettingsTile(
               icon: Icons.backup_outlined,
-              title: 'Backup & Restore',
+              title: l10n.settingsBackupRestore,
               subtitle: ServicesScope.of(context).backup == null
-                  ? 'Not available in this build.'
-                  : 'Write a backup you can keep, or restore one — including '
-                        'a backup made by the desktop app.',
+                  ? l10n.settingsBackupUnavailable
+                  : l10n.settingsBackupSubtitle,
               subtitleMaxLines: 3,
               available: ServicesScope.of(context).backup != null,
               onTap: ServicesScope.of(context).backup == null
@@ -155,47 +154,56 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         const SizedBox(height: Spacing.sectionGap),
 
-        const SectionLabel('Appearance & Privacy'),
+        SectionLabel(l10n.settingsSectionAppearance),
         const SizedBox(height: Spacing.stackSm),
         _SettingsGroup(
           children: [
-            const _SettingsTile(
+            _SettingsTile(
               icon: Icons.palette_outlined,
-              title: 'Premium Blue Theme',
-              subtitle: 'Uses the standard theme when disabled',
+              title: l10n.settingsPremiumTheme,
+              subtitle: l10n.settingsPremiumThemeSubtitle,
             ),
-            _SettingsTile(icon: Icons.shield_outlined, title: 'Data & Privacy'),
+            _SettingsTile(
+              icon: Icons.shield_outlined,
+              title: l10n.settingsDataPrivacy,
+            ),
           ],
         ),
         const SizedBox(height: Spacing.sectionGap),
 
-        const SectionLabel('Security & History'),
+        SectionLabel(l10n.settingsSectionSecurityHistory),
         const SizedBox(height: Spacing.stackSm),
         _SettingsGroup(
           children: [
-            const _SettingsTile(
+            _SettingsTile(
               icon: Icons.lock_outline,
-              title: 'Change Password',
-              subtitle: 'You can renew your password here.',
+              title: l10n.settingsChangePassword,
+              subtitle: l10n.settingsChangePasswordSubtitle,
             ),
-            _SettingsTile(icon: Icons.history, title: 'Balance History'),
+            _SettingsTile(
+              icon: Icons.history,
+              title: l10n.settingsBalanceHistory,
+            ),
           ],
         ),
         const SizedBox(height: Spacing.sectionGap),
 
-        const SectionLabel('System'),
+        SectionLabel(l10n.settingsSectionSystem),
         const SizedBox(height: Spacing.stackSm),
         _SettingsGroup(
           children: [
-            const _SettingsTile(
+            _SettingsTile(
               icon: Icons.dark_mode_outlined,
-              title: 'Dark Mode',
-              subtitle: 'Obsidian Prime is dark-only for now',
+              title: l10n.settingsDarkMode,
+              subtitle: l10n.settingsDarkModeSubtitle,
             ),
-            _SettingsTile(icon: Icons.mail_outline, title: 'Contact Us'),
-            const _SettingsTile(
+            _SettingsTile(
+              icon: Icons.mail_outline,
+              title: l10n.settingsContactUs,
+            ),
+            _SettingsTile(
               icon: Icons.logout,
-              title: 'Sign Out',
+              title: l10n.settingsSignOut,
               danger: true,
             ),
           ],
@@ -333,15 +341,118 @@ class _SettingsTile extends StatelessWidget {
 /// inject a fixed key. It says so rather than assuming the best case: claiming
 /// Keystore protection that is not there is the one thing on this screen it
 /// would be worst to be wrong about.
-String _keyProtectionSummary(KeyProtectionStatus? status) {
+String _keyProtectionSummary(AppLocalizations l10n, KeyProtectionStatus? status) {
   if (status == null) {
-    return 'Not known in this build.';
+    return l10n.keyProtectionUnknown;
   }
+  final method = switch (status.method) {
+    KeyProtectionMethod.androidKeystore => l10n.keyMethodAndroidKeystore,
+    KeyProtectionMethod.ownerOnlyFile => l10n.keyMethodOwnerOnlyFile,
+  };
   final where = status.secureStore
-      ? '${status.method} — held by the operating system.'
-      : '${status.method} — NOT in an OS key store; the key is a local file '
-            'readable only by this app.';
-  return status.warning == null ? where : '$where ${status.warning}';
+      ? l10n.keyProtectionHeldByOs(method)
+      : l10n.keyProtectionLocalFile(method);
+  final warning = switch (status.warning) {
+    null => null,
+    KeyProtectionWarning.osKeyStoreUnavailable =>
+      l10n.keyWarningOsStoreUnavailable,
+    KeyProtectionWarning.platformHasNoKeyStore =>
+      l10n.keyWarningNoPlatformStore,
+  };
+  return warning == null ? where : '$where $warning';
+}
+
+/// The language row, and what it opens.
+///
+/// The names of the languages are NOT translated. A reader looking for their
+/// own language finds it written the way they write it — "Türkçe" stays
+/// "Türkçe" in the English interface — and someone stranded in a language
+/// they cannot read can still find their way out.
+class _LanguageTile extends StatelessWidget {
+  const _LanguageTile();
+
+  /// Null first: the option that follows the phone's own setting.
+  static const _options = <Locale?>[null, ...supportedLocales];
+
+  static String _name(AppLocalizations l10n, Locale? locale) =>
+      switch (locale?.languageCode) {
+        'tr' => 'Türkçe',
+        'en' => 'English',
+        _ => l10n.settingsLanguageSystem,
+      };
+
+  Future<void> _choose(BuildContext context, AppLocaleScope scope) async {
+    final chosen = await showModalBottomSheet<_Chosen>(
+      context: context,
+      backgroundColor: ObsidianPalette.surfaceContainer,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.xl)),
+      ),
+      // The sheet returns the CHOICE, and a dismissed sheet returns nothing.
+      // A plain `Locale?` result cannot tell "follow the device" from
+      // "cancelled", so the options are wrapped on the way back out.
+      builder: (sheetContext) => _LanguageSheet(selected: scope.selected),
+    );
+    if (chosen == null) return;
+    await scope.select(chosen.locale);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final scope = AppLocaleScope.maybeOf(context);
+    return _SettingsTile(
+      icon: Icons.language,
+      title: l10n.settingsLanguage,
+      subtitle: _name(l10n, scope?.selected),
+      available: scope != null,
+      onTap: scope == null ? null : () => _choose(context, scope),
+    );
+  }
+}
+
+/// A chosen locale, distinct from the sheet being dismissed.
+class _Chosen {
+  const _Chosen(this.locale);
+
+  final Locale? locale;
+}
+
+class _LanguageSheet extends StatelessWidget {
+  const _LanguageSheet({required this.selected});
+
+  final Locale? selected;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              Spacing.containerMargin,
+              Spacing.stackLg,
+              Spacing.containerMargin,
+              Spacing.stackSm,
+            ),
+            child: Text(context.l10n.settingsLanguage, style: text.titleLarge),
+          ),
+          for (final option in _LanguageTile._options)
+            ListTile(
+              title: Text(_LanguageTile._name(context.l10n, option)),
+              trailing: option == selected
+                  ? const Icon(Icons.check, color: ObsidianPalette.primary)
+                  : null,
+              onTap: () => Navigator.of(context).pop(_Chosen(option)),
+            ),
+          const SizedBox(height: Spacing.stackMd),
+        ],
+      ),
+    );
+  }
 }
 
 /// The resume gate's switch, with what it actually buys written under it.

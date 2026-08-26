@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import '../money/financial_decimal.dart';
 import '../services/savings_service.dart';
 import '../theme/obsidian_prime.dart';
+import '../ui/app_locale.dart';
 import '../ui/money_format.dart';
 import 'surfaces.dart';
 
@@ -34,6 +35,7 @@ class SavingsGoalCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final l10n = context.l10n;
     // The service already guarantees a positive target, so this divides
     // safely; the clamp is for a goal deliberately overfunded past it.
     final ratio = (goal.currentAmount / goal.targetAmount).toDouble().clamp(
@@ -57,7 +59,7 @@ class SavingsGoalCard extends StatelessWidget {
                 child: Text(
                   // A name that will not decrypt says so rather than being
                   // replaced with something that reads like a real goal.
-                  goal.goalName ?? 'Unreadable goal',
+                  goal.goalName ?? l10n.goalUnreadable,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: text.titleLarge?.copyWith(
@@ -98,13 +100,13 @@ class SavingsGoalCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Amount(
-                  label: 'Saved',
+                  label: l10n.goalSaved,
                   value: formatLira(goal.currentAmount),
                 ),
               ),
               Expanded(
                 child: Amount(
-                  label: 'Target',
+                  label: l10n.goalTarget,
                   value: formatLira(goal.targetAmount),
                   alignEnd: true,
                 ),
@@ -113,7 +115,7 @@ class SavingsGoalCard extends StatelessWidget {
           ),
           const SizedBox(height: Spacing.stackMd),
           GradientButton(
-            label: goal.isCompleted ? 'Take back' : 'Save',
+            label: goal.isCompleted ? l10n.goalTakeBack : l10n.goalPutIn,
             onPressed: onMoveMoney,
           ),
         ],

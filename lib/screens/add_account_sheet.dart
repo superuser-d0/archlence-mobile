@@ -16,6 +16,7 @@ import 'package:flutter/services.dart';
 import '../app_services.dart';
 import '../services/account_service.dart';
 import '../theme/obsidian_prime.dart';
+import '../ui/app_locale.dart';
 import '../ui/error_messages.dart';
 import '../ui/money_format.dart';
 import '../widgets/surfaces.dart';
@@ -68,6 +69,9 @@ class _AddAccountSheetState extends State<_AddAccountSheet> {
   bool get _isCard => _type == AccountType.creditCard;
 
   Future<void> _save() async {
+    // Read BEFORE the first await, so the `catch` does not reach for a
+    // context that may no longer be mounted.
+    final l10n = context.l10n;
     // A blank amount means zero, which is a real answer — an account opened
     // with nothing in it. Text that is not a number is NOT zero, and saying
     // so here is the difference between opening an empty account and telling
@@ -75,14 +79,14 @@ class _AddAccountSheetState extends State<_AddAccountSheet> {
     final amountText = _amount.text.trim();
     final amount = parseAmountInput(amountText);
     if (amountText.isNotEmpty && amount == null) {
-      setState(() => _error = 'That is not an amount.');
+      setState(() => _error = l10n.errNotAnAmount);
       return;
     }
 
     final limitText = _limit.text.trim();
     final limit = parseAmountInput(limitText);
     if (limitText.isNotEmpty && limit == null) {
-      setState(() => _error = 'That is not an amount.');
+      setState(() => _error = l10n.errNotAnAmount);
       return;
     }
 
@@ -115,7 +119,7 @@ class _AddAccountSheetState extends State<_AddAccountSheet> {
       if (!mounted) return;
       setState(() {
         _saving = false;
-        _error = accountErrorMessage(error);
+        _error = accountErrorMessage(l10n, error);
       });
     }
   }
@@ -123,6 +127,7 @@ class _AddAccountSheetState extends State<_AddAccountSheet> {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final l10n = context.l10n;
 
     return Padding(
       // The keyboard, or the sheet's fields sit under it.
@@ -144,20 +149,20 @@ class _AddAccountSheetState extends State<_AddAccountSheet> {
               ),
             ),
             const SizedBox(height: Spacing.stackLg),
-            Text('New account', style: text.headlineMedium),
+            Text(l10n.addAccountTitle, style: text.headlineMedium),
             const SizedBox(height: Spacing.stackLg),
 
             SegmentedButton<AccountType>(
-              segments: const [
+              segments: [
                 ButtonSegment(
                   value: AccountType.checking,
-                  label: Text('Cash'),
-                  icon: Icon(Icons.account_balance_wallet_outlined),
+                  label: Text(l10n.accountTypeCash),
+                  icon: const Icon(Icons.account_balance_wallet_outlined),
                 ),
                 ButtonSegment(
                   value: AccountType.creditCard,
-                  label: Text('Credit card'),
-                  icon: Icon(Icons.credit_card),
+                  label: Text(l10n.accountTypeCreditCard),
+                  icon: const Icon(Icons.credit_card),
                 ),
               ],
               selected: {_type},
@@ -168,8 +173,10 @@ class _AddAccountSheetState extends State<_AddAccountSheet> {
 
             _Field(
               controller: _name,
-              label: 'Name',
-              hint: _isCard ? 'Bonus Flexi' : 'Salary account',
+              label: l10n.addAccountName,
+              hint: _isCard
+                  ? l10n.addAccountNameHintCard
+                  : l10n.addAccountNameHintCash,
               autofocus: true,
             ),
             const SizedBox(height: Spacing.stackMd),
@@ -180,7 +187,9 @@ class _AddAccountSheetState extends State<_AddAccountSheet> {
               // enters what they OWE as a positive number, and the service
               // stores it negative. Labelling this "balance" on a card would
               // invite a minus sign that would double the debt.
-              label: _isCard ? 'Current debt' : 'Opening balance',
+              label: _isCard
+                  ? l10n.addAccountCurrentDebt
+                  : l10n.addAccountOpeningBalance,
               hint: '0,00',
               numeric: true,
             ),
@@ -189,28 +198,27 @@ class _AddAccountSheetState extends State<_AddAccountSheet> {
               const SizedBox(height: Spacing.stackMd),
               _Field(
                 controller: _limit,
-                label: 'Card limit',
+                label: l10n.addAccountCardLimit,
                 hint: '20.000,00',
                 numeric: true,
               ),
               const SizedBox(height: Spacing.stackMd),
               _Field(
                 controller: _statementDay,
-                label: 'Statement day (optional)',
+                label: l10n.addAccountStatementDay,
                 hint: '15',
                 numeric: true,
               ),
               const SizedBox(height: Spacing.stackMd),
               _Field(
                 controller: _cardNumber,
-                label: 'Card number (optional)',
+                label: l10n.addAccountCardNumber,
                 hint: '#### #### #### 1234',
                 numeric: true,
               ),
               const SizedBox(height: Spacing.stackSm),
               Text(
-                'Only the last four digits and the network are kept. The '
-                'number itself is never stored.',
+                l10n.addAccountCardNumberNote,
                 style: text.labelMedium?.copyWith(
                   letterSpacing: 0,
                   color: ObsidianPalette.onSurfaceVariant,
@@ -243,7 +251,9 @@ class _AddAccountSheetState extends State<_AddAccountSheet> {
 
             const SizedBox(height: Spacing.stackLg),
             GradientButton(
-              label: _saving ? 'Saving…' : 'Add account',
+              label: _saving
+                  ? l10n.savingInProgress
+                  : l10n.addAccountAction,
               // Null while saving, so a second tap cannot open two accounts.
               onPressed: _saving ? null : _save,
             ),

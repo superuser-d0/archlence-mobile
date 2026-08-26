@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import '../app_services.dart';
 import '../services/savings_service.dart';
 import '../theme/obsidian_prime.dart';
+import '../ui/app_locale.dart';
 import '../ui/async_data.dart';
 import '../widgets/savings_goal_card.dart';
 import 'savings_sheets.dart';
@@ -38,10 +39,11 @@ class _SavingsScreenState extends State<SavingsScreen> {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final l10n = context.l10n;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Savings Goals'),
+        title: Text(l10n.savingsGoalsTitle),
         actions: [
           IconButton(
             onPressed: () async {
@@ -64,8 +66,7 @@ class _SavingsScreenState extends State<SavingsScreen> {
           ),
           children: [
             Text(
-              'Money in a goal is held aside from your balance. It is not '
-              'spending, so it never appears in any expense chart.',
+              l10n.savingsGoalsExplanation,
               style: text.bodySmall?.copyWith(
                 color: ObsidianPalette.onSurfaceVariant,
               ),
@@ -76,9 +77,7 @@ class _SavingsScreenState extends State<SavingsScreen> {
               placeholderHeight: 200,
               builder: (context, goals) {
                 if (goals.isEmpty) {
-                  return const NothingYet(
-                    message: 'No savings goals yet. Add one with the + above.',
-                  );
+                  return NothingYet(message: l10n.savingsGoalsEmpty);
                 }
                 return Column(
                   children: [

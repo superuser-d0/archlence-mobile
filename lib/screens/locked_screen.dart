@@ -8,6 +8,7 @@ library;
 import 'package:flutter/material.dart';
 
 import '../theme/obsidian_prime.dart';
+import '../ui/app_locale.dart';
 import '../widgets/surfaces.dart';
 
 class LockedScreen extends StatefulWidget {
@@ -54,6 +55,7 @@ class _LockedScreenState extends State<LockedScreen> {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final l10n = context.l10n;
     // Opaque, not translucent: the point is that the figures behind it cannot
     // be read.
     return ColoredBox(
@@ -70,11 +72,10 @@ class _LockedScreenState extends State<LockedScreen> {
                 color: ObsidianPalette.primary,
               ),
               const SizedBox(height: Spacing.stackLg),
-              Text('Archlence is locked', style: text.headlineMedium),
+              Text(l10n.lockedTitle, style: text.headlineMedium),
               const SizedBox(height: Spacing.stackSm),
               Text(
-                'Unlock with the same fingerprint or PIN you use for this '
-                'phone.',
+                l10n.lockedExplanation,
                 textAlign: TextAlign.center,
                 style: text.bodySmall?.copyWith(
                   color: ObsidianPalette.onSurfaceVariant,
@@ -83,13 +84,13 @@ class _LockedScreenState extends State<LockedScreen> {
               if (_refused) ...[
                 const SizedBox(height: Spacing.stackMd),
                 Text(
-                  'Not unlocked.',
+                  l10n.lockedRefused,
                   style: text.bodySmall?.copyWith(color: ObsidianPalette.error),
                 ),
               ],
               const SizedBox(height: Spacing.stackLg),
               GradientButton(
-                label: _asking ? 'Waiting…' : 'Unlock',
+                label: _asking ? l10n.lockedWaiting : l10n.lockedUnlock,
                 expand: false,
                 onPressed: _asking ? null : _ask,
               ),

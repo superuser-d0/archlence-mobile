@@ -10,7 +10,9 @@ import 'package:flutter/material.dart';
 import '../app_services.dart';
 import '../services/budget_service.dart';
 import '../theme/obsidian_prime.dart';
+import '../ui/app_locale.dart';
 import '../ui/async_data.dart';
+import '../ui/month_names.dart';
 import '../ui/money_format.dart';
 import '../widgets/savings_goal_card.dart';
 import '../widgets/summary_row.dart';
@@ -69,7 +71,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Monthly Budget'),
+        title: Text(context.l10n.budgetTitle),
         actions: [
           IconButton(
             onPressed: () async {
@@ -125,7 +127,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
               builder: (context, data) => _BudgetBody(data: data),
             ),
             const SizedBox(height: Spacing.sectionGap),
-            Text('Categories', style: text.titleLarge),
+            Text(context.l10n.budgetCategories, style: text.titleLarge),
             const SizedBox(height: Spacing.stackMd),
             AsyncData<_BudgetData>(
               future: _data!,
@@ -147,6 +149,7 @@ class _BudgetBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final l10n = context.l10n;
     final budget = data.budget;
 
     return Column(
@@ -155,17 +158,17 @@ class _BudgetBody extends StatelessWidget {
         SummaryRow(
           stats: [
             SummaryStat(
-              label: 'Planned Income',
+              label: l10n.budgetPlannedIncome,
               value: formatLira(budget.plannedIncome),
               tone: SummaryTone.positive,
             ),
             SummaryStat(
-              label: 'Planned Expense',
+              label: l10n.budgetPlannedExpense,
               value: formatLira(budget.plannedExpense),
               tone: SummaryTone.negative,
             ),
             SummaryStat(
-              label: 'Reserved',
+              label: l10n.budgetReserved,
               value: formatLira(budget.reservedRecurring),
             ),
           ],
@@ -176,7 +179,7 @@ class _BudgetBody extends StatelessWidget {
           child: Column(
             children: [
               Text(
-                'Left to spend',
+                l10n.budgetLeftToSpend,
                 style: text.bodySmall?.copyWith(
                   color: ObsidianPalette.onSurfaceVariant,
                 ),
@@ -199,8 +202,7 @@ class _BudgetBody extends StatelessWidget {
               ),
               const SizedBox(height: Spacing.stackSm),
               Text(
-                'Planned income, less planned spending, less what your '
-                'subscriptions will take.',
+                l10n.budgetLeftToSpendNote,
                 textAlign: TextAlign.center,
                 style: text.labelMedium?.copyWith(
                   letterSpacing: 0,
@@ -232,7 +234,7 @@ class _ReservedList extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SectionLabel('Reserved for subscriptions'),
+          SectionLabel(context.l10n.budgetReservedForSubscriptions),
           const SizedBox(height: Spacing.stackSm),
           for (final item in items)
             Padding(
@@ -241,7 +243,8 @@ class _ReservedList extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      item.payment.name ?? 'Unreadable subscription',
+                      item.payment.name ??
+                          context.l10n.subscriptionUnreadableName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: text.bodySmall?.copyWith(
@@ -257,7 +260,7 @@ class _ReservedList extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.only(right: 8),
                       child: Text(
-                        '×${item.occurrences}',
+                        context.l10n.budgetOccurrences(item.occurrences),
                         style: text.labelMedium?.copyWith(
                           letterSpacing: 0,
                           color: ObsidianPalette.onSurfaceVariant,
@@ -287,11 +290,7 @@ class _Categories extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (progress.isEmpty) {
-      return const NothingYet(
-        message:
-            'No category plans for this month yet. A plan gives each '
-            'category a limit and tracks what is left of it.',
-      );
+      return NothingYet(message: context.l10n.budgetNoCategoryPlans);
     }
     return Column(
       children: [
@@ -375,11 +374,16 @@ class _CategoryRow extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: Amount(label: 'Spent', value: formatLira(item.actual)),
+                child: Amount(
+                  label: context.l10n.budgetSpent,
+                  value: formatLira(item.actual),
+                ),
               ),
               Expanded(
                 child: Amount(
-                  label: overspent ? 'Over by' : 'Left',
+                  label: overspent
+                      ? context.l10n.budgetOverBy
+                      : context.l10n.budgetLeft,
                   value: formatLira(item.remaining.abs()),
                   alignEnd: true,
                 ),
@@ -398,21 +402,6 @@ class _MonthChip extends StatelessWidget {
     required this.selected,
     required this.onTap,
   });
-
-  static const _names = [
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dec',
-  ];
 
   final int month;
   final bool selected;
@@ -434,7 +423,7 @@ class _MonthChip extends StatelessWidget {
           border: Border.all(color: ObsidianPalette.cardStroke),
         ),
         child: Text(
-          _names[month - 1],
+          shortMonthName(context.l10n, month),
           style: Theme.of(context).textTheme.labelMedium?.copyWith(
             letterSpacing: 0,
             color: selected

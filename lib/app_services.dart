@@ -6,12 +6,14 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:path/path.dart' as p;
 
 import 'backup/backup_service.dart';
 import 'crypto/field_crypto.dart';
 import 'crypto/key_provider.dart';
 import 'data/database.dart';
+import 'l10n/app_localizations.dart';
 import 'services/account_service.dart';
 import 'services/asset_purchase_service.dart';
 import 'services/asset_sale_service.dart';
@@ -21,6 +23,7 @@ import 'services/recurring_service.dart';
 import 'services/savings_service.dart';
 import 'security/screen_lock.dart';
 import 'services/transaction_service.dart';
+import 'ui/app_locale.dart';
 
 class AppServices {
   AppServices._(
@@ -232,6 +235,8 @@ class ArchlenceRoot extends StatelessWidget {
     required this.home,
     required this.theme,
     this.swapProfile,
+    this.locale,
+    this.selectLocale,
     super.key,
   });
 
@@ -243,20 +248,45 @@ class ArchlenceRoot extends StatelessWidget {
   /// Null in tests, where there is no root to restart.
   final ProfileSwap? swapProfile;
 
+  /// The language chosen in Settings, or null to follow the device.
+  ///
+  /// Null in tests too, which is what puts them in English: the test binding
+  /// reports an en-US device, and an unset choice means the device decides.
+  final Locale? locale;
+
+  /// How Settings changes [locale]. Null where nothing can.
+  final Future<void> Function(Locale?)? selectLocale;
+
   @override
   Widget build(BuildContext context) {
     final resolved = services;
     final swap = swapProfile;
+    final choose = selectLocale;
     return MaterialApp(
       title: 'Archlence',
       debugShowCheckedModeBanner: false,
       theme: theme,
+      locale: locale,
+      supportedLocales: supportedLocales,
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
       builder: resolved == null
           ? null
           : (context, child) {
               Widget wrapped = ServicesScope(services: resolved, child: child!);
               if (swap != null) {
                 wrapped = AppRestartScope(swapProfile: swap, child: wrapped);
+              }
+              if (choose != null) {
+                wrapped = AppLocaleScope(
+                  selected: locale,
+                  select: choose,
+                  child: wrapped,
+                );
               }
               return wrapped;
             },

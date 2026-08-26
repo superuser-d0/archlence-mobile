@@ -24,9 +24,14 @@ key under a journal that can be rolled back. Both directions are proven
 against the desktop's own `services/backup_service.py` rather than against a
 reading of the format.
 
-Two things it cannot do yet. **Live prices** need a data source chosen, so
-holdings are shown at what they cost and labelled as such. And the **labels
-are English** while the numbers are already Turkish.
+**It speaks Turkish and English.** Every label comes from `lib/l10n/`, which
+carries both languages in full; a phone set to either gets that language, a
+phone set to anything else gets Turkish, and Settings can override the choice.
+The numbers stay Turkish either way — `1.234,56 ₺` is the format the design
+specifies and the desktop stores, not a translation.
+
+One thing it cannot do yet: **live prices** need a data source chosen, so
+holdings are shown at what they cost and labelled as such.
 
 **Start at [docs/ROADMAP.md](docs/ROADMAP.md)** — it opens with a "Pick up
 here" section listing the next steps in priority order, and records how each
@@ -37,9 +42,14 @@ claim was proven and which decisions are already settled.
 ```bash
 flutter pub get
 dart run build_runner build          # drift codegen
+flutter gen-l10n                     # labels, after editing lib/l10n/*.arb
 flutter test                         # unit tests
 flutter run -d <device>
 ```
+
+Both generators' output is checked in, so a fresh clone builds without running
+either. `flutter run` and `flutter test` re-run `gen-l10n` on their own; the
+command above is for when you want the regenerated class before either.
 
 Device tests need an emulator or handset. They exercise the real Android
 Keystore, the real database file and the real screens — the things an
@@ -61,11 +71,12 @@ roadmap.
 | `lib/money/` | Decimal amounts and the rounding rules, ported from the desktop |
 | `lib/crypto/` | AES-256-GCM, field-level encryption, the key provider |
 | `lib/data/` | Database connection and the desktop's schema, verbatim |
+| `lib/l10n/` | The Turkish and English label files, and the class generated from them |
 | `lib/backup/` | Backup packages: the bounded reader, the writer, the journalled restore |
 | `lib/security/` | The resume lock |
 | `lib/services/` | Accounts, the ledger, holdings, recurring, budget, savings |
 | `lib/screens/` | The five tabs, onboarding, and the forms behind them |
-| `lib/ui/` | Money formatting, error wording, the loading/error/empty contract |
+| `lib/ui/` | Money formatting, error wording, the language choice, the loading/error/empty contract |
 | `lib/theme/` | Obsidian Prime design tokens |
 | `lib/widgets/` | Shared surfaces, the balance ring, the sheet frame |
 | `tool/` | Developer utilities for regenerating parity vectors |

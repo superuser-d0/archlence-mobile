@@ -1,0 +1,682 @@
+{
+  "@@locale": "en",
+  "appTitle": "Archlence",
+  "@appTitle": {
+    "description": "The application's name. Not translated."
+  },
+  "navHome": "Home",
+  "@navHome": {
+    "description": "Bottom navigation: the dashboard tab."
+  },
+  "navAssets": "Assets",
+  "@navAssets": {
+    "description": "Bottom navigation: holdings."
+  },
+  "navCards": "Cards",
+  "@navCards": {
+    "description": "Bottom navigation: accounts and credit cards."
+  },
+  "navTools": "Tools",
+  "@navTools": {
+    "description": "Bottom navigation: budget, savings, backup."
+  },
+  "navSettings": "Settings",
+  "@navSettings": {
+    "description": "Bottom navigation: settings."
+  },
+  "startUpFailed": "Archlence could not start",
+  "@startUpFailed": {
+    "description": "Shown full-screen when the database or key store will not open."
+  },
+  "notYetChip": "NOT YET",
+  "@notYetChip": {
+    "description": "Chip on a control that has no service behind it yet. Deliberately not 'coming soon' — it states a fact rather than making a promise."
+  },
+  "couldNotBeRead": "This could not be read",
+  "@couldNotBeRead": {
+    "description": "Stands in for a figure whose source threw, so a failure is never drawn as a zero."
+  },
+  "totalBalance": "Total Balance",
+  "@totalBalance": {
+    "description": "The label inside the dashboard's balance ring."
+  },
+  "savingInProgress": "Saving…",
+  "@savingInProgress": {
+    "description": "A sheet's action button while the write is in flight."
+  },
+  "toolsTitle": "Financial Tools",
+  "@toolsTitle": {
+    "description": "Heading of the Tools tab."
+  },
+  "toolsSubtitle": "Explore calculators and planners to optimize your finances.",
+  "toolBudget": "Monthly\nBudget",
+  "@toolBudget": {
+    "description": "Tool card. The line break is part of the label: the grid gives every card two lines."
+  },
+  "toolCalendar": "Calendar",
+  "toolCalculator": "Calculator",
+  "toolInterestReturn": "Interest\nReturn",
+  "toolCompoundInterest": "Compound\nInterest",
+  "toolLoanCalculator": "Loan\nCalculator",
+  "toolSavingsGoal": "Savings\nGoal",
+  "toolWhatIf": "What-If\nSandbox",
+  "@toolWhatIf": {
+    "description": "Kept in English in both languages, as the desktop does."
+  },
+  "toolResetData": "Reset\nData",
+  "lockedTitle": "Archlence is locked",
+  "lockedExplanation": "Unlock with the same fingerprint or PIN you use for this phone.",
+  "lockedRefused": "Not unlocked.",
+  "lockedWaiting": "Waiting…",
+  "lockedUnlock": "Unlock",
+  "unlockPrompt": "Unlock Archlence",
+  "@unlockPrompt": {
+    "description": "Reason shown by the platform's own biometric/PIN sheet."
+  },
+  "savingsGoalsTitle": "Savings Goals",
+  "savingsGoalsExplanation": "Money in a goal is held aside from your balance. It is not spending, so it never appears in any expense chart.",
+  "savingsGoalsEmpty": "No savings goals yet. Add one with the + above.",
+  "goalUnreadable": "Unreadable goal",
+  "@goalUnreadable": {
+    "description": "Stands in for a goal name that will not decrypt."
+  },
+  "goalSaved": "Saved",
+  "@goalSaved": {
+    "description": "How much is in the goal so far."
+  },
+  "goalTarget": "Target",
+  "goalTakeBack": "Take back",
+  "@goalTakeBack": {
+    "description": "Withdraw from a completed goal."
+  },
+  "goalPutIn": "Save",
+  "@goalPutIn": {
+    "description": "Put money INTO the goal — not the verb for saving a form."
+  },
+  "settingsSectionAccount": "Account & Preferences",
+  "settingsCategorySettings": "Category Settings",
+  "settingsLanguage": "Language",
+  "settingsLanguageSystem": "System language",
+  "@settingsLanguageSystem": {
+    "description": "Shown as the Language row's subtitle when no explicit choice has been made and the app follows the phone."
+  },
+  "settingsEncryptionKey": "Encryption Key",
+  "keyMethodAndroidKeystore": "Android Keystore",
+  "@keyMethodAndroidKeystore": {
+    "description": "The name of the OS key store. A product name, so it is the same in both languages."
+  },
+  "keyMethodOwnerOnlyFile": "owner-only file",
+  "keyProtectionUnknown": "Not known in this build.",
+  "@keyProtectionUnknown": {
+    "description": "No platform key provider behind this build — it must say it does not know rather than assume the best case."
+  },
+  "keyProtectionHeldByOs": "{method} — held by the operating system.",
+  "@keyProtectionHeldByOs": {
+    "placeholders": {
+      "method": {
+        "type": "String"
+      }
+    }
+  },
+  "keyProtectionLocalFile": "{method} — NOT in an OS key store; the key is a local file readable only by this app.",
+  "@keyProtectionLocalFile": {
+    "placeholders": {
+      "method": {
+        "type": "String"
+      }
+    }
+  },
+  "keyWarningOsStoreUnavailable": "The OS key store is unavailable; the key is kept in a local file readable only by this app.",
+  "keyWarningNoPlatformStore": "This platform has no supported OS key store.",
+  "settingsSectionSecurity": "Security",
+  "lockTileTitle": "Lock when I come back",
+  "lockTileExplanation": "Asks for your fingerprint or PIN after a minute away. It hides the screen from someone holding your phone — it does not add encryption.",
+  "lockTileUnavailable": "This device has no fingerprint or screen lock set up.",
+  "settingsSectionYourData": "Your Data",
+  "settingsBackupRestore": "Backup & Restore",
+  "settingsBackupUnavailable": "Not available in this build.",
+  "settingsBackupSubtitle": "Write a backup you can keep, or restore one — including a backup made by the desktop app.",
+  "settingsSectionAppearance": "Appearance & Privacy",
+  "settingsPremiumTheme": "Premium Blue Theme",
+  "settingsPremiumThemeSubtitle": "Uses the standard theme when disabled",
+  "settingsDataPrivacy": "Data & Privacy",
+  "settingsSectionSecurityHistory": "Security & History",
+  "settingsChangePassword": "Change Password",
+  "settingsChangePasswordSubtitle": "You can renew your password here.",
+  "settingsBalanceHistory": "Balance History",
+  "settingsSectionSystem": "System",
+  "settingsDarkMode": "Dark Mode",
+  "settingsDarkModeSubtitle": "Obsidian Prime is dark-only for now",
+  "settingsContactUs": "Contact Us",
+  "settingsSignOut": "Sign Out",
+  "errNotAnAmount": "That is not an amount.",
+  "@errNotAnAmount": {
+    "description": "Shared by every service that parses a typed figure."
+  },
+  "errAmountNotPositive": "Enter an amount above zero.",
+  "errAccountEmptyName": "Give the account a name.",
+  "errAccountUnknownType": "Choose an account type.",
+  "errAccountInvalidStatementDay": "The statement day has to be between 1 and 31.",
+  "errAccountCreditLimitRequired": "A credit card needs a limit above zero.",
+  "errAccountNegativeOpeningDebt": "Debt cannot be a negative amount.",
+  "errAccountOpeningDebtExceedsLimit": "The debt is larger than the limit you entered.",
+  "errAccountNotFound": "That account no longer exists.",
+  "errAccountCardFrozen": "This card is frozen. Unfreeze it to spend on it.",
+  "errAccountInsufficientLimit": "That would go past the card's available limit.",
+  "errAccountNotACreditCard": "That is not a credit card.",
+  "errAccountNoDebtToPay": "There is nothing owing on this card.",
+  "errAccountPaymentExceedsDebt": "That is more than the card owes.",
+  "errAccountSourceMustBeChecking": "Pay a card from a cash account, not another card.",
+  "errAccountBalanceUpdateFailed": "The balance could not be updated. Nothing was changed.",
+  "errAccountUnknownCardPreference": "Unknown card setting.",
+  "errTransactionInstallmentRange": "Instalments have to be between 1 and 12.",
+  "errTransactionNegativeLimit": "The limit cannot be negative.",
+  "errAssetInvalidAmount": "Price and quantity both have to be numbers above zero.",
+  "errAssetNotFound": "That holding no longer exists.",
+  "errSavingsEmptyName": "Say what the goal is for.",
+  "errSavingsNegativeOpeningAmount": "A goal cannot start with less than nothing in it.",
+  "errSavingsIdentityMismatch": "This goal has changed since the screen was drawn. Nothing was moved — pull to refresh and try again.",
+  "@errSavingsIdentityMismatch": {
+    "description": "The one error here that has to explain rather than name: a stale card pointing at a reused id is not something a user can reason about, and the only thing that matters is that no money moved."
+  },
+  "errSavingsAccountNotFound": "That cash account no longer exists.",
+  "errSavingsGoalNotFoundOrCompleted": "This goal is already complete.",
+  "errSavingsInsufficientBalance": "The goal does not hold that much.",
+  "errSavingsRefundAccountRequired": "Choose where the money should go.",
+  "errBudgetUnknownItemType": "Choose income or expense.",
+  "errBudgetEmptyName": "Give the line a name.",
+  "errBudgetInvalidMonth": "Pick a month between January and December.",
+  "errBudgetInvalidAlertThreshold": "The alert threshold has to be between 1 and 100 per cent.",
+  "errRecurringUnknownFrequency": "This subscription repeats on a schedule Archlence does not recognise.",
+  "errRecurringInvalidDay": "The day of the month has to be between 1 and 31.",
+  "errRecurringInvalidTransactionType": "A subscription has to be income or expense.",
+  "errRecurringUnreadablePayment": "This subscription could not be read.",
+  "commonNext": "Next",
+  "onboardingTagline": "Your accounts, cards, holdings and budget — on this phone and nowhere else.",
+  "onboardingNoServerTitle": "No account, no server",
+  "onboardingNoServerBody": "Nothing is uploaded and there is nothing to sign in to. The data lives in a file only this app can read.",
+  "onboardingSameFileTitle": "The same file as the desktop app",
+  "onboardingSameFileBody": "A backup written on one opens in the other, down to the kurus.",
+  "onboardingBackupsTitle": "Which means backups are on you",
+  "onboardingBackupsBody": "If you lose the phone without a backup, the data goes with it. Nobody else has a copy.",
+  "onboardingEncryptedTitle": "Your data is encrypted",
+  "onboardingEncryptedBody": "Every amount and description is stored encrypted. The key that opens them is kept apart from the data.",
+  "onboardingKeyUnknownTitle": "Key location unknown",
+  "onboardingKeyUnknownBody": "This build could not tell where the key ended up.",
+  "onboardingKeySecureBody": "Held by the operating system. It never leaves this device and no other app can read it.",
+  "onboardingKeyFileBody": "The OS key store was not available, so the key is a file only this app can open. That is weaker than the key store, and worth knowing.",
+  "onboardingAccountTitle": "Where does your money sit?",
+  "onboardingAccountBody": "One cash account to start with. Everything else — spending, cards, holdings, goals — needs somewhere for money to come from.",
+  "onboardingDefaultAccountName": "Cash",
+  "@onboardingDefaultAccountName": {
+    "description": "Prefilled into the first account's name field. Translated even though it becomes stored DATA, because it is a suggestion the user types over and nothing in either app groups or reports on an account's name — unlike the category literals, which stay verbatim."
+  },
+  "onboardingAccountName": "Name",
+  "onboardingAccountBalance": "What is in it now",
+  "onboardingBalanceOptional": "You can leave this empty and add it later.",
+  "onboardingSettingUp": "Setting up…",
+  "onboardingStart": "Start using Archlence",
+  "addAccountTitle": "New account",
+  "accountTypeCash": "Cash",
+  "accountTypeCreditCard": "Credit card",
+  "addAccountName": "Name",
+  "addAccountNameHintCard": "Bonus Flexi",
+  "@addAccountNameHintCard": {
+    "description": "A placeholder card name. A Turkish bank's product, so it is the same in both languages."
+  },
+  "addAccountNameHintCash": "Salary account",
+  "addAccountCurrentDebt": "Current debt",
+  "@addAccountCurrentDebt": {
+    "description": "On a card the user enters what they OWE as a positive number. Calling it 'balance' here would invite a minus sign that doubles the debt."
+  },
+  "addAccountOpeningBalance": "Opening balance",
+  "addAccountCardLimit": "Card limit",
+  "addAccountStatementDay": "Statement day (optional)",
+  "addAccountCardNumber": "Card number (optional)",
+  "addAccountCardNumberNote": "Only the last four digits and the network are kept. The number itself is never stored.",
+  "addAccountAction": "Add account",
+  "addTransactionTitle": "New transaction",
+  "transactionTypeExpense": "Expense",
+  "transactionTypeIncome": "Income",
+  "errEnterAnAmount": "Enter an amount.",
+  "addTransactionNoAccount": "Add an account first — money has to come from somewhere.",
+  "fieldAccount": "Account",
+  "fieldAmount": "Amount",
+  "fieldCategory": "Category",
+  "fieldDescriptionOptional": "Description (optional)",
+  "fieldInstallments": "Instalments",
+  "installmentsNone": "None",
+  "installmentMonths": "{count} months",
+  "@installmentMonths": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    },
+    "description": "The instalment count, never below two — hence no singular form."
+  },
+  "installmentNote": "The whole amount is charged to the card now — that is what the bank blocks against your limit. The plan tracks the monthly split.",
+  "transactionScheduledNote": "Scheduled — it will not touch your balance until that day.",
+  "addTransactionAction": "Record",
+  "payDebtTitle": "Pay {card}",
+  "@payDebtTitle": {
+    "placeholders": {
+      "card": {
+        "type": "String"
+      }
+    },
+    "description": "The card's name is the user's own text and is substituted AFTER translation, never translated itself."
+  },
+  "payDebtAction": "Pay",
+  "payDebtOwing": "{amount} owing",
+  "@payDebtOwing": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "payDebtAmount": "Amount to pay",
+  "payDebtAll": "Pay it all off ({amount})",
+  "@payDebtAll": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "payDebtNoSource": "No cash account to pay from.",
+  "payDebtFrom": "Pay from",
+  "payDebtFrozenNote": "This card is frozen, and can still be paid. Freezing stops new spending, not clearing what you owe.",
+  "errChooseSource": "Choose where the money comes from.",
+  "accountWithBalance": "{name} — {balance}",
+  "@accountWithBalance": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "balance": {
+        "type": "String"
+      }
+    },
+    "description": "A dropdown row: the user's own account name beside its formatted balance. Identical in both languages, and a template rather than an inline join so the separator can move if a language needs it to."
+  },
+  "subscriptionFallbackName": "Subscription",
+  "@subscriptionFallbackName": {
+    "description": "Stands in for a subscription name that will not decrypt."
+  },
+  "subscriptionNoLongerActive": "This subscription is no longer active.",
+  "errEnterNewPrice": "Enter the new price.",
+  "subscriptionSavePrice": "Save new price",
+  "subscriptionNextOn": "Next on {date}",
+  "@subscriptionNextOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "subscriptionPrice": "Price",
+  "subscriptionPriceNote": "Changing the price leaves the schedule where it is.",
+  "subscriptionSkip": "Skip the next one",
+  "subscriptionSkipNote": "Moves it on one period. The subscription keeps running.",
+  "subscriptionStop": "Stop tracking it",
+  "subscriptionStopNote": "Stops it for good. Past charges stay in your history.",
+  "subscriptionStopTitle": "Stop tracking this?",
+  "subscriptionStopBody": "{name} will stop being tracked. Charges already recorded stay where they are.",
+  "@subscriptionStopBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "subscriptionStopFallbackName": "This subscription",
+  "@subscriptionStopFallbackName": {
+    "description": "Substituted into subscriptionStopBody when the name will not decrypt."
+  },
+  "subscriptionKeep": "Keep it",
+  "subscriptionStopConfirm": "Stop it",
+  "budgetLineTitle": "New budget line",
+  "budgetLineAction": "Save line",
+  "budgetLineName": "Name",
+  "budgetLineNameHint": "Kira",
+  "@budgetLineNameHint": {
+    "description": "A placeholder budget line. Left in Turkish in both languages: it is an example of the user's own data, and the categories it sits beside are Turkish literals in either interface."
+  },
+  "budgetLineAmount": "Amount for the month",
+  "fieldCategoryOptional": "Category (optional)",
+  "categoryNone": "None",
+  "budgetLineCategoryNote": "Only a line with a category is tracked against what you actually spend.",
+  "budgetLineEveryMonth": "Every month",
+  "budgetLineEveryMonthNote": "Applies to every month until you set a different amount for one.",
+  "budgetLineRollover": "Carry the balance over",
+  "budgetLineRolloverNote": "Adds last month's leftover to this month's limit. Only last month's — it does not build up.",
+  "budgetLineWarnAt": "Warn me at {threshold}",
+  "@budgetLineWarnAt": {
+    "placeholders": {
+      "threshold": {
+        "type": "String"
+      }
+    },
+    "description": "The threshold arrives already formatted as a Turkish percentage (%80), which is written the same way in both languages."
+  },
+  "newGoalTitle": "New savings goal",
+  "newGoalAction": "Create goal",
+  "newGoalExplanation": "Money in a goal is set aside from your balance. It is not spending and never appears in an expense chart.",
+  "newGoalName": "What it is for",
+  "newGoalNameHint": "Acil Durum Fonu",
+  "@newGoalNameHint": {
+    "description": "An example goal name — the user's own data, left in Turkish in both languages."
+  },
+  "newGoalTarget": "Target amount",
+  "errEnterTargetAmount": "Enter a target amount.",
+  "errChooseCashAccount": "Choose a cash account.",
+  "goalFallbackName": "Savings goal",
+  "goalSetAside": "Set aside",
+  "goalProgress": "{saved} of {target}",
+  "@goalProgress": {
+    "placeholders": {
+      "saved": {
+        "type": "String"
+      },
+      "target": {
+        "type": "String"
+      }
+    }
+  },
+  "goalProgressWithRemaining": "{saved} of {target} — {remaining} to go",
+  "@goalProgressWithRemaining": {
+    "placeholders": {
+      "saved": {
+        "type": "String"
+      },
+      "target": {
+        "type": "String"
+      },
+      "remaining": {
+        "type": "String"
+      }
+    },
+    "description": "A whole second template rather than a suffix glued onto goalProgress: the clause's position in the sentence belongs to the translation."
+  },
+  "goalMoveNoAccount": "No cash account to move money between.",
+  "goalMoveFrom": "From",
+  "goalMoveInto": "Into",
+  "goalMayGoNegative": "Your account may go negative — Archlence will not stop you.",
+  "errEnterPriceAndQuantity": "Enter a price and a quantity.",
+  "errChooseDestination": "Choose where the money goes.",
+  "buyAssetTitle": "New holding",
+  "buyAssetAction": "Add holding",
+  "assetName": "Name",
+  "assetNameHint": "Gram Altın",
+  "@assetNameHint": {
+    "description": "An example holding name — the user's own data, and the kinds it is filed under are Turkish literals in either interface."
+  },
+  "assetCode": "Code",
+  "assetKind": "Kind",
+  "@assetKind": {
+    "description": "The asset type. Its VALUES ('Altın', 'Hisse Senedi') stay verbatim in both languages — the desktop groups and reports on those literals."
+  },
+  "assetUnitPrice": "Unit price",
+  "assetQuantity": "Quantity",
+  "assetTotalIs": "That is {total} in total.",
+  "@assetTotalIs": {
+    "placeholders": {
+      "total": {
+        "type": "String"
+      }
+    },
+    "description": "Shown before anything is written, because `1.234` meaning a thousand rather than a lira and a bit is a judgement the parser makes on the user's behalf."
+  },
+  "assetAlreadyOwned": "I already owned this",
+  "assetAlreadyOwnedNote": "Records the holding without taking the money from an account.",
+  "assetNoCashAccount": "No cash account to pay from. Add one, or record this as something you already owned.",
+  "assetPayFrom": "Pay from",
+  "assetChooseForMe": "Choose for me",
+  "@assetChooseForMe": {
+    "description": "The service picks the first account that can cover it, and the richest one if none can. Saying so beats a silent default."
+  },
+  "sellAssetTitle": "Sell {name}",
+  "@sellAssetTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "sellAssetAction": "Sell",
+  "sellAssetHoldingLine": "You hold {quantity}, bought at {price} each.",
+  "@sellAssetHoldingLine": {
+    "placeholders": {
+      "quantity": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "sellAssetPrice": "Sale price, per unit",
+  "sellAssetQuantity": "Quantity to sell",
+  "sellAssetOutcome": "{proceeds} in, against {cost} paid — {gain}.",
+  "@sellAssetOutcome": {
+    "placeholders": {
+      "proceeds": {
+        "type": "String"
+      },
+      "cost": {
+        "type": "String"
+      },
+      "gain": {
+        "type": "String"
+      }
+    }
+  },
+  "sellAssetNoAccount": "No account to pay into.",
+  "sellAssetPayInto": "Pay into",
+  "homeActiveSubscriptions": "My Active Subscriptions",
+  "homeNetWorth": "Net Worth",
+  "homeCash": "Cash",
+  "homeCardDebt": "Card Debt",
+  "homeNoSubscriptions": "Nothing recurring yet. A subscription paid by card is noticed automatically and lands here.",
+  "homeSearchDisabled": "Search — not yet",
+  "homeMyWallet": "My Wallet",
+  "homeForecastTitle": "Algorithmic Forecast",
+  "homeForecastPending": "Spending trends and the month-end projection arrive with the insight and projection services.",
+  "homeHealthScoreTitle": "Financial Health Score",
+  "homeHealthScorePending": "Scoring needs savings rate, debt-to-income and expense volatility, which the metrics service will supply.",
+  "subscriptionUnreadableName": "Unreadable subscription",
+  "amountUnreadable": "unreadable",
+  "@amountUnreadable": {
+    "description": "Stands in for an amount that will not decrypt. Never a zero — a false figure is exactly what the money layer refuses."
+  },
+  "subscriptionManage": "MANAGE",
+  "budgetTitle": "Monthly Budget",
+  "budgetCategories": "Categories",
+  "budgetPlannedIncome": "Planned Income",
+  "budgetPlannedExpense": "Planned Expense",
+  "budgetReserved": "Reserved",
+  "budgetLeftToSpend": "Left to spend",
+  "budgetLeftToSpendNote": "Planned income, less planned spending, less what your subscriptions will take.",
+  "budgetReservedForSubscriptions": "Reserved for subscriptions",
+  "budgetOccurrences": "×{count}",
+  "@budgetOccurrences": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    },
+    "description": "How many times a subscription falls due this month. A weekly one falls due four or five times, and showing a single fee would understate it that many-fold."
+  },
+  "budgetNoCategoryPlans": "No category plans for this month yet. A plan gives each category a limit and tracks what is left of it.",
+  "budgetSpent": "Spent",
+  "budgetOverBy": "Over by",
+  "budgetLeft": "Left",
+  "monthShortJan": "Jan",
+  "@monthShortJan": {
+    "description": "Three-letter month, for the budget's month chips. Held here rather than taken from `intl`'s date symbols so that both languages are visible in one file and neither needs date data loaded at startup."
+  },
+  "monthShortFeb": "Feb",
+  "monthShortMar": "Mar",
+  "monthShortApr": "Apr",
+  "monthShortMay": "May",
+  "monthShortJun": "Jun",
+  "monthShortJul": "Jul",
+  "monthShortAug": "Aug",
+  "monthShortSep": "Sep",
+  "monthShortOct": "Oct",
+  "monthShortNov": "Nov",
+  "monthShortDec": "Dec",
+  "backupTitle": "Backup & Restore",
+  "backupNoProfile": "This build has no profile on disk, so there is nothing to back up.",
+  "backupSectionCreate": "Make a backup",
+  "backupCreateExplanation": "A backup holds your whole database and the key that opens it, wrapped under a passphrase you choose. Twelve characters at least.\n\nTHE PASSPHRASE IS NOT STORED ANYWHERE. Without it the backup cannot be opened — not by this app, not by anyone.",
+  "backupPassphrase": "Passphrase",
+  "backupPassphraseAgain": "Passphrase again",
+  "backupCreateAction": "Create and share a backup",
+  "backupCreateBusy": "Wrapping the key. This takes a few seconds — the passphrase is deliberately slow to try.",
+  "backupShareSubject": "Archlence backup",
+  "@backupShareSubject": {
+    "description": "The subject line the share sheet offers, e.g. for an e-mail."
+  },
+  "backupFileTypeLabel": "Archlence backup",
+  "@backupFileTypeLabel": {
+    "description": "Names the file kind in the system file picker."
+  },
+  "backupCreated": "Backup written and checked: {records} encrypted records opened with the key inside it before it was published.",
+  "@backupCreated": {
+    "placeholders": {
+      "records": {
+        "type": "int"
+      }
+    }
+  },
+  "backupSectionRestore": "Restore from a backup",
+  "backupRestoreExplanation": "Replaces everything in this app with what is in the file, including the encryption key. A backup written by the desktop app works here.\n\nWhat is here now is written to a backup of its own first, under the same passphrase.",
+  "backupRestorePassphrase": "The backup's passphrase",
+  "backupRestoreAction": "Choose a file and restore",
+  "backupRestoreConfirmButton": "Restore",
+  "@backupRestoreConfirmButton": {
+    "description": "The system file picker's confirm button."
+  },
+  "backupRestoreBusy": "Checking the backup and replacing your data. Do not close the app.",
+  "backupRestoreConfirmTitle": "Replace everything in this app?",
+  "backupRestoreConfirmBody": "Every account, transaction, holding, budget and goal on this phone is replaced by what is in the backup.\n\nWhat is here now is written to a backup of its own first, using the same passphrase, and the app will tell you its name.",
+  "commonCancel": "Cancel",
+  "backupReplaceConfirm": "Replace",
+  "backupRestoredNothingBefore": "Restored. There was nothing here before, so nothing was set aside.",
+  "backupRestoredWithSafety": "Restored. What was here before was written to {file} in this app's own storage first.",
+  "@backupRestoredWithSafety": {
+    "placeholders": {
+      "file": {
+        "type": "String"
+      }
+    }
+  },
+  "backupPassphrasesDiffer": "The two passphrases are not the same.",
+  "backupWrongPassphrase": "That passphrase does not open this backup.",
+  "backupFileUnusable": "This file cannot be used as a backup.",
+  "backupRestoreRolledBack": "The restore failed, and your data was put back as it was.",
+  "backupInterrupted": "A half-finished restore was found and could not be undone.",
+  "backupKeyUnavailable": "The encryption key could not be read or replaced.",
+  "backupUnexpected": "Something went wrong.",
+  "cardsMyCards": "My Cards",
+  "cardsAdd": "+  ADD",
+  "cardsNoCards": "No credit cards yet. Add one to track its limit and debt here.",
+  "cardsMyAccounts": "My Accounts",
+  "cardsActiveAssets": "My Active Assets",
+  "cardsHoldingsMeta": "{count} holdings · at cost",
+  "@cardsHoldingsMeta": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    },
+    "description": "Cost, not value: there is no price feed yet, and the screen has to say which figure it is showing."
+  },
+  "cardsNoCashAccounts": "No cash accounts yet. Everything else in Archlence needs one to move money into or out of.",
+  "cardsCashChecking": "Cash / Checking",
+  "cardsCreditCardBadge": "CREDIT CARD",
+  "cardsAvailableLimit": "Available Limit",
+  "cardsCurrentDebt": "Current Debt",
+  "cardsControls": "Card Controls",
+  "cardsOnlineShopping": "Online Shopping Preference",
+  "cardsOnlineShoppingNote": "Stored as a preference only",
+  "cardsFreeze": "Freeze Card",
+  "cardsFreezeNote": "Blocks new spending, not debt payments",
+  "cardsRecentTransactions": "Recent Transactions",
+  "cardsStatement": "Statement",
+  "cardsPayDebt": "Pay Debt",
+  "cardsNothingOnCard": "Nothing on this card yet.",
+  "periodToday": "Today",
+  "periodWeek": "1 Week",
+  "periodMonth": "1 Month",
+  "periodYear": "1 Year",
+  "periodAllTime": "All Time",
+  "assetsDetails": "Details",
+  "assetsIncome": "Income",
+  "assetsExpense": "Expense",
+  "assetsNetBalance": "Net Balance",
+  "assetsMyActiveAssets": "My Active Assets",
+  "assetsAtCostNote": "Valued at purchase cost — no price source yet",
+  "assetsNoHoldings": "No holdings yet. Anything you buy shows here with what it cost.",
+  "assetsOpeningBalance": "Opening Balance",
+  "@assetsOpeningBalance": {
+    "description": "A slice of the distribution chart, not a stored category — the chart is drawn here, so the label belongs here."
+  },
+  "assetsNoDistribution": "Nothing moved in this period, so there is no distribution to draw.",
+  "assetsDistributionTitle": "Asset",
+  "@assetsDistributionTitle": {
+    "description": "The first line inside the donut; assetsDistributionSubtitle is the second."
+  },
+  "assetsDistributionSubtitle": "Distribution",
+  "assetsNoTrend": "No income or spending in the last year, so there is no trend to draw yet.",
+  "assetsHoldingsAtCost": "Holdings at Cost",
+  "assetsNothingBought": "Nothing bought yet",
+  "assetsHoldingCount": "{count} holdings",
+  "@assetsHoldingCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "assetsNoGoals": "No savings goals yet. A goal holds money aside from your balance without counting as spending.",
+  "assetsHoldingName": "{name} ({code})",
+  "@assetsHoldingName": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "code": {
+        "type": "String"
+      }
+    },
+    "description": "The holding's own name and ticker. Identical in both languages, kept as a template so the brackets can move if a language needs them to."
+  },
+  "assetsPurchaseLine": "Purchase: {price} × {quantity}",
+  "@assetsPurchaseLine": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      },
+      "quantity": {
+        "type": "String"
+      }
+    }
+  },
+  "assetsCost": "Cost",
+  "monthYearShort": "{month}'{year}",
+  "@monthYearShort": {
+    "placeholders": {
+      "month": {
+        "type": "String"
+      },
+      "year": {
+        "type": "String"
+      }
+    },
+    "description": "The trend chart's x-axis tick, e.g. Sep'25 / Eyl'25."
+  }
+}

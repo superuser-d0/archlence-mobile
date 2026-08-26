@@ -49,19 +49,31 @@ bool _sameKey(List<int>? a, List<int>? b) {
   return true;
 }
 
+/// Which store the key ended up in.
+///
+/// A CODE, not a display name, for the reason the services carry error codes
+/// rather than sentences: the wording belongs to the screen that shows it and
+/// has to survive translation. This layer knows which store it used; it does
+/// not know what language the phone is in. `settings_screen.dart` turns these
+/// into words.
+enum KeyProtectionMethod { androidKeystore, ownerOnlyFile }
+
+/// Why the key is somewhere less protected than it could be.
+enum KeyProtectionWarning { osKeyStoreUnavailable, platformHasNoKeyStore }
+
 /// How the key is being protected, for display in Settings.
 class KeyProtectionStatus {
   const KeyProtectionStatus(this.method, this.secureStore, [this.warning]);
 
-  /// Human-readable name of the store in use.
-  final String method;
+  /// The store in use.
+  final KeyProtectionMethod method;
 
   /// Whether the key is held by an OS-backed secure store.
   final bool secureStore;
 
   /// Set when the key fell back to a less protected location, so the UI can
   /// tell the user rather than leaving them to assume the best case.
-  final String? warning;
+  final KeyProtectionWarning? warning;
 }
 
 abstract interface class KeyProvider {
@@ -392,17 +404,16 @@ Future<MigratingKeyProvider> createPlatformKeyProvider(
       return MigratingKeyProvider(
         provider,
         fallback,
-        const KeyProtectionStatus('Android Keystore', true),
+        const KeyProtectionStatus(KeyProtectionMethod.androidKeystore, true),
       );
     }
     return MigratingKeyProvider(
       null,
       fallback,
       const KeyProtectionStatus(
-        'owner-only file',
+        KeyProtectionMethod.ownerOnlyFile,
         false,
-        'The OS key store is unavailable; the key is kept in a local file '
-            'readable only by this app.',
+        KeyProtectionWarning.osKeyStoreUnavailable,
       ),
     );
   }
@@ -411,9 +422,9 @@ Future<MigratingKeyProvider> createPlatformKeyProvider(
     null,
     fallback,
     const KeyProtectionStatus(
-      'owner-only file',
+      KeyProtectionMethod.ownerOnlyFile,
       false,
-      'This platform has no supported OS key store.',
+      KeyProtectionWarning.platformHasNoKeyStore,
     ),
   );
 }

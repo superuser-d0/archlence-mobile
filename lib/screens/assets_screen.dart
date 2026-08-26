@@ -3,13 +3,16 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
 import '../app_services.dart';
+import '../l10n/app_localizations.dart';
 import '../money/financial_decimal.dart';
 import '../services/asset_service.dart';
 import '../services/savings_service.dart';
 import '../services/transaction_service.dart';
 import '../theme/obsidian_prime.dart';
+import '../ui/app_locale.dart';
 import '../ui/async_data.dart';
 import '../ui/money_format.dart';
+import '../ui/month_names.dart';
 import '../widgets/savings_goal_card.dart';
 import 'asset_sheets.dart';
 import 'savings_sheets.dart';
@@ -78,13 +81,26 @@ class _AssetsData {
 }
 
 class _AssetsScreenState extends State<AssetsScreen> {
-  static const _periods = <(String, DashboardPeriod)>[
-    ('Today', DashboardPeriod.today),
-    ('1 Week', DashboardPeriod.week),
-    ('1 Month', DashboardPeriod.month),
-    ('1 Year', DashboardPeriod.year),
-    ('All Time', DashboardPeriod.allTime),
+  /// The five period chips. Held as bare [DashboardPeriod] values, with the
+  /// label looked up when the chip is drawn: the desktop passes its Turkish
+  /// UI labels ('1 Hafta', 'Hayat Boyu') as the filter itself, which is
+  /// exactly the coupling that would break the moment the language changed.
+  static const _periods = <DashboardPeriod>[
+    DashboardPeriod.today,
+    DashboardPeriod.week,
+    DashboardPeriod.month,
+    DashboardPeriod.year,
+    DashboardPeriod.allTime,
   ];
+
+  static String _periodLabel(AppLocalizations l10n, DashboardPeriod period) =>
+      switch (period) {
+        DashboardPeriod.today => l10n.periodToday,
+        DashboardPeriod.week => l10n.periodWeek,
+        DashboardPeriod.month => l10n.periodMonth,
+        DashboardPeriod.year => l10n.periodYear,
+        DashboardPeriod.allTime => l10n.periodAllTime,
+      };
   int _period = 3;
   Future<_AssetsData>? _data;
 
@@ -96,7 +112,7 @@ class _AssetsScreenState extends State<AssetsScreen> {
 
   Future<_AssetsData> _load() async {
     final services = ServicesScope.of(context);
-    final period = _periods[_period].$2;
+    final period = _periods[_period];
     return _AssetsData(
       entries: await services.transactions.getTransactionsByPeriod(period),
       openingTotal: await services.transactions.getOpeningBaselineByPeriod(
@@ -132,7 +148,7 @@ class _AssetsScreenState extends State<AssetsScreen> {
         children: [
           Padding(
             padding: horizontal,
-            child: Text('Details', style: text.titleLarge),
+            child: Text(context.l10n.assetsDetails, style: text.titleLarge),
           ),
           const SizedBox(height: Spacing.stackMd),
 
@@ -147,7 +163,7 @@ class _AssetsScreenState extends State<AssetsScreen> {
               itemCount: _periods.length,
               separatorBuilder: (_, _) => const SizedBox(width: 8),
               itemBuilder: (context, i) => _PeriodChip(
-                label: _periods[i].$1,
+                label: _periodLabel(context.l10n, _periods[i]),
                 selected: i == _period,
                 onTap: () {
                   setState(() {
@@ -195,17 +211,17 @@ class _AssetsBody extends StatelessWidget {
           child: SummaryRow(
             stats: [
               SummaryStat(
-                label: 'Income',
+                label: context.l10n.assetsIncome,
                 value: formatLira(data.income),
                 tone: SummaryTone.positive,
               ),
               SummaryStat(
-                label: 'Expense',
+                label: context.l10n.assetsExpense,
                 value: formatLira(data.expense),
                 tone: SummaryTone.negative,
               ),
               SummaryStat(
-                label: 'Net Balance',
+                label: context.l10n.assetsNetBalance,
                 value: formatSignedLira(data.net),
               ),
             ],
@@ -248,7 +264,10 @@ class _AssetsBody extends StatelessWidget {
                   ),
                   const SizedBox(width: Spacing.stackSm),
                   Expanded(
-                    child: Text('My Active Assets', style: text.titleLarge),
+                    child: Text(
+                      context.l10n.assetsMyActiveAssets,
+                      style: text.titleLarge,
+                    ),
                   ),
                   // AssetPurchaseService.createPurchase is ready and has no
                   // form; a disabled button says so.
@@ -265,7 +284,7 @@ class _AssetsBody extends StatelessWidget {
               // There is no price feed, so the honest line is what these
               // figures actually are.
               Text(
-                'Valued at purchase cost — no price source yet',
+                context.l10n.assetsAtCostNote,
                 style: text.labelMedium?.copyWith(
                   letterSpacing: 0,
                   color: ObsidianPalette.onSurfaceVariant,
@@ -273,11 +292,7 @@ class _AssetsBody extends StatelessWidget {
               ),
               const SizedBox(height: Spacing.stackMd),
               if (data.holdings.isEmpty)
-                const NothingYet(
-                  message:
-                      'No holdings yet. Anything you buy shows here with '
-                      'what it cost.',
-                )
+                NothingYet(message: context.l10n.assetsNoHoldings)
               else
                 for (final holding in data.holdings) ...[
                   _HoldingTile(holding: holding, onChanged: onChanged),
@@ -366,7 +381,10 @@ class _DistributionCard extends StatelessWidget {
     Color(0xFF93000A),
   ];
 
-  List<_Slice> _slices() {
+  /// [openingBalanceLabel] is passed in rather than read from a context:
+  /// this builds the chart's data, and the one slice that is not a stored
+  /// category still needs a name in the user's language.
+  List<_Slice> _slices(String openingBalanceLabel) {
     final incomeByCategory = <String, Decimal>{};
     final expenseByCategory = <String, Decimal>{};
     for (final entry in data.entries) {
@@ -408,7 +426,7 @@ class _DistributionCard extends StatelessWidget {
     if (data.openingTotal > Decimal.zero) {
       slices.add(
         _Slice(
-          'Opening Balance',
+          openingBalanceLabel,
           data.openingTotal,
           shareOf(data.openingTotal),
           _incomeColors[index++ % _incomeColors.length],
@@ -432,14 +450,10 @@ class _DistributionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    final slices = _slices();
+    final slices = _slices(context.l10n.assetsOpeningBalance);
 
     if (slices.isEmpty) {
-      return const NothingYet(
-        message:
-            'Nothing moved in this period, so there is no distribution '
-            'to draw.',
-      );
+      return NothingYet(message: context.l10n.assetsNoDistribution);
     }
 
     return AppCard(
@@ -470,9 +484,12 @@ class _DistributionCard extends StatelessWidget {
                 Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text('Asset', style: text.titleLarge),
                     Text(
-                      'Distribution',
+                      context.l10n.assetsDistributionTitle,
+                      style: text.titleLarge,
+                    ),
+                    Text(
+                      context.l10n.assetsDistributionSubtitle,
                       style: text.labelMedium?.copyWith(
                         letterSpacing: 0,
                         color: ObsidianPalette.onSurfaceVariant,
@@ -550,23 +567,10 @@ class _MonthlyTotals {
   final Decimal expense;
 
   /// `Sep'25` — the mockup's axis form.
-  String get label {
-    const names = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    return "${names[month - 1]}'${year.toString().substring(2)}";
-  }
+  String label(AppLocalizations l10n) => l10n.monthYearShort(
+    shortMonthName(l10n, month),
+    year.toString().substring(2),
+  );
 }
 
 class _TrendCardState extends State<_TrendCard> {
@@ -643,11 +647,7 @@ class _TrendChart extends StatelessWidget {
       if (month.expense > peak) peak = month.expense;
     }
     if (peak <= Decimal.zero) {
-      return const NothingYet(
-        message:
-            'No income or spending in the last year, so there is no '
-            'trend to draw yet.',
-      );
+      return NothingYet(message: context.l10n.assetsNoTrend);
     }
     final maxY = peak.toDouble();
 
@@ -660,12 +660,18 @@ class _TrendChart extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
       child: Column(
         children: [
-          const Row(
+          Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              _LegendDot(color: ObsidianPalette.tertiary, label: 'Income'),
-              SizedBox(width: Spacing.stackMd),
-              _LegendDot(color: ObsidianPalette.error, label: 'Expense'),
+              _LegendDot(
+                color: ObsidianPalette.tertiary,
+                label: context.l10n.assetsIncome,
+              ),
+              const SizedBox(width: Spacing.stackMd),
+              _LegendDot(
+                color: ObsidianPalette.error,
+                label: context.l10n.assetsExpense,
+              ),
             ],
           ),
           const SizedBox(height: Spacing.stackMd),
@@ -719,7 +725,7 @@ class _TrendChart extends StatelessWidget {
               // Four labels across twelve months: every month would not fit.
               for (final index in [0, 4, 8, 11])
                 Text(
-                  series[index].label,
+                  series[index].label(context.l10n),
                   style: text.labelMedium?.copyWith(
                     fontSize: 10,
                     letterSpacing: 0,
@@ -778,7 +784,7 @@ class _TotalHoldingsCard extends StatelessWidget {
       child: Column(
         children: [
           Text(
-            'Holdings at Cost',
+            context.l10n.assetsHoldingsAtCost,
             style: text.bodySmall?.copyWith(
               color: ObsidianPalette.onSurfaceVariant,
             ),
@@ -795,8 +801,8 @@ class _TotalHoldingsCard extends StatelessWidget {
           const SizedBox(height: Spacing.stackSm),
           Text(
             data.holdings.isEmpty
-                ? 'Nothing bought yet'
-                : '${data.holdings.length} holdings',
+                ? context.l10n.assetsNothingBought
+                : context.l10n.assetsHoldingCount(data.holdings.length),
             style: text.labelMedium?.copyWith(
               letterSpacing: 0,
               color: ObsidianPalette.onSurfaceVariant,
@@ -822,11 +828,7 @@ class _SavingsGoals extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (goals.isEmpty) {
-      return const NothingYet(
-        message:
-            'No savings goals yet. A goal holds money aside from your '
-            'balance without counting as spending.',
-      );
+      return NothingYet(message: context.l10n.assetsNoGoals);
     }
     return Column(
       children: [
@@ -897,15 +899,20 @@ class _HoldingTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '${holding.assetName} (${holding.assetCode})',
+                  context.l10n.assetsHoldingName(
+                    holding.assetName,
+                    holding.assetCode,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Purchase: ${formatLira(holding.purchasePrice)} × '
-                  '${holding.quantity}',
+                  context.l10n.assetsPurchaseLine(
+                    formatLira(holding.purchasePrice),
+                    '${holding.quantity}',
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: text.labelMedium?.copyWith(
@@ -921,7 +928,7 @@ class _HoldingTile extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                'Cost',
+                context.l10n.assetsCost,
                 style: text.labelMedium?.copyWith(
                   letterSpacing: 0,
                   color: ObsidianPalette.onSurfaceVariant,

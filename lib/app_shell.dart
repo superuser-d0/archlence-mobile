@@ -7,6 +7,7 @@ import 'screens/home_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/tools_screen.dart';
 import 'theme/obsidian_prime.dart';
+import 'ui/app_locale.dart';
 import 'widgets/surfaces.dart';
 
 /// The five-tab shell: a glass header and bottom bar with content scrolling
@@ -83,40 +84,43 @@ class _AppShellState extends State<AppShell> {
           backgroundColor: Colors.transparent,
           selectedIndex: _tab,
           onDestinationSelected: (index) => setState(() => _tab = index),
-          destinations: _destinations,
+          destinations: _destinations(context),
         ),
       ),
     );
   }
 }
 
-const _destinations = <NavigationDestination>[
-  NavigationDestination(
-    icon: Icon(Icons.home_outlined),
-    selectedIcon: Icon(Icons.home),
-    label: 'Home',
-  ),
-  NavigationDestination(
-    icon: Icon(Icons.account_balance_wallet_outlined),
-    selectedIcon: Icon(Icons.account_balance_wallet),
-    label: 'Assets',
-  ),
-  NavigationDestination(
-    icon: Icon(Icons.credit_card_outlined),
-    selectedIcon: Icon(Icons.credit_card),
-    label: 'Cards',
-  ),
-  NavigationDestination(
-    icon: Icon(Icons.grid_view_outlined),
-    selectedIcon: Icon(Icons.grid_view),
-    label: 'Tools',
-  ),
-  NavigationDestination(
-    icon: Icon(Icons.settings_outlined),
-    selectedIcon: Icon(Icons.settings),
-    label: 'Settings',
-  ),
-];
+List<NavigationDestination> _destinations(BuildContext context) {
+  final l10n = context.l10n;
+  return [
+    NavigationDestination(
+      icon: const Icon(Icons.home_outlined),
+      selectedIcon: const Icon(Icons.home),
+      label: l10n.navHome,
+    ),
+    NavigationDestination(
+      icon: const Icon(Icons.account_balance_wallet_outlined),
+      selectedIcon: const Icon(Icons.account_balance_wallet),
+      label: l10n.navAssets,
+    ),
+    NavigationDestination(
+      icon: const Icon(Icons.credit_card_outlined),
+      selectedIcon: const Icon(Icons.credit_card),
+      label: l10n.navCards,
+    ),
+    NavigationDestination(
+      icon: const Icon(Icons.grid_view_outlined),
+      selectedIcon: const Icon(Icons.grid_view),
+      label: l10n.navTools,
+    ),
+    NavigationDestination(
+      icon: const Icon(Icons.settings_outlined),
+      selectedIcon: const Icon(Icons.settings),
+      label: l10n.navSettings,
+    ),
+  ];
+}
 
 class _GlassHeader extends StatelessWidget implements PreferredSizeWidget {
   const _GlassHeader();

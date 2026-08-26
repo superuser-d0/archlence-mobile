@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
 import '../theme/obsidian_prime.dart';
+import '../ui/app_locale.dart';
 import '../widgets/not_yet.dart';
 import '../widgets/surfaces.dart';
 import 'budget_screen.dart';
@@ -15,41 +17,47 @@ import 'savings_screen.dart';
 class ToolsScreen extends StatelessWidget {
   const ToolsScreen({super.key});
 
-  static const _tools = <_Tool>[
+  /// Built per frame rather than held as a `const` list, because the labels
+  /// now come from the localizations rather than from source text.
+  static List<_Tool> _tools(AppLocalizations l10n) => [
     _Tool(
-      'Monthly\nBudget',
+      l10n.toolBudget,
       Icons.calendar_month_outlined,
       ObsidianPalette.primary,
       destination: _Destination.budget,
     ),
-    _Tool('Calendar', Icons.event_note_outlined, ObsidianPalette.tertiary),
-    _Tool('Calculator', Icons.calculate_outlined, ObsidianPalette.primary),
-    _Tool('Interest\nReturn', Icons.percent, ObsidianPalette.secondary),
-    _Tool('Compound\nInterest', Icons.trending_up, ObsidianPalette.tertiary),
+    _Tool(l10n.toolCalendar, Icons.event_note_outlined, ObsidianPalette.tertiary),
+    _Tool(l10n.toolCalculator, Icons.calculate_outlined, ObsidianPalette.primary),
+    _Tool(l10n.toolInterestReturn, Icons.percent, ObsidianPalette.secondary),
     _Tool(
-      'Loan\nCalculator',
+      l10n.toolCompoundInterest,
+      Icons.trending_up,
+      ObsidianPalette.tertiary,
+    ),
+    _Tool(
+      l10n.toolLoanCalculator,
       Icons.account_balance_outlined,
       ObsidianPalette.error,
     ),
     _Tool(
-      'Savings\nGoal',
+      l10n.toolSavingsGoal,
       Icons.savings_outlined,
       ObsidianPalette.secondary,
       destination: _Destination.savings,
     ),
-    _Tool('What-If\nSandbox', Icons.explore_outlined, ObsidianPalette.primary),
+    _Tool(l10n.toolWhatIf, Icons.explore_outlined, ObsidianPalette.primary),
     _Tool(
-      'Reset\nData',
+      l10n.toolResetData,
       Icons.delete_outline,
       ObsidianPalette.error,
       destructive: true,
     ),
   ];
-
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final inset = MediaQuery.paddingOf(context);
+    final tools = _tools(context.l10n);
 
     return ListView(
       key: const PageStorageKey('tools'),
@@ -60,10 +68,10 @@ class ToolsScreen extends StatelessWidget {
         inset.bottom + Spacing.stackLg,
       ),
       children: [
-        Text('Financial Tools', style: text.headlineMedium),
+        Text(context.l10n.toolsTitle, style: text.headlineMedium),
         const SizedBox(height: Spacing.stackSm),
         Text(
-          'Explore calculators and planners to optimize your finances.',
+          context.l10n.toolsSubtitle,
           style: text.bodyMedium?.copyWith(
             color: ObsidianPalette.onSurfaceVariant,
           ),
@@ -72,7 +80,7 @@ class ToolsScreen extends StatelessWidget {
         GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          itemCount: _tools.length,
+          itemCount: tools.length,
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 2,
             mainAxisSpacing: Spacing.gutter,
@@ -80,7 +88,7 @@ class ToolsScreen extends StatelessWidget {
             // Tall enough for a two-line label without clipping.
             mainAxisExtent: 168,
           ),
-          itemBuilder: (context, index) => _ToolCard(tool: _tools[index]),
+          itemBuilder: (context, index) => _ToolCard(tool: tools[index]),
         ),
       ],
     );

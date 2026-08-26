@@ -15,6 +15,7 @@ import 'package:flutter/material.dart';
 import '../app_services.dart';
 import '../services/account_service.dart';
 import '../theme/obsidian_prime.dart';
+import '../ui/app_locale.dart';
 import '../ui/error_messages.dart';
 import '../ui/money_format.dart';
 import '../widgets/sheet_frame.dart';
@@ -71,14 +72,17 @@ class _PayDebtSheetState extends State<_PayDebtSheet> {
   }
 
   Future<void> _save() async {
+    // Read BEFORE the first await, so the `catch` does not reach for a
+    // context that may no longer be mounted.
+    final l10n = context.l10n;
     final amount = parseAmountInput(_amount.text);
     if (amount == null) {
-      setState(() => _error = 'Enter an amount.');
+      setState(() => _error = l10n.errEnterAnAmount);
       return;
     }
     final sourceId = _sourceId;
     if (sourceId == null) {
-      setState(() => _error = 'Choose where the money comes from.');
+      setState(() => _error = l10n.errChooseSource);
       return;
     }
 
@@ -99,7 +103,7 @@ class _PayDebtSheetState extends State<_PayDebtSheet> {
       if (!mounted) return;
       setState(() {
         _saving = false;
-        _error = accountErrorMessage(error);
+        _error = accountErrorMessage(l10n, error);
       });
     }
   }
@@ -107,23 +111,24 @@ class _PayDebtSheetState extends State<_PayDebtSheet> {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final l10n = context.l10n;
     final card = widget.card;
 
     return SheetFrame(
-      title: 'Pay ${card.name}',
+      title: l10n.payDebtTitle(card.name),
       error: _error,
       saving: _saving,
-      actionLabel: 'Pay',
+      actionLabel: l10n.payDebtAction,
       onSave: _save,
       children: [
         Text(
-          '${formatLira(card.debt)} owing',
+          l10n.payDebtOwing(formatLira(card.debt)),
           style: text.bodyMedium?.copyWith(color: ObsidianPalette.error),
         ),
         const SizedBox(height: Spacing.stackMd),
         SheetField(
           controller: _amount,
-          label: 'Amount to pay',
+          label: l10n.payDebtAmount,
           hint: '0,00',
           numeric: true,
         ),
@@ -139,7 +144,7 @@ class _PayDebtSheetState extends State<_PayDebtSheet> {
                     _amount.text = formatLira(card.debt).replaceAll(' ₺', '');
                   })
                 : null,
-            child: Text('Pay it all off (${formatLira(card.debt)})'),
+            child: Text(l10n.payDebtAll(formatLira(card.debt))),
           ),
         ),
         const SizedBox(height: Spacing.stackSm),
@@ -149,7 +154,7 @@ class _PayDebtSheetState extends State<_PayDebtSheet> {
             final sources = snapshot.data ?? const <Account>[];
             if (sources.isEmpty) {
               return Text(
-                'No cash account to pay from.',
+                l10n.payDebtNoSource,
                 style: text.bodySmall?.copyWith(color: ObsidianPalette.error),
               );
             }
@@ -157,13 +162,16 @@ class _PayDebtSheetState extends State<_PayDebtSheet> {
             return DropdownButtonFormField<int>(
               key: const Key('field-source'),
               initialValue: _sourceId,
-              decoration: sheetDecoration('Pay from'),
+              decoration: sheetDecoration(l10n.payDebtFrom),
               items: [
                 for (final source in sources)
                   DropdownMenuItem(
                     value: source.id,
                     child: Text(
-                      '${source.name} — ${formatLira(source.balance)}',
+                      l10n.accountWithBalance(
+                        source.name,
+                        formatLira(source.balance),
+                      ),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
@@ -175,8 +183,7 @@ class _PayDebtSheetState extends State<_PayDebtSheet> {
         if (card.isFrozen) ...[
           const SizedBox(height: Spacing.stackSm),
           Text(
-            'This card is frozen, and can still be paid. Freezing stops new '
-            'spending, not clearing what you owe.',
+            l10n.payDebtFrozenNote,
             style: text.labelMedium?.copyWith(
               letterSpacing: 0,
               color: ObsidianPalette.onSurfaceVariant,

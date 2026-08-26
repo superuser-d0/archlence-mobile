@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../theme/obsidian_prime.dart';
+import '../ui/app_locale.dart';
 import 'surfaces.dart';
 
 /// The dashboard's headline: total balance inside a progress ring.
@@ -53,7 +54,7 @@ class BalanceRing extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  'Total Balance',
+                  context.l10n.totalBalance,
                   style: text.bodySmall?.copyWith(
                     color: ObsidianPalette.onSurfaceVariant,
                   ),

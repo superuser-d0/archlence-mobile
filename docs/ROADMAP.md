@@ -25,31 +25,34 @@ desktop app wrote — replacing the database and the encryption key under a
 journal that survives the process being killed. Proven in both directions
 against `services/backup_service.py` itself.
 
-**What it cannot do yet:** show a live price, or speak Turkish in its labels.
+**And it speaks Turkish.** Every label in the app comes from `lib/l10n/`,
+which carries Turkish and English in full. A phone set to either gets that
+language; a phone set to anything else gets Turkish, and Settings can override
+the choice. The one thing NOT translated is the backup layer's diagnostic
+detail — see "What i18n did not cover".
 
-568 unit tests and 12 device tests pass. `flutter analyze` is clean, no
+**What it cannot do yet:** show a live price.
+
+578 unit tests and 12 device tests pass. `flutter analyze` is clean, no
 control in the app is inert, and it runs on the emulator.
 
 ## Pick up here
 
 In priority order. Each of these is a self-contained next session.
 
-**1. i18n.** The numbers are already Turkish-formatted; the labels are English
-strings sitting in widgets. The desktop's `ui/i18n.py` has the full map, so
-this is mechanical — but it touches every screen, and it is the difference
-between an app for its author and an app for its users. `error_messages.dart`
-was written for exactly this.
+**1. Icon, launch screen, release signing.** Small and mechanical, and nothing
+above waits on them. With the labels done, this is what stands between the app
+and a build someone else could install.
 
-**2. Icon, launch screen, release signing.** Small and mechanical, and nothing
-above waits on them.
-
-**3. `key_recovery_service.py`.** The one piece of the backup work deliberately
+**2. `key_recovery_service.py`.** The one piece of the backup work deliberately
 left out — see "What the backup work did NOT port". It matters for someone who
 still has their database but has lost the key, which a whole backup package
 does not help with.
 
-Open work 1 (price fetching) needs a DECISION before it needs code, and open
-work 3 lists what has not been considered at all.
+**3. Price fetching.** Needs a DECISION before it needs code; open work 1 says
+what the decision is.
+
+Open work 3 lists what has not been considered at all.
 
 ## Settled decisions
 
@@ -100,14 +103,72 @@ The desktop raises `ValueError` with the Turkish user-facing text baked into
 it, and its tests match on substrings. The port raises a typed error carrying
 a code (`AccountErrorCode.insufficientLimit` and so on) with a developer-facing
 English message beside it. The reason is i18n: the desktop has both languages
-in `ui/i18n.py` and this app will need the same, and a code survives
-translation where a matched string does not.
+in `ui/i18n.py` and this app now has the same, and a code survives translation
+where a matched string does not. That decision paid: turning the whole app
+Turkish meant editing `error_messages.dart` and nothing in `services/`.
+
+`KeyProtectionStatus` was moved onto the same footing when the labels landed.
+It used to carry `'Android Keystore'` and a sentence about a fallback; it now
+carries `KeyProtectionMethod` and `KeyProtectionWarning`, and the words live
+in `settings_screen.dart`. A crypto layer does not know what language the
+phone is in.
 
 The same line separates data from interface text. `network_logo` values, and
 the `Borç Ödeme` category a card payment is filed under, stay verbatim —
 the desktop groups and reports on those literals, so translating them would
 split one category in two. A `type_label` field was dropped for the opposite
 reason: it was a Turkish UI string sitting on a data model.
+
+### The labels come from ARB files, and Turkish leads
+
+`flutter gen-l10n` over `lib/l10n/app_en.arb` and `app_tr.arb`, rather than
+the desktop's `tr(text)` map keyed on Turkish source strings. Two reasons, and
+both are about what fails loudly:
+
+* A key that does not exist is a **compile error**, where a lookup that misses
+  returns its own argument and renders as English nobody notices.
+* Placeholders are typed. `l10n.payDebtAll(formatLira(card.debt))` will not
+  compile with the wrong arity, where a hand-rolled `trf` finds out at run
+  time — on the one screen a user is about to spend money on.
+
+The template is **English**, and Turkish is the FALLBACK. `supportedLocales`
+in `lib/ui/app_locale.dart` is written out by hand with `tr` first, because
+Flutter resolves an unsupported device locale to `supportedLocales.first`: a
+phone set to German gets Turkish, not English. `test/l10n_test.dart` holds
+that list against the generated one, and holds each ARB against the other so
+that a key present in English and missing in Turkish is a failing test rather
+than an English label on a Turkish screen.
+
+The desktop's `ui/i18n.py` was the source for the WORDING, not the mechanism —
+its map gives the Turkish this app's users already read on the desktop for
+every shared concept, down to `Hayat Boyu` for the all-time filter.
+
+### The numbers do not move with the language
+
+`money_format.dart` writes `1.234,56 ₺` and `%12,5` in either language. The
+grouping is what the design specifies and what the desktop stores, not a
+translation, and an English label over a Turkish figure is the app being
+honest about a lira account. Switching the separators with the labels would
+make one balance read as two different amounts.
+
+The same line, drawn again: **category names, asset types and `network_logo`
+values stay verbatim in both languages.** The desktop groups and reports on
+those literals. The one deliberate exception is the account name onboarding
+prefills — `Nakit` / `Cash` — because nothing groups on an account's name and
+the user types over it anyway.
+
+**Language names are never translated.** `Türkçe` stays `Türkçe` in the
+English interface. Someone stranded in a language they cannot read has to be
+able to find their way out of it.
+
+### Upper-casing is a language operation
+
+`SectionLabel` upper-cases its heading, and Dart's `toUpperCase` is
+locale-independent: it maps `i` to `I`, which is a different letter in
+Turkish. Left alone, the Settings headings came out as `GÜVENLIK` and
+`GIZLILIK`. `localizedUpperCase` in `lib/ui/app_locale.dart` fixes the two
+Turkish i's and is used everywhere the app upper-cases its own text. It is
+never applied to text a user typed.
 
 ### Obsidian Prime, with four deliberate deviations
 
@@ -140,6 +201,7 @@ Long, and grouped roughly by layer rather than by date:
 | Services | Accounts · Transactions · Holdings · Recurring payments · The monthly budget · Savings goals |
 | Backup | The backup's cryptographic core · The package around it · Restoring |
 | Security | The screen lock |
+| Language | i18n · What i18n did NOT cover |
 | Screens | The screen–service join · The wired tabs · Every control is live or visibly unavailable · Screens (as first built) |
 | Write flows | The first write flow · Recording a transaction · Buying and selling a holding · Savings goals (sheets) · A budget line · Managing a subscription · Paying card debt · The first run · Backup & Restore |
 
@@ -612,6 +674,96 @@ because the first test could not be written otherwise.
 Still open, deliberately: `FLAG_SECURE` would also blank the app in the
 recents list, which is the same threat. It is not set, because it blocks
 legitimate screenshots too and that is a product call.
+
+### i18n — `lib/l10n/`, `lib/ui/app_locale.dart`
+
+The app speaks Turkish and English — 348 labels in each. Every user-facing
+string in `lib/` comes from the ARB files; what is left as a source literal is the product name, the
+numeric hints (`0,00`, `15`, `#### #### #### 1234`), and the technical detail
+described below.
+
+**Where the choice lives.** `LanguagePreference` keeps it in the platform
+secure store, next to the screen-lock preference and for the reason that one
+gives at length: `finance.db`'s schema is a contract shared with the desktop
+app, and a UI preference is not financial data. Unset means "follow the
+phone", which is a third state and not the same as either language —
+`AppLocaleScope` passes `Locale?` and the Settings sheet wraps its result so a
+dismissed sheet cannot be mistaken for a choice of "follow the device".
+
+**Read before the first frame.** `main.dart` reads the preference inside
+`_start()`, alongside opening the database, rather than in a future of its
+own. A second future would draw the shell in the device's language and then
+swap it, which reads as a bug even when it settles correctly.
+
+**The Language row in Settings became real.** It used to be a dead tile whose
+subtitle said `English` whatever the app was actually drawing — one of the
+few places the app stated something false about itself.
+
+**What went with it, beyond substitution:**
+
+* `error_messages.dart` now takes an `AppLocalizations` and maps 45 service
+  codes onto 36 labels. Codes that share a sentence share a key: six services
+  can all fail to read a typed figure, and six copies of "That is not an
+  amount." would be six chances to drift apart in one language only.
+* `KeyProtectionStatus` carries codes rather than sentences — see "Services
+  raise error codes, not sentences".
+* `ScreenLock.authenticate` takes a **required** `reason`. It has no
+  `BuildContext` to read labels from, and the platform's own sheet is the one
+  moment a user reads closely; a defaulted argument would have left English
+  there silently, where a required one is a compile error.
+* The Assets tab's period chips are now bare `DashboardPeriod` values with the
+  label looked up at draw time. The desktop passes its Turkish UI labels
+  (`1 Hafta`, `Hayat Boyu`) as the filter itself — exactly the coupling that
+  breaks the moment the language changes.
+* The twelve short month names were held twice, in the budget's chips and the
+  trend chart's axis. They are now `lib/ui/month_names.dart`, and the lookup
+  is a `switch` so an unhandled month is a compile error rather than a range
+  error at the top of a chart.
+
+**How it was proven.** `test/l10n_test.dart`:
+
+* Every English key has a Turkish value, and nothing is left over in Turkish.
+  Read from the ARB FILES, not through the generated class — a missing key
+  compiles and falls back to English, so only the files themselves can tell a
+  deliberate English label from an untranslated one.
+* The two languages substitute the same placeholder names. `{amount}` dropped
+  in translation is a sentence with a hole in it and `{amout}` is a literal
+  brace on screen; both compile.
+* `supportedLocales` matches the generated set and still leads with `tr`.
+* `localizedUpperCase` produces `GÜVENLİK`, not `GÜVENLIK`.
+* And the end of the chain rather than the middle: `SettingsScreen` pumped
+  under `Locale('tr')` renders `Şifreleme Anahtarı` and `GÜVENLİK`, and the
+  English `Encryption Key` is nowhere on it.
+
+The other 568 tests stayed in English on purpose. The test binding reports
+an en-US device and the harness passes no locale, so they resolve to English
+and go on asserting the strings they always did — which means they still test
+the wiring rather than the wording.
+
+Checked for teeth, all three measured: removing `cardsPayDebt` from
+`app_tr.arb` fails the completeness test, renaming `{amount}` to `{tutar}` in
+one Turkish template fails the placeholder test, and reverting
+`localizedUpperCase` to a plain `toUpperCase()` fails two — the dotted-i case
+and the Turkish render. The dotless-i case still passes under that last
+mutation, which is correct: Unicode already maps `ı` to `I`, and only the
+dotted one needed fixing.
+
+### What i18n did NOT cover
+
+The backup layer's ~66 diagnostic messages — a hash that does not match, a
+metadata field of the wrong shape, a key of the wrong length. They are still
+English, and deliberately.
+
+The screen wraps them: `backup_screen.dart` shows a translated HEADLINE that
+says what to do about it (`Bu dosya yedek olarak kullanılamaz.`) with the
+untranslated detail underneath, which is the split `DataUnavailable` and the
+start-up failure screen already use. Translating sixty sentences that describe
+the internals of a malformed package would put them in front of a translator
+while the sentence that decides what the user actually DOES is the one above
+them.
+
+If that changes, the shape is already there: the codes would go on
+`BackupFormatError` the way they went on `AccountError`.
 
 ### Paying card debt — `lib/screens/pay_debt_sheet.dart`
 
@@ -1111,23 +1263,12 @@ is a deliberate holding position, not an oversight: `AssetService.calculatePnl`
 already takes a current price as a plain argument, so wiring a feed in is a
 small change once the source exists.
 
-### 2. i18n
-
-The desktop has `ui/i18n.py` with a full Turkish/English map. Here the NUMBERS
-are already Turkish-formatted — `lib/ui/money_format.dart` — while the labels
-are English strings sitting in widgets, which is the wrong way round for a
-Turkish user reading `1.234,56 ₺` under the word "Cash".
-
-Mechanical, but it touches every screen, and `error_messages.dart` was written
-for exactly this: the services raise codes and one file turns them into
-sentences, so the wording moves without a rule moving with it.
-
-### 3. Shipping
+### 2. Shipping
 
 App icon, launch screen, release signing, Play Store listing. The last of
 those is not engineering.
 
-### 4. Not yet considered at all
+### 3. Not yet considered at all
 
 Widening beyond a phone (tablet layouts), accessibility beyond what Material
 gives by default, and anything to do with more than one user or device.

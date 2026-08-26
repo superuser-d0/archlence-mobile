@@ -6,6 +6,7 @@ import 'screens/locked_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'security/screen_lock.dart';
 import 'theme/obsidian_prime.dart';
+import 'ui/app_locale.dart';
 
 void main() {
   // The database and the key store are platform channels; the binding has to
@@ -36,13 +37,29 @@ class _ArchlenceAppState extends State<ArchlenceApp> {
   late Future<(AppServices, _Destination)> _startUp = _start();
   _Destination? _override;
 
+  final LanguagePreference _language = LanguagePreference();
+
+  /// The chosen language, or null to follow the device.
+  ///
+  /// Read inside [_start] rather than in its own future, so the first frame
+  /// that shows a label already knows which language it is in. A second
+  /// future would draw the shell in the device's language and then swap it,
+  /// which reads as a bug even when it settles correctly.
+  Locale? _locale;
+
   Future<(AppServices, _Destination)> _start() async {
+    _locale = await _language.read();
     final services = await AppServices.open();
     await services.startUp();
     return (
       services,
       await services.isSetUp ? _Destination.shell : _Destination.onboarding,
     );
+  }
+
+  Future<void> _selectLocale(Locale? locale) async {
+    await _language.write(locale);
+    if (mounted) setState(() => _locale = locale);
   }
 
   /// Closes the database, lets [work] replace the profile, and opens again.
@@ -77,6 +94,8 @@ class _ArchlenceAppState extends State<ArchlenceApp> {
         return ArchlenceRoot(
           services: resolved?.$1,
           swapProfile: _swapProfile,
+          locale: _locale,
+          selectLocale: _selectLocale,
           theme: obsidianPrimeTheme(),
           home: switch ((snapshot.error, resolved)) {
             (final Object error, _) => _StartUpFailed(error: error),
@@ -111,8 +130,10 @@ class _Gated extends StatelessWidget {
   Widget build(BuildContext context) {
     return ScreenLockGate(
       lock: lock,
-      locked: (context, unlock) =>
-          LockedScreen(onAuthenticate: lock.authenticate, onUnlocked: unlock),
+      locked: (context, unlock) => LockedScreen(
+        onAuthenticate: () => lock.authenticate(reason: context.l10n.unlockPrompt),
+        onUnlocked: unlock,
+      ),
       child: child,
     );
   }
@@ -153,7 +174,7 @@ class _StartUpFailed extends StatelessWidget {
                 color: ObsidianPalette.error,
               ),
               const SizedBox(height: Spacing.stackMd),
-              Text('Archlence could not start', style: text.titleLarge),
+              Text(context.l10n.startUpFailed, style: text.titleLarge),
               const SizedBox(height: Spacing.stackSm),
               Text(
                 '$error',

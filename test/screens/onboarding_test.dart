@@ -30,7 +30,7 @@ void main() {
   Future<AppServices> pump(
     WidgetTester tester, {
     KeyProtectionStatus? status = const KeyProtectionStatus(
-      'Android Keystore',
+      KeyProtectionMethod.androidKeystore,
       true,
     ),
     VoidCallback? onFinished,
@@ -122,16 +122,16 @@ void main() {
       await pump(
         tester,
         status: const KeyProtectionStatus(
-          'owner-only file',
+          KeyProtectionMethod.ownerOnlyFile,
           false,
-          'The OS key store was unavailable.',
+          KeyProtectionWarning.osKeyStoreUnavailable,
         ),
       );
       await next(tester);
 
       expect(find.textContaining('weaker than the key store'), findsOneWidget);
       expect(
-        find.textContaining('The OS key store was unavailable.'),
+        find.textContaining('The OS key store is unavailable'),
         findsOneWidget,
       );
       expect(find.textContaining('Held by the operating system'), findsNothing);

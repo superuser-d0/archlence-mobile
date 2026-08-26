@@ -19,6 +19,7 @@ import '../app_services.dart';
 import '../crypto/key_provider.dart';
 import '../services/account_service.dart';
 import '../theme/obsidian_prime.dart';
+import '../ui/app_locale.dart';
 import '../ui/error_messages.dart';
 import '../ui/money_format.dart';
 import '../widgets/surfaces.dart';
@@ -120,6 +121,7 @@ class _WhatThisIs extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final l10n = context.l10n;
     return _Page(
       children: [
         const SizedBox(height: Spacing.sectionGap),
@@ -140,36 +142,29 @@ class _WhatThisIs extends StatelessWidget {
         Text('Archlence', style: text.displayLarge),
         const SizedBox(height: Spacing.stackMd),
         Text(
-          'Your accounts, cards, holdings and budget — on this phone and '
-          'nowhere else.',
+          l10n.onboardingTagline,
           style: text.bodyLarge?.copyWith(
             color: ObsidianPalette.onSurfaceVariant,
           ),
         ),
         const SizedBox(height: Spacing.stackLg),
-        const _Point(
+        _Point(
           icon: Icons.cloud_off,
-          title: 'No account, no server',
-          body:
-              'Nothing is uploaded and there is nothing to sign in to. '
-              'The data lives in a file only this app can read.',
+          title: l10n.onboardingNoServerTitle,
+          body: l10n.onboardingNoServerBody,
         ),
-        const _Point(
+        _Point(
           icon: Icons.sync_alt,
-          title: 'The same file as the desktop app',
-          body:
-              'A backup written on one opens in the other, down to the '
-              'kurus.',
+          title: l10n.onboardingSameFileTitle,
+          body: l10n.onboardingSameFileBody,
         ),
-        const _Point(
+        _Point(
           icon: Icons.warning_amber,
-          title: 'Which means backups are on you',
-          body:
-              'If you lose the phone without a backup, the data goes with '
-              'it. Nobody else has a copy.',
+          title: l10n.onboardingBackupsTitle,
+          body: l10n.onboardingBackupsBody,
         ),
         const SizedBox(height: Spacing.stackLg),
-        GradientButton(label: 'Next', onPressed: onNext),
+        GradientButton(label: l10n.commonNext, onPressed: onNext),
       ],
     );
   }
@@ -184,6 +179,7 @@ class _WhereTheKeyIs extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final l10n = context.l10n;
     // Told plainly and WITHOUT flattery. On a device whose key store is
     // unavailable the key sits in a file, and a welcome screen that implied
     // otherwise would be the app's first lie.
@@ -198,11 +194,10 @@ class _WhereTheKeyIs extends StatelessWidget {
           color: secure ? ObsidianPalette.tertiary : ObsidianPalette.secondary,
         ),
         const SizedBox(height: Spacing.stackLg),
-        Text('Your data is encrypted', style: text.headlineMedium),
+        Text(l10n.onboardingEncryptedTitle, style: text.headlineMedium),
         const SizedBox(height: Spacing.stackMd),
         Text(
-          'Every amount and description is stored encrypted. The key that '
-          'opens them is kept apart from the data.',
+          l10n.onboardingEncryptedBody,
           style: text.bodyMedium?.copyWith(
             color: ObsidianPalette.onSurfaceVariant,
           ),
@@ -215,20 +210,22 @@ class _WhereTheKeyIs extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                status == null ? 'Key location unknown' : status!.method,
+                switch (status?.method) {
+                  null => l10n.onboardingKeyUnknownTitle,
+                  KeyProtectionMethod.androidKeystore =>
+                    l10n.keyMethodAndroidKeystore,
+                  KeyProtectionMethod.ownerOnlyFile =>
+                    l10n.keyMethodOwnerOnlyFile,
+                },
                 style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 4),
               Text(
                 switch (status) {
-                  null => 'This build could not tell where the key ended up.',
+                  null => l10n.onboardingKeyUnknownBody,
                   final KeyProtectionStatus s when s.secureStore =>
-                    'Held by the operating system. It never leaves this '
-                        'device and no other app can read it.',
-                  _ =>
-                    'The OS key store was not available, so the key is a file '
-                        'only this app can open. That is weaker than the key '
-                        'store, and worth knowing.',
+                    l10n.onboardingKeySecureBody,
+                  _ => l10n.onboardingKeyFileBody,
                 },
                 style: text.bodySmall?.copyWith(
                   color: ObsidianPalette.onSurfaceVariant,
@@ -237,7 +234,12 @@ class _WhereTheKeyIs extends StatelessWidget {
               if (status?.warning != null) ...[
                 const SizedBox(height: Spacing.stackSm),
                 Text(
-                  status!.warning!,
+                  switch (status!.warning!) {
+                    KeyProtectionWarning.osKeyStoreUnavailable =>
+                      l10n.keyWarningOsStoreUnavailable,
+                    KeyProtectionWarning.platformHasNoKeyStore =>
+                      l10n.keyWarningNoPlatformStore,
+                  },
                   style: text.bodySmall?.copyWith(
                     color: ObsidianPalette.secondary,
                   ),
@@ -247,7 +249,7 @@ class _WhereTheKeyIs extends StatelessWidget {
           ),
         ),
         const SizedBox(height: Spacing.stackLg),
-        GradientButton(label: 'Next', onPressed: onNext),
+        GradientButton(label: l10n.commonNext, onPressed: onNext),
       ],
     );
   }
@@ -263,10 +265,21 @@ class _FirstAccount extends StatefulWidget {
 }
 
 class _FirstAccountState extends State<_FirstAccount> {
-  final _name = TextEditingController(text: 'Nakit');
+  final _name = TextEditingController();
   final _balance = TextEditingController();
   String? _error;
   bool _saving = false;
+
+  /// Prefilled once the localizations are reachable, and only while the field
+  /// is still untouched — retyping over what the user has typed because a
+  /// dependency changed would be worse than an empty field.
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_name.text.isEmpty) {
+      _name.text = context.l10n.onboardingDefaultAccountName;
+    }
+  }
 
   @override
   void dispose() {
@@ -276,10 +289,13 @@ class _FirstAccountState extends State<_FirstAccount> {
   }
 
   Future<void> _create() async {
+    // Read BEFORE the first await: the `catch` below needs it, and by then
+    // this widget's context may be gone.
+    final l10n = context.l10n;
     final balanceText = _balance.text.trim();
     final balance = parseAmountInput(balanceText);
     if (balanceText.isNotEmpty && balance == null) {
-      setState(() => _error = 'That is not an amount.');
+      setState(() => _error = l10n.errNotAnAmount);
       return;
     }
 
@@ -299,7 +315,7 @@ class _FirstAccountState extends State<_FirstAccount> {
       if (!mounted) return;
       setState(() {
         _saving = false;
-        _error = accountErrorMessage(error);
+        _error = accountErrorMessage(l10n, error);
       });
     }
   }
@@ -307,6 +323,7 @@ class _FirstAccountState extends State<_FirstAccount> {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final l10n = context.l10n;
     return _Page(
       children: [
         const SizedBox(height: Spacing.sectionGap),
@@ -316,27 +333,26 @@ class _FirstAccountState extends State<_FirstAccount> {
           color: ObsidianPalette.primary,
         ),
         const SizedBox(height: Spacing.stackLg),
-        Text('Where does your money sit?', style: text.headlineMedium),
+        Text(l10n.onboardingAccountTitle, style: text.headlineMedium),
         const SizedBox(height: Spacing.stackMd),
         Text(
-          'One cash account to start with. Everything else — spending, cards, '
-          'holdings, goals — needs somewhere for money to come from.',
+          l10n.onboardingAccountBody,
           style: text.bodyMedium?.copyWith(
             color: ObsidianPalette.onSurfaceVariant,
           ),
         ),
         const SizedBox(height: Spacing.stackLg),
-        _OnboardingField(controller: _name, label: 'Name'),
+        _OnboardingField(controller: _name, label: l10n.onboardingAccountName),
         const SizedBox(height: Spacing.stackMd),
         _OnboardingField(
           controller: _balance,
-          label: 'What is in it now',
+          label: l10n.onboardingAccountBalance,
           hint: '0,00',
           numeric: true,
         ),
         const SizedBox(height: Spacing.stackSm),
         Text(
-          'You can leave this empty and add it later.',
+          l10n.onboardingBalanceOptional,
           style: text.labelMedium?.copyWith(
             letterSpacing: 0,
             color: ObsidianPalette.onSurfaceVariant,
@@ -351,7 +367,7 @@ class _FirstAccountState extends State<_FirstAccount> {
         ],
         const SizedBox(height: Spacing.stackLg),
         GradientButton(
-          label: _saving ? 'Setting up…' : 'Start using Archlence',
+          label: _saving ? l10n.onboardingSettingUp : l10n.onboardingStart,
           onPressed: _saving ? null : _create,
         ),
       ],

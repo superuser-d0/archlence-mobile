@@ -14,6 +14,7 @@ library;
 import 'package:flutter/material.dart';
 
 import '../theme/obsidian_prime.dart';
+import '../ui/app_locale.dart';
 
 class NotYetChip extends StatelessWidget {
   const NotYetChip({super.key});
@@ -27,7 +28,7 @@ class NotYetChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(Radii.full),
       ),
       child: Text(
-        'NOT YET',
+        context.l10n.notYetChip,
         style: Theme.of(context).textTheme.labelMedium
             ?.copyWith(fontSize: 9, color: ObsidianPalette.onSurfaceVariant),
       ),

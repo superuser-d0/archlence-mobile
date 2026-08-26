@@ -10,6 +10,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
 
   # Money must never touch a binary float. Mirrors utils/financial_decimal.py.
   decimal: ^3.2.4
@@ -60,6 +62,7 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  generate: true
 
   fonts:
     - family: PlusJakartaSans

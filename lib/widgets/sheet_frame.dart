@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../theme/obsidian_prime.dart';
+import '../ui/app_locale.dart';
 import 'surfaces.dart';
 
 InputDecoration sheetDecoration(String label) => InputDecoration(
@@ -95,7 +96,7 @@ class SheetFrame extends StatelessWidget {
             ],
             const SizedBox(height: Spacing.stackLg),
             GradientButton(
-              label: saving ? 'Saving…' : actionLabel,
+              label: saving ? context.l10n.savingInProgress : actionLabel,
               onPressed: saving ? null : onSave,
             ),
             const SizedBox(height: Spacing.stackMd),

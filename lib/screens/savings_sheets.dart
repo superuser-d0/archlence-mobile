@@ -13,6 +13,7 @@ import '../app_services.dart';
 import '../services/account_service.dart';
 import '../services/savings_service.dart';
 import '../theme/obsidian_prime.dart';
+import '../ui/app_locale.dart';
 import '../ui/error_messages.dart';
 import '../ui/money_format.dart';
 import '../widgets/sheet_frame.dart';
@@ -60,9 +61,12 @@ class _NewGoalSheetState extends State<_NewGoalSheet> {
   }
 
   Future<void> _save() async {
+    // Read BEFORE the first await, so the `catch` does not reach for a
+    // context that may no longer be mounted.
+    final l10n = context.l10n;
     final target = parseAmountInput(_target.text);
     if (target == null) {
-      setState(() => _error = 'Enter a target amount.');
+      setState(() => _error = l10n.errEnterTargetAmount);
       return;
     }
 
@@ -83,7 +87,7 @@ class _NewGoalSheetState extends State<_NewGoalSheet> {
       if (!mounted) return;
       setState(() {
         _saving = false;
-        _error = savingsErrorMessage(error);
+        _error = savingsErrorMessage(l10n, error);
       });
     }
   }
@@ -91,16 +95,16 @@ class _NewGoalSheetState extends State<_NewGoalSheet> {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final l10n = context.l10n;
     return SheetFrame(
-      title: 'New savings goal',
+      title: l10n.newGoalTitle,
       error: _error,
       saving: _saving,
-      actionLabel: 'Create goal',
+      actionLabel: l10n.newGoalAction,
       onSave: _save,
       children: [
         Text(
-          'Money in a goal is set aside from your balance. It is not spending '
-          'and never appears in an expense chart.',
+          l10n.newGoalExplanation,
           style: text.bodySmall?.copyWith(
             color: ObsidianPalette.onSurfaceVariant,
           ),
@@ -108,13 +112,13 @@ class _NewGoalSheetState extends State<_NewGoalSheet> {
         const SizedBox(height: Spacing.stackMd),
         SheetField(
           controller: _name,
-          label: 'What it is for',
-          hint: 'Acil Durum Fonu',
+          label: l10n.newGoalName,
+          hint: l10n.newGoalNameHint,
         ),
         const SizedBox(height: Spacing.stackMd),
         SheetField(
           controller: _target,
-          label: 'Target amount',
+          label: l10n.newGoalTarget,
           hint: '0,00',
           numeric: true,
         ),
@@ -165,14 +169,17 @@ class _MoveMoneySheetState extends State<_MoveMoneySheet> {
   }
 
   Future<void> _save() async {
+    // Read BEFORE the first await, so the `catch` does not reach for a
+    // context that may no longer be mounted.
+    final l10n = context.l10n;
     final amount = parseAmountInput(_amount.text);
     if (amount == null) {
-      setState(() => _error = 'Enter an amount.');
+      setState(() => _error = l10n.errEnterAnAmount);
       return;
     }
     final accountId = _accountId;
     if (accountId == null) {
-      setState(() => _error = 'Choose a cash account.');
+      setState(() => _error = l10n.errChooseCashAccount);
       return;
     }
 
@@ -204,7 +211,7 @@ class _MoveMoneySheetState extends State<_MoveMoneySheet> {
       if (!mounted) return;
       setState(() {
         _saving = false;
-        _error = savingsErrorMessage(error);
+        _error = savingsErrorMessage(l10n, error);
       });
     }
   }
@@ -212,36 +219,44 @@ class _MoveMoneySheetState extends State<_MoveMoneySheet> {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final l10n = context.l10n;
     final goal = widget.goal;
     final remaining = goal.targetAmount - goal.currentAmount;
 
     return SheetFrame(
-      title: goal.goalName ?? 'Savings goal',
+      title: goal.goalName ?? l10n.goalFallbackName,
       error: _error,
       saving: _saving,
-      actionLabel: _depositing ? 'Set aside' : 'Take back',
+      actionLabel: _depositing ? l10n.goalSetAside : l10n.goalTakeBack,
       onSave: _save,
       children: [
         Text(
-          '${formatLira(goal.currentAmount)} of '
-          '${formatLira(goal.targetAmount)}'
-          '${remaining > Decimal.zero ? ' — ${formatLira(remaining)} to go' : ''}',
+          remaining > Decimal.zero
+              ? l10n.goalProgressWithRemaining(
+                  formatLira(goal.currentAmount),
+                  formatLira(goal.targetAmount),
+                  formatLira(remaining),
+                )
+              : l10n.goalProgress(
+                  formatLira(goal.currentAmount),
+                  formatLira(goal.targetAmount),
+                ),
           style: text.bodySmall?.copyWith(
             color: ObsidianPalette.onSurfaceVariant,
           ),
         ),
         const SizedBox(height: Spacing.stackMd),
         SegmentedButton<bool>(
-          segments: const [
+          segments: [
             ButtonSegment(
               value: true,
-              label: Text('Set aside'),
-              icon: Icon(Icons.savings_outlined),
+              label: Text(l10n.goalSetAside),
+              icon: const Icon(Icons.savings_outlined),
             ),
             ButtonSegment(
               value: false,
-              label: Text('Take back'),
-              icon: Icon(Icons.undo),
+              label: Text(l10n.goalTakeBack),
+              icon: const Icon(Icons.undo),
             ),
           ],
           selected: {_depositing},
@@ -251,7 +266,7 @@ class _MoveMoneySheetState extends State<_MoveMoneySheet> {
         const SizedBox(height: Spacing.stackMd),
         SheetField(
           controller: _amount,
-          label: 'Amount',
+          label: l10n.fieldAmount,
           hint: '0,00',
           numeric: true,
         ),
@@ -262,7 +277,7 @@ class _MoveMoneySheetState extends State<_MoveMoneySheet> {
             final accounts = snapshot.data ?? const <Account>[];
             if (accounts.isEmpty) {
               return Text(
-                'No cash account to move money between.',
+                l10n.goalMoveNoAccount,
                 style: text.bodySmall?.copyWith(color: ObsidianPalette.error),
               );
             }
@@ -270,7 +285,9 @@ class _MoveMoneySheetState extends State<_MoveMoneySheet> {
             return DropdownButtonFormField<int>(
               key: const Key('field-account'),
               initialValue: _accountId,
-              decoration: sheetDecoration(_depositing ? 'From' : 'Into'),
+              decoration: sheetDecoration(
+                _depositing ? l10n.goalMoveFrom : l10n.goalMoveInto,
+              ),
               items: [
                 for (final account in accounts)
                   DropdownMenuItem(
@@ -288,7 +305,7 @@ class _MoveMoneySheetState extends State<_MoveMoneySheet> {
           // no insufficient-balance check here, because going negative to
           // fund a goal is the user's call.
           Text(
-            'Your account may go negative — Archlence will not stop you.',
+            l10n.goalMayGoNegative,
             style: text.labelMedium?.copyWith(
               letterSpacing: 0,
               color: ObsidianPalette.onSurfaceVariant,

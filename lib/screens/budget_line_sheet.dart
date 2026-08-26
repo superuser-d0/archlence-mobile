@@ -14,6 +14,7 @@ import 'package:flutter/material.dart';
 import '../app_services.dart';
 import '../services/budget_service.dart';
 import '../theme/obsidian_prime.dart';
+import '../ui/app_locale.dart';
 import '../ui/error_messages.dart';
 import '../ui/money_format.dart';
 import '../widgets/sheet_frame.dart';
@@ -76,9 +77,12 @@ class _BudgetLineSheetState extends State<_BudgetLineSheet> {
   }
 
   Future<void> _save() async {
+    // Read BEFORE the first await, so the `catch` does not reach for a
+    // context that may no longer be mounted.
+    final l10n = context.l10n;
     final amount = parseAmountInput(_amount.text);
     if (amount == null) {
-      setState(() => _error = 'Enter an amount.');
+      setState(() => _error = l10n.errEnterAnAmount);
       return;
     }
 
@@ -105,7 +109,7 @@ class _BudgetLineSheetState extends State<_BudgetLineSheet> {
       if (!mounted) return;
       setState(() {
         _saving = false;
-        _error = budgetErrorMessage(error);
+        _error = budgetErrorMessage(l10n, error);
       });
     }
   }
@@ -113,18 +117,25 @@ class _BudgetLineSheetState extends State<_BudgetLineSheet> {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final l10n = context.l10n;
 
     return SheetFrame(
-      title: 'New budget line',
+      title: l10n.budgetLineTitle,
       error: _error,
       saving: _saving,
-      actionLabel: 'Save line',
+      actionLabel: l10n.budgetLineAction,
       onSave: _save,
       children: [
         SegmentedButton<String>(
-          segments: const [
-            ButtonSegment(value: 'expense', label: Text('Expense')),
-            ButtonSegment(value: 'income', label: Text('Income')),
+          segments: [
+            ButtonSegment(
+              value: 'expense',
+              label: Text(l10n.transactionTypeExpense),
+            ),
+            ButtonSegment(
+              value: 'income',
+              label: Text(l10n.transactionTypeIncome),
+            ),
           ],
           selected: {_type},
           onSelectionChanged: (selection) => setState(() {
@@ -136,11 +147,15 @@ class _BudgetLineSheetState extends State<_BudgetLineSheet> {
         ),
         const SizedBox(height: Spacing.stackMd),
 
-        SheetField(controller: _name, label: 'Name', hint: 'Kira'),
+        SheetField(
+          controller: _name,
+          label: l10n.budgetLineName,
+          hint: l10n.budgetLineNameHint,
+        ),
         const SizedBox(height: Spacing.stackMd),
         SheetField(
           controller: _amount,
-          label: 'Amount for the month',
+          label: l10n.budgetLineAmount,
           hint: '0,00',
           numeric: true,
         ),
@@ -154,9 +169,12 @@ class _BudgetLineSheetState extends State<_BudgetLineSheet> {
               key: const Key('field-category'),
               initialValue: _category,
               isExpanded: true,
-              decoration: sheetDecoration('Category (optional)'),
+              decoration: sheetDecoration(l10n.fieldCategoryOptional),
               items: [
-                const DropdownMenuItem(value: null, child: Text('None')),
+                DropdownMenuItem(
+                  value: null,
+                  child: Text(l10n.categoryNone),
+                ),
                 for (final category in categories)
                   DropdownMenuItem(
                     value: category,
@@ -171,8 +189,7 @@ class _BudgetLineSheetState extends State<_BudgetLineSheet> {
         Text(
           // Why the optional field matters: without a category the line
           // counts towards the month's total and nothing tracks it.
-          'Only a line with a category is tracked against what you actually '
-          'spend.',
+          l10n.budgetLineCategoryNote,
           style: text.labelMedium?.copyWith(
             letterSpacing: 0,
             color: ObsidianPalette.onSurfaceVariant,
@@ -184,9 +201,9 @@ class _BudgetLineSheetState extends State<_BudgetLineSheet> {
           contentPadding: EdgeInsets.zero,
           value: _everyMonth,
           onChanged: (value) => setState(() => _everyMonth = value),
-          title: Text('Every month', style: text.bodyMedium),
+          title: Text(l10n.budgetLineEveryMonth, style: text.bodyMedium),
           subtitle: Text(
-            'Applies to every month until you set a different amount for one.',
+            l10n.budgetLineEveryMonthNote,
             style: text.labelMedium?.copyWith(
               letterSpacing: 0,
               color: ObsidianPalette.onSurfaceVariant,
@@ -197,10 +214,9 @@ class _BudgetLineSheetState extends State<_BudgetLineSheet> {
           contentPadding: EdgeInsets.zero,
           value: _rollover,
           onChanged: (value) => setState(() => _rollover = value),
-          title: Text('Carry the balance over', style: text.bodyMedium),
+          title: Text(l10n.budgetLineRollover, style: text.bodyMedium),
           subtitle: Text(
-            'Adds last month\'s leftover to this month\'s limit. Only last '
-            'month\'s — it does not build up.',
+            l10n.budgetLineRolloverNote,
             style: text.labelMedium?.copyWith(
               letterSpacing: 0,
               color: ObsidianPalette.onSurfaceVariant,
@@ -209,7 +225,7 @@ class _BudgetLineSheetState extends State<_BudgetLineSheet> {
         ),
 
         const SizedBox(height: Spacing.stackMd),
-        Text('Warn me at %$_threshold', style: text.bodyMedium),
+        Text(l10n.budgetLineWarnAt('%$_threshold'), style: text.bodyMedium),
         Slider(
           value: _threshold.toDouble(),
           min: 10,

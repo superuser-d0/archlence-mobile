@@ -28,6 +28,7 @@ import '../backup/backup_service.dart';
 import '../backup/recovery_material.dart';
 import '../crypto/key_provider.dart';
 import '../theme/obsidian_prime.dart';
+import '../ui/app_locale.dart';
 import '../widgets/sheet_frame.dart';
 import '../widgets/surfaces.dart';
 
@@ -50,7 +51,20 @@ class _BackupScreenState extends State<BackupScreen> {
   /// happening rather than spinning silently.
   String? _busy;
 
+  /// The headline of what went wrong, in the user's language.
   String? _error;
+
+  /// The technical detail under it, and the one thing on this screen that is
+  /// NOT translated.
+  ///
+  /// The backup layer's sixty-odd messages are diagnostics about a malformed
+  /// package — a hash that does not match, a field of the wrong shape, a key
+  /// of the wrong length. Translating them would put sixty sentences nobody
+  /// reads in front of a translator while the sentence that decides what the
+  /// user DOES — [_error] — is the one above. The same split `DataUnavailable`
+  /// and the start-up failure screen already use.
+  String? _detail;
+
   String? _note;
 
   @override
@@ -66,42 +80,56 @@ class _BackupScreenState extends State<BackupScreen> {
   /// Runs [work] with the screen locked and whatever it throws turned into a
   /// sentence.
   Future<void> _run(String busy, Future<String?> Function() work) async {
+    final l10n = context.l10n;
     setState(() {
       _busy = busy;
       _error = null;
+      _detail = null;
       _note = null;
     });
     String? note;
     String? error;
+    String? detail;
     try {
       note = await work();
+    } on _StatedError catch (failure) {
+      error = failure.message;
     } on WrongPassphraseError {
-      error = 'That passphrase does not open this backup.';
+      // No detail: there is nothing to add, and "you mistyped" and "this file
+      // is not a backup" send a user to different places.
+      error = l10n.backupWrongPassphrase;
     } on BackupFormatError catch (failure) {
-      error = failure.message;
+      error = l10n.backupFileUnusable;
+      detail = failure.message;
     } on RestoreFailedError catch (failure) {
-      error = failure.message;
+      error = l10n.backupRestoreRolledBack;
+      detail = failure.message;
     } on InterruptedRestoreError catch (failure) {
-      error = failure.message;
+      error = l10n.backupInterrupted;
+      detail = failure.message;
     } on KeyUnavailableError catch (failure) {
-      error = failure.message;
+      error = l10n.backupKeyUnavailable;
+      detail = failure.message;
     } on Object catch (failure) {
-      error = 'Something went wrong: $failure';
+      error = l10n.backupUnexpected;
+      detail = '$failure';
     }
     if (!mounted) return;
     setState(() {
       _busy = null;
       _note = note;
       _error = error;
+      _detail = detail;
     });
   }
 
   Future<String?> _create() async {
+    final l10n = context.l10n;
     final service = _service;
     if (service == null) return null;
     final passphrase = _createPassphrase.text;
     if (passphrase != _confirmPassphrase.text) {
-      throw const BackupFormatError('The two passphrases are not the same.');
+      throw _StatedError(l10n.backupPassphrasesDiffer);
     }
     requirePassphrase(passphrase);
 
@@ -122,15 +150,14 @@ class _BackupScreenState extends State<BackupScreen> {
       ShareParams(
         files: [XFile(outcome.path)],
         fileNameOverrides: [p.basename(outcome.path)],
-        subject: 'Archlence backup',
+        subject: l10n.backupShareSubject,
       ),
     );
-    return 'Backup written and checked: '
-        '${outcome.aeadRecordsVerified} encrypted records opened with the key '
-        'inside it before it was published.';
+    return l10n.backupCreated(outcome.aeadRecordsVerified);
   }
 
   Future<String?> _restore() async {
+    final l10n = context.l10n;
     final service = _service;
     final swap = AppRestartScope.maybeOf(context);
     if (service == null || swap == null) return null;
@@ -141,8 +168,8 @@ class _BackupScreenState extends State<BackupScreen> {
     // the file actually is gets decided by reading it, which is the only
     // thing that could be trusted anyway.
     final picked = await openFile(
-      confirmButtonText: 'Restore',
-      acceptedTypeGroups: const [XTypeGroup(label: 'Archlence backup')],
+      confirmButtonText: l10n.backupRestoreConfirmButton,
+      acceptedTypeGroups: [XTypeGroup(label: l10n.backupFileTypeLabel)],
     );
     final path = picked?.path;
     if (path == null) return null;
@@ -162,32 +189,26 @@ class _BackupScreenState extends State<BackupScreen> {
     _restorePassphrase.clear();
 
     return safety == null
-        ? 'Restored. There was nothing here before, so nothing was set aside.'
-        : 'Restored. What was here before was written to '
-              '${p.basename(safety!)} in this app\'s own storage first.';
+        ? l10n.backupRestoredNothingBefore
+        : l10n.backupRestoredWithSafety(p.basename(safety!));
   }
 
   Future<bool?> _confirmRestore() => showDialog<bool>(
     context: context,
     builder: (context) => AlertDialog(
       backgroundColor: ObsidianPalette.surfaceContainer,
-      title: const Text('Replace everything in this app?'),
-      content: const Text(
-        'Every account, transaction, holding, budget and goal on this phone '
-        'is replaced by what is in the backup.\n\n'
-        'What is here now is written to a backup of its own first, using the '
-        'same passphrase, and the app will tell you its name.',
-      ),
+      title: Text(context.l10n.backupRestoreConfirmTitle),
+      content: Text(context.l10n.backupRestoreConfirmBody),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Cancel'),
+          child: Text(context.l10n.commonCancel),
         ),
         TextButton(
           onPressed: () => Navigator.of(context).pop(true),
-          child: const Text(
-            'Replace',
-            style: TextStyle(color: ObsidianPalette.error),
+          child: Text(
+            context.l10n.backupReplaceConfirm,
+            style: const TextStyle(color: ObsidianPalette.error),
           ),
         ),
       ],
@@ -197,11 +218,12 @@ class _BackupScreenState extends State<BackupScreen> {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final l10n = context.l10n;
     final available = _service != null;
     final busy = _busy;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Backup & Restore')),
+      appBar: AppBar(title: Text(l10n.backupTitle)),
       body: AbsorbPointer(
         absorbing: busy != null,
         child: ListView(
@@ -215,8 +237,7 @@ class _BackupScreenState extends State<BackupScreen> {
             if (!available)
               AppCard(
                 child: Text(
-                  'This build has no profile on disk, so there is nothing to '
-                  'back up.',
+                  l10n.backupNoProfile,
                   style: text.bodySmall?.copyWith(
                     color: ObsidianPalette.onSurfaceVariant,
                   ),
@@ -239,7 +260,7 @@ class _BackupScreenState extends State<BackupScreen> {
               const SizedBox(height: Spacing.stackMd),
             ],
             if (_error != null) ...[
-              _Message(text: _error!, danger: true),
+              _Message(text: _error!, detail: _detail, danger: true),
               const SizedBox(height: Spacing.stackMd),
             ],
             if (_note != null) ...[
@@ -247,18 +268,14 @@ class _BackupScreenState extends State<BackupScreen> {
               const SizedBox(height: Spacing.stackMd),
             ],
 
-            const SectionLabel('Make a backup'),
+            SectionLabel(l10n.backupSectionCreate),
             const SizedBox(height: Spacing.stackSm),
             AppCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'A backup holds your whole database and the key that opens '
-                    'it, wrapped under a passphrase you choose. Twelve '
-                    'characters at least.\n\n'
-                    'THE PASSPHRASE IS NOT STORED ANYWHERE. Without it the '
-                    'backup cannot be opened — not by this app, not by anyone.',
+                    l10n.backupCreateExplanation,
                     style: text.bodySmall?.copyWith(
                       color: ObsidianPalette.onSurfaceVariant,
                     ),
@@ -266,24 +283,20 @@ class _BackupScreenState extends State<BackupScreen> {
                   const SizedBox(height: Spacing.stackMd),
                   SheetField(
                     controller: _createPassphrase,
-                    label: 'Passphrase',
+                    label: l10n.backupPassphrase,
                     onChanged: (_) => setState(() {}),
                   ),
                   const SizedBox(height: Spacing.stackSm),
                   SheetField(
                     controller: _confirmPassphrase,
-                    label: 'Passphrase again',
+                    label: l10n.backupPassphraseAgain,
                     onChanged: (_) => setState(() {}),
                   ),
                   const SizedBox(height: Spacing.stackMd),
                   GradientButton(
-                    label: 'Create and share a backup',
+                    label: l10n.backupCreateAction,
                     onPressed: available && _createReady
-                        ? () => _run(
-                            'Wrapping the key. This takes a few seconds — the '
-                            'passphrase is deliberately slow to try.',
-                            _create,
-                          )
+                        ? () => _run(l10n.backupCreateBusy, _create)
                         : null,
                   ),
                 ],
@@ -291,18 +304,14 @@ class _BackupScreenState extends State<BackupScreen> {
             ),
             const SizedBox(height: Spacing.sectionGap),
 
-            const SectionLabel('Restore from a backup'),
+            SectionLabel(l10n.backupSectionRestore),
             const SizedBox(height: Spacing.stackSm),
             AppCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Replaces everything in this app with what is in the file, '
-                    'including the encryption key. A backup written by the '
-                    'desktop app works here.\n\n'
-                    'What is here now is written to a backup of its own first, '
-                    'under the same passphrase.',
+                    l10n.backupRestoreExplanation,
                     style: text.bodySmall?.copyWith(
                       color: ObsidianPalette.onSurfaceVariant,
                     ),
@@ -310,7 +319,7 @@ class _BackupScreenState extends State<BackupScreen> {
                   const SizedBox(height: Spacing.stackMd),
                   SheetField(
                     controller: _restorePassphrase,
-                    label: 'The backup\'s passphrase',
+                    label: l10n.backupRestorePassphrase,
                     onChanged: (_) => setState(() {}),
                   ),
                   const SizedBox(height: Spacing.stackMd),
@@ -319,13 +328,9 @@ class _BackupScreenState extends State<BackupScreen> {
                         available &&
                             _restorePassphrase.text.length >=
                                 minPassphraseLength
-                        ? () => _run(
-                            'Checking the backup and replacing your data. Do '
-                            'not close the app.',
-                            _restore,
-                          )
+                        ? () => _run(l10n.backupRestoreBusy, _restore)
                         : null,
-                    child: const Text('Choose a file and restore'),
+                    child: Text(l10n.backupRestoreAction),
                   ),
                 ],
               ),
@@ -341,10 +346,27 @@ class _BackupScreenState extends State<BackupScreen> {
       _confirmPassphrase.text.length >= minPassphraseLength;
 }
 
+/// A problem this screen raises itself, already in the user's language.
+///
+/// Distinct from the backup layer's own exceptions, which carry an untranslated
+/// diagnostic: this one IS the sentence, and gets no detail line under it.
+class _StatedError implements Exception {
+  const _StatedError(this.message);
+
+  final String message;
+
+  @override
+  String toString() => 'StatedError: $message';
+}
+
 class _Message extends StatelessWidget {
-  const _Message({required this.text, this.danger = false});
+  const _Message({required this.text, this.detail, this.danger = false});
 
   final String text;
+
+  /// Untranslated technical detail, shown under [text] when there is any.
+  final String? detail;
+
   final bool danger;
 
   @override
@@ -360,13 +382,28 @@ class _Message extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(
-              text,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: danger
-                    ? ObsidianPalette.error
-                    : ObsidianPalette.onSurface,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  text,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: danger
+                        ? ObsidianPalette.error
+                        : ObsidianPalette.onSurface,
+                  ),
+                ),
+                if (detail != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    detail!,
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      letterSpacing: 0,
+                      color: ObsidianPalette.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
         ],

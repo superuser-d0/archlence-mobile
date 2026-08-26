@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 
 import '../theme/obsidian_prime.dart';
+import '../ui/app_locale.dart';
 
 /// A standard content card: opaque fill plus the 1px hairline stroke.
 ///
@@ -176,7 +177,10 @@ class SectionLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Text(
-      text.toUpperCase(),
+      // Not `toUpperCase()`: see `localizedUpperCase`. Every heading on the
+      // Settings screen goes through here, and half of them have an `i` in
+      // them in Turkish.
+      localizedUpperCase(text, Localizations.localeOf(context)),
       style: Theme.of(context).textTheme.labelMedium
           ?.copyWith(color: ObsidianPalette.onSurfaceVariant),
     );
