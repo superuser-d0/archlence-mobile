@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    The adaptive icon's foreground, and its monochrome layer.
+
+    The same geometry as `assets/icon/archlence_icon_foreground.svg`, which is
+    where the reasoning for the numbers is written down and where to edit it.
+    In short: the mark's feet sit 167.7 units from its centre in the 360-unit
+    source, and 167.7 x 0.18 = 30.2, inside the 33dp radius that survives every
+    launcher mask with enough left over that the A does not look cramped
+    against the icons beside it.
+
+    A vector rather than five PNGs: Android has drawn these natively since API
+    21, and the mark is two paths — rasterising it at five densities would be
+    five files to keep in step for no gain in fidelity.
+
+    `<group>` applies scale about the pivot and then translate, which is the
+    same order as the SVG's `translate(...) scale(...)`. The two therefore
+    agree, and a preview of the SVG is a preview of this.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:translateX="21.60"
+        android:translateY="21.78"
+        android:scaleX="0.18"
+        android:scaleY="0.18">
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M180,56 Q218,168 294,302 L232,302 Q200,212 180,150 Q160,212 128,302 L66,302 Q142,168 180,56 Z" />
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M138,228 Q180,240 222,228 L222,254 Q180,266 138,254 Z" />
+    </group>
+</vector>

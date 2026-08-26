@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        The icon's ground. The desktop app's own `ARCHLENCE_PRIMARY_HEX`, and
+        deliberately NOT an Obsidian Prime token — see
+        `assets/icon/archlence_icon.svg`.
+    -->
+    <color name="ic_launcher_background">#5444E5</color>
+
+    <!--
+        `ObsidianPalette.surface`. What the window is painted before Flutter's
+        first frame, and behind it afterwards.
+
+        Fixed, not `?android:colorBackground`. The template's theme-following
+        value is white on a phone in light mode, and this app is dark-only —
+        which showed up as a white flash on every cold start into a #131313
+        dashboard.
+    -->
+    <color name="launch_background">#131313</color>
+</resources>

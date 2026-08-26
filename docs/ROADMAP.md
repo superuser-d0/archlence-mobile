@@ -31,18 +31,23 @@ language; a phone set to anything else gets Turkish, and Settings can override
 the choice. The one thing NOT translated is the backup layer's diagnostic
 detail — see "What i18n did not cover".
 
+**And it looks like itself.** The launcher icon is the desktop app's own
+mark, the label under it says Archlence rather than `archlence_mobile`, and a
+cold start opens on the app's own dark instead of a white flash.
+
 **What it cannot do yet:** show a live price.
 
-578 unit tests and 12 device tests pass. `flutter analyze` is clean, no
+579 unit tests and 12 device tests pass. `flutter analyze` is clean, no
 control in the app is inert, and it runs on the emulator.
 
 ## Pick up here
 
 In priority order. Each of these is a self-contained next session.
 
-**1. Icon, launch screen, release signing.** Small and mechanical, and nothing
-above waits on them. With the labels done, this is what stands between the app
-and a build someone else could install.
+**1. Release signing.** The icon and the launch screen are done; what is left
+is a keystore, `key.properties`, and a `signingConfigs` block — after which
+`flutter build apk --release` produces something installable by someone else.
+Nothing above waits on it.
 
 **2. `key_recovery_service.py`.** The one piece of the backup work deliberately
 left out — see "What the backup work did NOT port". It matters for someone who
@@ -202,6 +207,7 @@ Long, and grouped roughly by layer rather than by date:
 | Backup | The backup's cryptographic core · The package around it · Restoring |
 | Security | The screen lock |
 | Language | i18n · What i18n did NOT cover |
+| Shipping | The icon and the launch screen · What running it caught |
 | Screens | The screen–service join · The wired tabs · Every control is live or visibly unavailable · Screens (as first built) |
 | Write flows | The first write flow · Recording a transaction · Buying and selling a holding · Savings goals (sheets) · A budget line · Managing a subscription · Paying card debt · The first run · Backup & Restore |
 
@@ -765,6 +771,94 @@ them.
 If that changes, the shape is already there: the codes would go on
 `BackupFormatError` the way they went on `AccountError`.
 
+### The icon and the launch screen — `android/app/src/main/res/`
+
+The app looked like a Flutter template on the home screen: the default blue
+Flutter logo, the label `archlence_mobile`, and a launch window that painted
+white and handed over to a #131313 dashboard.
+
+**The mark is the desktop's, verbatim.** `assets/icon/archlence_icon.svg` is a
+copy of `assets/icon_source.svg` from the desktop checkout — same paths, same
+`#5444E5` ground. Two clients of one product, and a second icon would say
+otherwise. The ground is deliberately NOT an Obsidian Prime token: Obsidian
+Prime governs what is inside the app, and a launcher badge that moved with the
+mobile theme would break the identity the two share.
+
+**The adaptive icon is where the thinking went.** Android 8 and up draw
+`mipmap-anydpi-v26/ic_launcher.xml`, whose foreground is 108dp with only the
+centre 66dp circle surviving every launcher mask. The mark's furthest points
+from its centre are the two FEET, 167.7 units out in the 360-unit source,
+which caps the scale at 0.196.
+
+It is set to **0.18**, not the cap. At the cap the feet touch the circle
+exactly — safe, and it looks it: cramped beside every rounder icon in the
+drawer. That was measured, not guessed, by putting all three candidates on the
+emulator next to Gmail and Chrome; 0.17 read as timid. The direction that
+breaks something is the other one — above 0.196 a round mask clips the legs
+off the A, which is the part of the letter carrying it, and the desktop
+already replaced an earlier logo for going illegible at small sizes.
+
+`<monochrome>` points at the same drawable as `<foreground>`. Android 13's
+themed icons take the shape from that layer's alpha and supply their own
+colour, and the mark is already a solid silhouette inside the safe zone; a
+second file would be the same two paths waiting to drift.
+
+The foreground is a `VectorDrawable` rather than five PNGs — two paths, drawn
+natively since API 21. `tool/generate_launcher_icons.sh` renders only what has
+to be raster: the five legacy `mipmap-*dpi` PNGs that API 24 and 25 fall back
+to, and the launch screen's logo.
+
+**The launch screen was a real defect, not a decoration.** Three parts:
+
+1. `launch_background.xml` used `?android:colorBackground`, which is WHITE on a
+   phone in light mode. Every cold start flashed white into a dark app. It is
+   now fixed to `@color/launch_background` (#131313 — `ObsidianPalette.surface`),
+   and `NormalTheme` with it, in `values/` as well as `values-night/`: this app
+   has one theme and the light-mode folder must not disagree with the dark one.
+2. Android 12 draws its own splash and IGNORES `android:windowBackground`. It
+   falls back to the theme's window background only when that is a plain
+   colour; ours is a layer-list, so without `values-v31/styles.xml` setting
+   `android:windowSplashScreenBackground` the fix would have been invisible on
+   every phone from Android 12 onward — which is most of them.
+3. The centred logo is `@drawable/launch_logo`, a PNG, NOT `@mipmap/ic_launcher`.
+   From API 26 that name resolves to the adaptive-icon XML, and a `<bitmap>`
+   whose source is not a bitmap fails to inflate: a crash on the launch window,
+   before Flutter starts, on exactly the devices most people have.
+
+**The label** moved to `@string/app_name` = `Archlence`. Not translated and
+there is no `values-tr/`: it is the product's name, and a launcher label is
+fixed from the system locale anyway, so one that moved with the in-app
+language setting would disagree with the home screen.
+
+**How it was proven.** On the emulator, because none of this is visible in the
+source: the launcher icon in the app drawer beside Gmail and Chrome, the
+Android 12 splash on #131313 with no white frame, and the app coming up behind
+it. `aapt dump badging` confirms the label. iOS and the other platform folders
+are untouched — this is an Android client.
+
+### What running it caught, that 578 tests did not
+
+The i18n work had missed three strings: the resume lock's title and its two
+subtitles, still English in `settings_screen.dart` while their ARB keys sat
+unused. Nothing failed. The other tests run in ENGLISH, where a wired label
+and an unwired one render the same string, and `l10n_test.dart` was checking
+two labels on that screen and not those.
+
+It took opening the app on a device, in Turkish, and reading "Lock when I come
+back" under GÜVENLİK.
+
+The fix is one line each; the test that now holds it is
+`no tab leaves an English label on a Turkish screen`, which pumps `AppShell`
+under `Locale('tr')`, walks all five tabs, and fails on any rendered string
+that is an English ARB value the Turkish file translates differently — upper-
+cased variants included, since `SectionLabel` upper-cases what it is given and
+the section headings were the visible half of the miss.
+
+It has teeth: putting the literal back fails it with `left in English on the
+Ayarlar tab`. What it CANNOT catch is a label that was never given a key at
+all — nothing but reading can — and that limit is worth knowing rather than
+trusting the green.
+
 ### Paying card debt — `lib/screens/pay_debt_sheet.dart`
 
 The last write flow. Two things it gets right by refusing rather than
@@ -1265,8 +1359,8 @@ small change once the source exists.
 
 ### 2. Shipping
 
-App icon, launch screen, release signing, Play Store listing. The last of
-those is not engineering.
+Release signing and a Play Store listing. The icon and the launch screen are
+done — see "The icon and the launch screen". The listing is not engineering.
 
 ### 3. Not yet considered at all
 

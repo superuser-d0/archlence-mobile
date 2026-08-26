@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        What the launcher writes under the icon. It was `archlence_mobile` —
+        the Flutter project name, which is not the product's.
+
+        NOT translated, and there is no `values-tr/`: it is the product's name
+        and reads the same in either language. The label a launcher shows is
+        also fixed at install time from the system locale, so a name that moved
+        with the in-app language setting would disagree with the home screen
+        until the phone itself changed.
+    -->
+    <string name="app_name">Archlence</string>
+</resources>

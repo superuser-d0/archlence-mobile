@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        Android 12 replaced the old launch window with a splash screen it draws
+        itself, and it IGNORES `android:windowBackground` while doing so. Left
+        alone it falls back to the theme's window background only when that is
+        a plain colour; ours is a layer-list, so it would have used the system
+        default — white — and the fix below it would have been invisible on
+        every phone from Android 12 onwards, which is most of them.
+
+        The icon is not named here. The system takes the launcher icon on its
+        own and masks it to a circle, which is why `launch_background.xml`
+        centres that same icon: the two look alike either side of API 31.
+    -->
+    <style name="LaunchTheme" parent="@android:style/Theme.Black.NoTitleBar">
+        <item name="android:windowBackground">@drawable/launch_background</item>
+        <item name="android:windowSplashScreenBackground">@color/launch_background</item>
+    </style>
+
+    <style name="NormalTheme" parent="@android:style/Theme.Black.NoTitleBar">
+        <item name="android:windowBackground">@color/launch_background</item>
+    </style>
+</resources>

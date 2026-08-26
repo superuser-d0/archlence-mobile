@@ -30,6 +30,10 @@ phone set to anything else gets Turkish, and Settings can override the choice.
 The numbers stay Turkish either way — `1.234,56 ₺` is the format the design
 specifies and the desktop stores, not a translation.
 
+**It looks like itself on the home screen.** The launcher icon is the desktop
+app's own mark, and a cold start opens on the app's dark rather than a white
+flash. What is left before someone else can install it is release signing.
+
 One thing it cannot do yet: **live prices** need a data source chosen, so
 holdings are shown at what they cost and labelled as such.
 
@@ -79,7 +83,8 @@ roadmap.
 | `lib/ui/` | Money formatting, error wording, the language choice, the loading/error/empty contract |
 | `lib/theme/` | Obsidian Prime design tokens |
 | `lib/widgets/` | Shared surfaces, the balance ring, the sheet frame |
-| `tool/` | Developer utilities for regenerating parity vectors |
+| `assets/icon/` | The launcher icon's SVG sources — the desktop app's own mark |
+| `tool/` | Developer utilities: parity vectors, and the launcher PNGs |
 
 ## A note on the tests
 

@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 360">
+  <!--
+    The launcher icon, and the SAME MARK the desktop app uses. Copied verbatim
+    from `assets/icon_source.svg` in the Archlence desktop checkout, paths and
+    colours unchanged, because the two are one product with two clients and a
+    second icon would say otherwise.
+
+    The ground is #5444E5 — the desktop's own `ARCHLENCE_PRIMARY_HEX`. It is
+    NOT an Obsidian Prime token, and that is deliberate: Obsidian Prime governs
+    what is inside the app, and a launcher badge that changed with the mobile
+    theme would break the identity the two apps share. It sits in the same
+    indigo family as Obsidian's #8083FF regardless.
+
+    The desktop's own notes on the form, worth keeping because both are about
+    what fails at small sizes:
+
+      * The "A" has a sharp apex and concave outer edges, which splay the legs
+        and leave an open triangle at the base. It replaced a leaf/beam form
+        that became unreadable at 48px — its thin beams simply disappeared in
+        the taskbar and the system tray.
+      * The mid-band's ends overshoot INTO the legs on purpose. Ends that
+        tapered to nothing read as a smudge floating free of the letter rather
+        than a band crossing it.
+
+    Regenerate the PNGs with `tool/generate_launcher_icons.sh`.
+  -->
+  <rect x="0" y="0" width="360" height="360" rx="80" fill="#5444E5"/>
+  <path d="M180,56 Q218,168 294,302 L232,302 Q200,212 180,150 Q160,212 128,302 L66,302 Q142,168 180,56 Z" fill="#FFFFFF"/>
+  <path d="M138,228 Q180,240 222,228 L222,254 Q180,266 138,254 Z" fill="#FFFFFF"/>
+</svg>

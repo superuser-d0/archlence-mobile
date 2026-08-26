@@ -1,12 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Modify this file to customize your launch splash screen -->
-<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:drawable="?android:colorBackground" />
+<!--
+    The window behind Flutter while the engine starts.
 
-    <!-- You can insert your own image assets here -->
-    <!-- <item>
+    Two changes from the Flutter template. The ground is FIXED to
+    `@color/launch_background` rather than following the system theme, because
+    the app is dark-only and a light-mode phone was painting this white and
+    then handing over to a #131313 dashboard. And the logo is drawn on it, so
+    that what a cold start shows matches the Android 12 splash — which draws
+    the launcher icon whatever this file says.
+
+    `@drawable/launch_logo`, NOT `@mipmap/ic_launcher`: from API 26 that name
+    resolves to the adaptive-icon XML, and a `<bitmap>` whose source is not a
+    bitmap fails to inflate. That is a crash on the launch window, before
+    Flutter has started, on every phone new enough to have an adaptive icon.
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/launch_background" />
+    <item>
         <bitmap
             android:gravity="center"
-            android:src="@mipmap/launch_image" />
-    </item> -->
+            android:src="@drawable/launch_logo" />
+    </item>
 </layer-list>

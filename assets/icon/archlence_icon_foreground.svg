@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108">
+  <!--
+    The adaptive icon's FOREGROUND layer: the mark alone, on nothing.
+    `android/app/src/main/res/drawable/ic_launcher_foreground.xml` is the same
+    geometry written as an Android `VectorDrawable`, and the two must agree —
+    this file is what a person edits and looks at, that one is what ships.
+
+    THE SCALE IS THE WHOLE PROBLEM HERE. An adaptive icon's foreground is
+    108dp and the launcher masks it to a shape of its own choosing; only the
+    centre 66dp circle survives every mask. The mark's furthest points from
+    its centre are the two FEET, 167.7 units out in the 360-unit source, which
+    caps the scale at 0.196:
+
+        167.7 × 0.18 = 30.2  ≤  33
+
+    0.18 rather than that cap. At the cap the feet touch the circle exactly,
+    which is safe and looks it — cramped against every rounder icon beside it
+    in the drawer. Measured on the emulator against Gmail and Chrome; 0.17 was
+    the other candidate and read as timid. Going the other way is the one that
+    breaks something: a scale above 0.196 and a round-mask launcher clips the
+    legs off the A, which is the part of the letter carrying it. Rendered
+    small this shape is already fragile — the desktop replaced an earlier logo
+    for exactly that reason.
+
+    The mark's centre in source units is (180, 179), not (180, 180): the apex
+    sits at y=56 and the feet at y=302. Centring on the bounding box rather
+    than the canvas is what keeps it from riding low under a circular mask.
+  -->
+  <g transform="translate(21.60,21.78) scale(0.18)">
+    <path d="M180,56 Q218,168 294,302 L232,302 Q200,212 180,150 Q160,212 128,302 L66,302 Q142,168 180,56 Z" fill="#FFFFFF"/>
+    <path d="M138,228 Q180,240 222,228 L222,254 Q180,266 138,254 Z" fill="#FFFFFF"/>
+  </g>
+</svg>

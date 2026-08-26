@@ -475,6 +475,7 @@ class _LockTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final l10n = context.l10n;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       child: Row(
@@ -498,7 +499,7 @@ class _LockTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Lock when I come back',
+                  l10n.lockTileTitle,
                   style: text.bodyMedium?.copyWith(
                     color: available
                         ? ObsidianPalette.onSurface
@@ -508,10 +509,8 @@ class _LockTile extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   available
-                      ? 'Asks for your fingerprint or PIN after a minute away. '
-                            'It hides the screen from someone holding your '
-                            'phone — it does not add encryption.'
-                      : 'This device has no fingerprint or screen lock set up.',
+                      ? l10n.lockTileExplanation
+                      : l10n.lockTileUnavailable,
                   style: text.bodySmall?.copyWith(
                     color: ObsidianPalette.onSurfaceVariant,
                   ),
