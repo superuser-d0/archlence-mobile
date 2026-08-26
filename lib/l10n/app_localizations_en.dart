@@ -1185,4 +1185,62 @@ class AppLocalizationsEn extends AppLocalizations {
   String monthYearShort(String month, String year) {
     return '$month\'$year';
   }
+
+  @override
+  String get recoverySectionExport => 'Just the key';
+
+  @override
+  String get recoveryExportExplanation =>
+      'A key recovery package holds the encryption key and nothing else — no accounts, no transactions. It is for the day the data is still here and the key is not: a reinstall, a phone reset, a screen lock changed in a way that emptied the key store.\n\nA whole backup answers a different question. Restoring one would also throw away everything recorded since it was made.';
+
+  @override
+  String get recoveryExportAction => 'Export and share the key';
+
+  @override
+  String get recoveryExportShareSubject => 'Archlence key recovery';
+
+  @override
+  String get recoveryExported =>
+      'The key was written and checked. Keep it somewhere other than this phone — anyone holding it AND its passphrase can read your data.';
+
+  @override
+  String get recoverySectionImport => 'Put a key back';
+
+  @override
+  String get recoveryImportExplanation =>
+      'Replaces the encryption key with the one in the file, after checking that it opens the data already on this phone. Your accounts and transactions are not touched, and a key that does not open them changes nothing.';
+
+  @override
+  String get recoveryImportPassphrase => 'The package\'s passphrase';
+
+  @override
+  String get recoveryImportAction => 'Choose a file and put the key back';
+
+  @override
+  String get recoveryImportConfirmButton => 'Import';
+
+  @override
+  String get recoveryFileTypeLabel => 'Archlence key recovery';
+
+  @override
+  String get recoveryImportBusy =>
+      'Checking the key against your data. Do not close the app.';
+
+  @override
+  String recoveryImportedStored(int records) {
+    return 'The key is in place. $records encrypted fields opened with it.';
+  }
+
+  @override
+  String recoveryImportedReplaced(int records) {
+    return 'The key was replaced. $records encrypted fields opened with it.';
+  }
+
+  @override
+  String get recoveryImportedUnchanged =>
+      'That is already the key on this phone. Nothing was changed.';
+
+  @override
+  String get recoveryVerifiedNothing =>
+      'There was nothing encrypted here to check it against, so the key was accepted untested.';
 }

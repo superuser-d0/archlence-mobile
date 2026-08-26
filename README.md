@@ -24,6 +24,13 @@ key under a journal that can be rolled back. Both directions are proven
 against the desktop's own `services/backup_service.py` rather than against a
 reading of the format.
 
+**The key can travel on its own.** Beside the whole-database backup, Settings
+writes a key recovery package — the encryption key wrapped under a passphrase,
+with no data in it — and reads one back after proving it opens what is already
+on the phone. That is the case a backup does not cover: the data is still
+here, the key is gone. Wire-compatible with the desktop's, both directions
+checked against its own module.
+
 **It speaks Turkish and English.** Every label comes from `lib/l10n/`, which
 carries both languages in full; a phone set to either gets that language, a
 phone set to anything else gets Turkish, and Settings can override the choice.

@@ -16,6 +16,7 @@ import 'dart:io';
 
 import 'package:archlence_mobile/app_services.dart';
 import 'package:archlence_mobile/backup/backup_service.dart';
+import 'package:archlence_mobile/backup/key_recovery_service.dart';
 import 'package:archlence_mobile/crypto/field_crypto.dart';
 import 'package:archlence_mobile/data/database.dart';
 import 'package:archlence_mobile/screens/backup_screen.dart';
@@ -25,6 +26,18 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../support/fixed_key_provider.dart';
 import '../support/test_app.dart';
+
+/// Whether the outlined button carrying [label] refuses to be pressed.
+bool _outlinedDisabled(WidgetTester tester, String label) =>
+    tester
+        .widget<OutlinedButton>(
+          find.ancestor(
+            of: find.text(label),
+            matching: find.byType(OutlinedButton),
+          ),
+        )
+        .onPressed ==
+    null;
 
 /// How solidly the primary button is painted.
 double _gradientOpacity(WidgetTester tester) => tester
@@ -44,18 +57,26 @@ void main() {
 
   AppServices servicesWith({required bool withBackup}) {
     BackupService? backup;
+    KeyRecoveryService? recovery;
     if (withBackup) {
       final directory = Directory.systemTemp.createTempSync('backup-screen-');
       addTearDown(() => directory.deleteSync(recursive: true));
+      final provider = FixedKeyProvider.arbitrary();
       backup = BackupService(
         databasePath: '${directory.path}/finance.db',
-        keyProvider: FixedKeyProvider.arbitrary(),
+        keyProvider: provider,
+      );
+      recovery = KeyRecoveryService(
+        databasePath: '${directory.path}/finance.db',
+        keyProvider: provider,
+        backup: backup,
       );
     }
     return AppServices.forDatabase(
       db,
       FieldCrypto(FixedKeyProvider.arbitrary()),
       backup: backup,
+      keyRecovery: recovery,
     );
   }
 
@@ -105,10 +126,17 @@ void main() {
     // ready and did nothing.
     expect(tester.widget<GradientButton>(find.byType(GradientButton)).onPressed, isNull);
     expect(_gradientOpacity(tester), lessThan(1.0));
-    expect(
-      tester.widget<OutlinedButton>(find.byType(OutlinedButton)).onPressed,
-      isNull,
-    );
+    // Three outlined buttons now — restore, export the key, put one back —
+    // and `find.byType` alone would match all three and throw. Each is
+    // addressed by its own label, because "one of them is disabled" is not
+    // the claim being made.
+    for (final label in const [
+      'Choose a file and restore',
+      'Export and share the key',
+      'Choose a file and put the key back',
+    ]) {
+      expect(_outlinedDisabled(tester, label), isTrue, reason: label);
+    }
 
     // Eleven characters: one short of the floor the format sets.
     await tester.enterText(find.byType(TextField).at(0), 'elevenchars');
@@ -142,6 +170,75 @@ void main() {
     expect(find.text('The two passphrases are not the same.'), findsOneWidget);
   });
 
+  testWidgets('the key rows say what a whole backup does not answer', (
+    tester,
+  ) async {
+    // The two are easy to confuse, and confusing them is expensive in one
+    // direction: restoring a backup when only the key was missing throws away
+    // everything recorded since it was made. The screen has to draw the line.
+    await open(tester);
+
+    expect(
+      find.textContaining('holds the encryption key and nothing else'),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining('the data is still here and the key is not'),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining('Restoring one would also throw away'),
+      findsOneWidget,
+    );
+    // And the import side's promise, which is the one that makes it safe to
+    // try: a key that does not fit changes nothing.
+    expect(
+      find.textContaining('a key that does not open them changes nothing'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('exporting the key waits for both passphrase fields', (
+    tester,
+  ) async {
+    await open(tester);
+    // 0,1 create · 2 restore · 3,4 export the key · 5 put one back.
+    const exportPassphrase = 3;
+    const confirmExport = 4;
+
+    await tester.enterText(
+      find.byType(TextField).at(exportPassphrase),
+      'twelve chars',
+    );
+    await tester.pumpAndSettle();
+    expect(
+      _outlinedDisabled(tester, 'Export and share the key'),
+      isTrue,
+      reason: 'one field filled is not a confirmed passphrase',
+    );
+
+    await tester.enterText(
+      find.byType(TextField).at(confirmExport),
+      'twelve chars',
+    );
+    await tester.pumpAndSettle();
+    expect(_outlinedDisabled(tester, 'Export and share the key'), isFalse);
+  });
+
+  testWidgets('two key passphrases that differ are reported, not written', (
+    tester,
+  ) async {
+    await open(tester);
+
+    await tester.enterText(find.byType(TextField).at(3), 'twelve chars');
+    await tester.enterText(find.byType(TextField).at(4), 'twelve chairs');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Export and share the key'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('The two passphrases are not the same.'), findsOneWidget);
+  });
+
   testWidgets('with no profile behind it, it says so instead of pretending', (
     tester,
   ) async {
@@ -150,7 +247,18 @@ void main() {
     expect(find.textContaining('no profile on disk'), findsOneWidget);
     await tester.enterText(find.byType(TextField).at(0), 'twelve chars');
     await tester.enterText(find.byType(TextField).at(1), 'twelve chars');
+    await tester.enterText(find.byType(TextField).at(3), 'twelve chars');
+    await tester.enterText(find.byType(TextField).at(4), 'twelve chars');
+    await tester.enterText(find.byType(TextField).at(5), 'twelve chars');
     await tester.pumpAndSettle();
     expect(tester.widget<GradientButton>(find.byType(GradientButton)).onPressed, isNull);
+    // The key rows go dead with it. They lead somewhere real, so a build
+    // without a profile has to draw them as unusable rather than let a tap
+    // find nothing behind it.
+    expect(_outlinedDisabled(tester, 'Export and share the key'), isTrue);
+    expect(
+      _outlinedDisabled(tester, 'Choose a file and put the key back'),
+      isTrue,
+    );
   });
 }

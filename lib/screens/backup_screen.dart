@@ -25,6 +25,7 @@ import 'package:share_plus/share_plus.dart';
 import '../app_services.dart';
 import '../backup/backup_errors.dart';
 import '../backup/backup_service.dart';
+import '../backup/key_recovery_service.dart';
 import '../backup/recovery_material.dart';
 import '../crypto/key_provider.dart';
 import '../theme/obsidian_prime.dart';
@@ -43,6 +44,9 @@ class _BackupScreenState extends State<BackupScreen> {
   final _createPassphrase = TextEditingController();
   final _confirmPassphrase = TextEditingController();
   final _restorePassphrase = TextEditingController();
+  final _exportKeyPassphrase = TextEditingController();
+  final _confirmKeyPassphrase = TextEditingController();
+  final _importKeyPassphrase = TextEditingController();
 
   /// What the app is doing, or null when it is doing nothing.
   ///
@@ -72,10 +76,15 @@ class _BackupScreenState extends State<BackupScreen> {
     _createPassphrase.dispose();
     _confirmPassphrase.dispose();
     _restorePassphrase.dispose();
+    _exportKeyPassphrase.dispose();
+    _confirmKeyPassphrase.dispose();
+    _importKeyPassphrase.dispose();
     super.dispose();
   }
 
   BackupService? get _service => ServicesScope.of(context).backup;
+
+  KeyRecoveryService? get _recovery => ServicesScope.of(context).keyRecovery;
 
   /// Runs [work] with the screen locked and whatever it throws turned into a
   /// sentence.
@@ -193,6 +202,91 @@ class _BackupScreenState extends State<BackupScreen> {
         : l10n.backupRestoredWithSafety(p.basename(safety!));
   }
 
+  /// Writes the key on its own and hands it to the share sheet.
+  ///
+  /// Shared rather than saved into this app's own storage, for the same
+  /// reason a backup is: a recovery package that lives beside the data it
+  /// recovers goes with the phone.
+  Future<String?> _exportKey() async {
+    final l10n = context.l10n;
+    final recovery = _recovery;
+    if (recovery == null) return null;
+    final passphrase = _exportKeyPassphrase.text;
+    if (passphrase != _confirmKeyPassphrase.text) {
+      throw _StatedError(l10n.backupPassphrasesDiffer);
+    }
+    requirePassphrase(passphrase);
+
+    final directory = await getApplicationDocumentsDirectory();
+    final destination = File(
+      p.join(
+        directory.path,
+        'archlence-key-${_stamp(DateTime.now())}.archlence-key',
+      ),
+    );
+    final written = await recovery.exportRecoveryPackage(
+      destination,
+      passphrase,
+    );
+
+    _exportKeyPassphrase.clear();
+    _confirmKeyPassphrase.clear();
+
+    await SharePlus.instance.share(
+      ShareParams(
+        files: [XFile(written)],
+        fileNameOverrides: [p.basename(written)],
+        subject: l10n.recoveryExportShareSubject,
+      ),
+    );
+    return l10n.recoveryExported;
+  }
+
+  /// Puts a key from a file back into the key store.
+  ///
+  /// THROUGH `swapProfile`, like a restore, and not because the database is
+  /// being replaced — it is not. `FieldCrypto` caches the key it first read,
+  /// so a running app would go on decrypting with the OLD one and report
+  /// every row as corrupt. Closing the graph and building it again over the
+  /// new key is what makes the import take effect.
+  Future<String?> _importKey() async {
+    final l10n = context.l10n;
+    final recovery = _recovery;
+    final swap = AppRestartScope.maybeOf(context);
+    if (recovery == null || swap == null) return null;
+
+    final picked = await openFile(
+      confirmButtonText: l10n.recoveryImportConfirmButton,
+      acceptedTypeGroups: [XTypeGroup(label: l10n.recoveryFileTypeLabel)],
+    );
+    final path = picked?.path;
+    if (path == null) return null;
+
+    final passphrase = _importKeyPassphrase.text;
+    requirePassphrase(passphrase);
+
+    RecoveryImportOutcome? outcome;
+    await swap(() async {
+      outcome = await recovery.importRecoveryPackage(File(path), passphrase);
+    });
+    _importKeyPassphrase.clear();
+
+    final result = outcome!;
+    final said = switch (result.result) {
+      KeyImportResult.stored =>
+        l10n.recoveryImportedStored(result.aeadRecordsVerified),
+      KeyImportResult.replaced =>
+        l10n.recoveryImportedReplaced(result.aeadRecordsVerified),
+      KeyImportResult.unchanged => l10n.recoveryImportedUnchanged,
+    };
+    // "Verified" and "verified nothing" are not the same reassurance: on a
+    // profile with nothing encrypted in it, any key at all would have passed.
+    return result.aeadRecordsVerified == 0 &&
+            result.result != KeyImportResult.unchanged
+        ? '$said ${l10n.recoveryVerifiedNothing}'
+        : said;
+  }
+
   Future<bool?> _confirmRestore() => showDialog<bool>(
     context: context,
     builder: (context) => AlertDialog(
@@ -220,6 +314,10 @@ class _BackupScreenState extends State<BackupScreen> {
     final text = Theme.of(context).textTheme;
     final l10n = context.l10n;
     final available = _service != null;
+    // A separate question from [available]: the recovery service and the
+    // restart scope are what the key rows need, and a screen built without
+    // either must show them dead rather than let a tap do nothing.
+    final keyRecovery = _recovery != null && AppRestartScope.maybeOf(context) != null;
     final busy = _busy;
 
     return Scaffold(
@@ -335,6 +433,76 @@ class _BackupScreenState extends State<BackupScreen> {
                 ],
               ),
             ),
+            const SizedBox(height: Spacing.sectionGap),
+
+            SectionLabel(l10n.recoverySectionExport),
+            const SizedBox(height: Spacing.stackSm),
+            AppCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.recoveryExportExplanation,
+                    style: text.bodySmall?.copyWith(
+                      color: ObsidianPalette.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: Spacing.stackMd),
+                  SheetField(
+                    controller: _exportKeyPassphrase,
+                    label: l10n.backupPassphrase,
+                    onChanged: (_) => setState(() {}),
+                  ),
+                  const SizedBox(height: Spacing.stackSm),
+                  SheetField(
+                    controller: _confirmKeyPassphrase,
+                    label: l10n.backupPassphraseAgain,
+                    onChanged: (_) => setState(() {}),
+                  ),
+                  const SizedBox(height: Spacing.stackMd),
+                  OutlinedButton(
+                    onPressed: keyRecovery && _exportKeyReady
+                        ? () => _run(l10n.backupCreateBusy, _exportKey)
+                        : null,
+                    child: Text(l10n.recoveryExportAction),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: Spacing.sectionGap),
+
+            SectionLabel(l10n.recoverySectionImport),
+            const SizedBox(height: Spacing.stackSm),
+            AppCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.recoveryImportExplanation,
+                    style: text.bodySmall?.copyWith(
+                      color: ObsidianPalette.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: Spacing.stackMd),
+                  SheetField(
+                    controller: _importKeyPassphrase,
+                    label: l10n.recoveryImportPassphrase,
+                    onChanged: (_) => setState(() {}),
+                  ),
+                  const SizedBox(height: Spacing.stackMd),
+                  OutlinedButton(
+                    onPressed:
+                        keyRecovery &&
+                            _importKeyPassphrase.text.length >=
+                                minPassphraseLength
+                        ? () => _run(l10n.recoveryImportBusy, _importKey)
+                        : null,
+                    child: Text(l10n.recoveryImportAction),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: Spacing.sectionGap),
           ],
         ),
       ),
@@ -344,6 +512,10 @@ class _BackupScreenState extends State<BackupScreen> {
   bool get _createReady =>
       _createPassphrase.text.length >= minPassphraseLength &&
       _confirmPassphrase.text.length >= minPassphraseLength;
+
+  bool get _exportKeyReady =>
+      _exportKeyPassphrase.text.length >= minPassphraseLength &&
+      _confirmKeyPassphrase.text.length >= minPassphraseLength;
 }
 
 /// A problem this screen raises itself, already in the user's language.

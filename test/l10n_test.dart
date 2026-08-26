@@ -11,20 +11,60 @@ library;
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:archlence_mobile/app_services.dart';
 import 'package:archlence_mobile/app_shell.dart';
+import 'package:archlence_mobile/backup/backup_service.dart';
+import 'package:archlence_mobile/backup/key_recovery_service.dart';
+import 'package:archlence_mobile/crypto/field_crypto.dart';
 import 'package:archlence_mobile/data/database.dart';
 import 'package:archlence_mobile/l10n/app_localizations.dart';
+import 'package:archlence_mobile/screens/backup_screen.dart';
 import 'package:archlence_mobile/screens/settings_screen.dart';
 import 'package:archlence_mobile/services/account_service.dart';
 import 'package:archlence_mobile/ui/app_locale.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/fixed_key_provider.dart';
 import 'support/test_app.dart';
 
 Map<String, dynamic> _arb(String locale) =>
     jsonDecode(File('lib/l10n/app_$locale.arb').readAsStringSync())
         as Map<String, dynamic>;
+
+/// Every English value whose Turkish differs, plus its upper-cased form.
+///
+/// Templates are skipped: they render with their placeholders filled in, so an
+/// exact match would never fire. A value the two languages SHARE is skipped
+/// too — `Archlence`, `Android Keystore`, `What-If Sandbox` — because seeing
+/// it on a Turkish screen is evidence of nothing.
+///
+/// The upper-cased variant is not decoration. `SectionLabel` upper-cases what
+/// it is given, so the heading on screen is never the ARB value, and without
+/// this the section headings — the very place the first miss showed up —
+/// would be invisible.
+Set<String> _englishTurkishChanges(
+  Map<String, dynamic> en,
+  Map<String, dynamic> tr,
+  List<String> keys,
+) {
+  final englishOnly = <String>{};
+  for (final key in keys) {
+    final english = en[key] as String;
+    if (english.contains('{') || english == tr[key]) continue;
+    englishOnly.add(english);
+    englishOnly.add(english.toUpperCase());
+  }
+  return englishOnly;
+}
+
+/// Which of [englishOnly] is currently on screen.
+Set<String> _leaked(WidgetTester tester, Set<String> englishOnly) => tester
+    .widgetList<Text>(find.byType(Text))
+    .map((widget) => widget.data)
+    .whereType<String>()
+    .where(englishOnly.contains)
+    .toSet();
 
 /// The `{placeholder}` names in a message, as a set.
 Set<String> _placeholders(String message) => RegExp(r'\{(\w+)\}')
@@ -121,19 +161,7 @@ void main() {
     // English ARB value the Turkish file translates differently. It cannot
     // catch a label that was never given a key at all — nothing but reading
     // can — but it does catch a key that exists and is not being used.
-    final englishOnly = <String>{};
-    for (final key in keys) {
-      final english = en[key] as String;
-      // Templates render with their placeholders filled in, so an exact match
-      // would never fire; and a value the two languages share is not evidence
-      // of anything.
-      if (english.contains('{') || english == tr[key]) continue;
-      englishOnly.add(english);
-      // `SectionLabel` upper-cases what it is given, so the heading on screen
-      // is not the ARB value. Without this the section headings — the very
-      // place the miss showed up — would be invisible to this test.
-      englishOnly.add(english.toUpperCase());
-    }
+    final englishOnly = _englishTurkishChanges(en, tr, keys);
 
     final db = ArchlenceDatabase.memory();
     addTearDown(db.close);
@@ -169,14 +197,54 @@ void main() {
       await tester.tap(find.text(tab));
       await tester.pumpAndSettle();
 
-      final leaked = tester
-          .widgetList<Text>(find.byType(Text))
-          .map((widget) => widget.data)
-          .whereType<String>()
-          .where(englishOnly.contains)
-          .toSet();
-      expect(leaked, isEmpty, reason: 'left in English on the $tab tab');
+      expect(
+        _leaked(tester, englishOnly),
+        isEmpty,
+        reason: 'left in English on the $tab tab',
+      );
     }
+  });
+
+  testWidgets('nor does Backup & Restore, which no tab walk reaches', (
+    tester,
+  ) async {
+    // The tab walk cannot see this screen: it is pushed from Settings, and it
+    // carries more prose than any tab does — the passphrase warning, the two
+    // key sections. A screen the leak check does not reach is a screen where
+    // the next unwired label goes unnoticed, so it is pumped on its own.
+    final englishOnly = _englishTurkishChanges(en, tr, keys);
+
+    final db = ArchlenceDatabase.memory();
+    addTearDown(db.close);
+    // `createTempSync`, not `await createTemp`. A `testWidgets` body runs in
+    // a fake-async zone, and real file I/O awaited inside it never completes:
+    // the test simply hangs until the runner gives up, with no failure to
+    // read. `backup_screen_test.dart` uses the sync call for the same reason.
+    final directory = Directory.systemTemp.createTempSync('archlence-l10n-');
+    addTearDown(() => directory.deleteSync(recursive: true));
+
+    final provider = FixedKeyProvider.arbitrary();
+    final backup = BackupService(
+      databasePath: '${directory.path}/finance.db',
+      keyProvider: provider,
+    );
+    await pumpScreen(
+      tester,
+      AppServices.forDatabase(
+        db,
+        FieldCrypto(provider),
+        backup: backup,
+        keyRecovery: KeyRecoveryService(
+          databasePath: '${directory.path}/finance.db',
+          keyProvider: provider,
+          backup: backup,
+        ),
+      ),
+      const BackupScreen(),
+      locale: const Locale('tr'),
+    );
+
+    expect(_leaked(tester, englishOnly), isEmpty);
   });
 
   testWidgets('a screen asked for Turkish is drawn in Turkish', (tester) async {

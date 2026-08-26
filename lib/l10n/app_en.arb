@@ -678,5 +678,44 @@
       }
     },
     "description": "The trend chart's x-axis tick, e.g. Sep'25 / Eyl'25."
+  },
+  "recoverySectionExport": "Just the key",
+  "recoveryExportExplanation": "A key recovery package holds the encryption key and nothing else — no accounts, no transactions. It is for the day the data is still here and the key is not: a reinstall, a phone reset, a screen lock changed in a way that emptied the key store.\n\nA whole backup answers a different question. Restoring one would also throw away everything recorded since it was made.",
+  "recoveryExportAction": "Export and share the key",
+  "recoveryExportShareSubject": "Archlence key recovery",
+  "recoveryExported": "The key was written and checked. Keep it somewhere other than this phone — anyone holding it AND its passphrase can read your data.",
+  "recoverySectionImport": "Put a key back",
+  "recoveryImportExplanation": "Replaces the encryption key with the one in the file, after checking that it opens the data already on this phone. Your accounts and transactions are not touched, and a key that does not open them changes nothing.",
+  "recoveryImportPassphrase": "The package's passphrase",
+  "recoveryImportAction": "Choose a file and put the key back",
+  "recoveryImportConfirmButton": "Import",
+  "@recoveryImportConfirmButton": {
+    "description": "The system file picker's confirm button."
+  },
+  "recoveryFileTypeLabel": "Archlence key recovery",
+  "@recoveryFileTypeLabel": {
+    "description": "Names the file kind in the system file picker."
+  },
+  "recoveryImportBusy": "Checking the key against your data. Do not close the app.",
+  "recoveryImportedStored": "The key is in place. {records} encrypted fields opened with it.",
+  "@recoveryImportedStored": {
+    "placeholders": {
+      "records": {
+        "type": "int"
+      }
+    }
+  },
+  "recoveryImportedReplaced": "The key was replaced. {records} encrypted fields opened with it.",
+  "@recoveryImportedReplaced": {
+    "placeholders": {
+      "records": {
+        "type": "int"
+      }
+    }
+  },
+  "recoveryImportedUnchanged": "That is already the key on this phone. Nothing was changed.",
+  "recoveryVerifiedNothing": "There was nothing encrypted here to check it against, so the key was accepted untested.",
+  "@recoveryVerifiedNothing": {
+    "description": "Appended when the import verified zero fields. 'Verified' and 'verified nothing' are not the same reassurance, and on a fresh profile any key at all would have passed."
   }
 }

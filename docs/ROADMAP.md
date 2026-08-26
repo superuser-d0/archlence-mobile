@@ -42,9 +42,16 @@ release key on this machine yet, so no installable release APK exists yet
 either. `android/key.properties.example` carries the one command that makes
 one.
 
+**And the key can travel on its own.** Settings writes a key recovery
+package — the encryption key wrapped under a passphrase, no data with it — and
+reads one back after proving it opens what is already on the phone. It answers
+the case a whole backup does not: the data is still here and the KEY is gone.
+Wire-compatible with the desktop's, checked in both directions against
+`services/key_recovery_service.py`.
+
 **What it cannot do yet:** show a live price.
 
-579 unit tests and 12 device tests pass. `flutter analyze` is clean, no
+598 unit tests and 12 device tests pass. `flutter analyze` is clean, no
 control in the app is inert, and it runs on the emulator.
 
 ## Pick up here
@@ -58,13 +65,9 @@ everything else is written and waiting on it: the moment that file exists,
 It is not a coding task, and it is not one to delegate — the keystore is the
 app's identity and its password should never be typed into this repository.
 
-**2. `key_recovery_service.py`.** The one piece of the backup work deliberately
-left out — see "What the backup work did NOT port". It matters for someone who
-still has their database but has lost the key, which a whole backup package
-does not help with.
-
-**3. Price fetching.** Needs a DECISION before it needs code; open work 1 says
-what the decision is.
+**2. Price fetching.** Needs a DECISION before it needs code; open work 1 says
+what the decision is. It is now the only thing on the list that changes what
+the app can tell a user.
 
 Open work 3 lists what has not been considered at all.
 
@@ -213,7 +216,7 @@ Long, and grouped roughly by layer rather than by date:
 | --- | --- |
 | Foundations | Money · Encryption · Database · The REAL column's drift |
 | Services | Accounts · Transactions · Holdings · Recurring payments · The monthly budget · Savings goals |
-| Backup | The backup's cryptographic core · The package around it · Restoring |
+| Backup | The backup's cryptographic core · The package around it · Restoring · The key on its own |
 | Security | The screen lock |
 | Language | i18n · What i18n did NOT cover |
 | Shipping | The icon and the launch screen · What running it caught · Release signing |
@@ -603,9 +606,8 @@ backup could have caught it.
 `key_recovery_service.py`, deliberately, and for two different reasons.
 
 `export_recovery_package` / `import_recovery_package` — a passphrase-wrapped
-copy of just the key, without the database — is worth having and is item 3 in
-"Pick up here". It answers a case a whole backup does not: still having the
-data, having lost the key.
+copy of just the key, without the database — has since been ported; see "The
+key on its own".
 
 `rotate_encryption_key` is a different matter. It refuses to run until the
 desktop's legacy CBC migration has finished, and that migration is explicitly
@@ -927,6 +929,89 @@ config that never signs look identical from the outside:
 The throwaway keystore and the release APK it signed were both deleted
 afterwards. Neither was ever in the repository, and nothing signed with a
 disposable key should be left where it could be mistaken for a build to ship.
+
+### The key on its own — `lib/backup/key_recovery_service.dart`
+
+The port of `export_recovery_package` / `import_recovery_package`, and the
+form on Backup & Restore that drives them.
+
+**Why it is not just a smaller backup.** A backup holds the database AND the
+key, so restoring one replaces both. This answers the other case: the data is
+fine and the KEY is gone — a reinstall, a phone reset, a screen lock changed
+in a way that emptied the Keystore. Restoring a backup then would work, and
+would also throw away everything recorded since it was made. The screen says
+so in as many words, and `backup_screen_test.dart` pins the sentence.
+
+The file is a few hundred bytes of JSON: `format`, `created_at`, a
+`key_fingerprint`, and the same passphrase-wrapped `recovery` block that
+travels inside a backup. The desktop's field names and format string verbatim.
+
+**THE ORDER IS THE SAFETY PROPERTY.** The incoming key is proven against the
+database that is here NOW, before the key store is touched at all. A key that
+does not open this data would make every encrypted row unreadable the moment
+it landed, and by then the old key is gone with nothing to roll back to. A
+failure therefore leaves the store exactly as it was — asserted, not assumed:
+one test imports a well-formed package belonging to a different key and checks
+the stored key afterwards.
+
+**Two things the desktop's version cannot say, and this one does:**
+
+* **How much was actually checked.** `verifyDatabaseKey` returns a count, and
+  the outcome carries it. Zero is the number that matters: it means the
+  database had nothing encrypted in it, so the key was not really tested and
+  any key at all would have passed. The screen appends a sentence saying so
+  rather than reporting a bare success.
+* **That nothing changed.** The desktop returns `{"imported": True}` whether
+  it stored, replaced, or found the key already there. Here they are three
+  outcomes, because "that is already the key on this phone" is the reassuring
+  answer to the question the user actually asked.
+
+**The import goes through `swapProfile`,** the same restart the restore uses,
+and not because the database is being replaced — it is not. `FieldCrypto`
+caches the key it first read, so a running app would go on decrypting with the
+OLD one and report every row as corrupt.
+
+**The file is untrusted input,** like a backup package: bounded by length
+before it is parsed at all (the same 4MiB ceiling the recovery member gets
+inside a package — the point is that a 2GB "recovery package" is refused by
+its size rather than by the JSON parser running out of memory), then a strict
+shape, then `RecoveryMaterial.fromJson`'s own bounds, then the fingerprint.
+The fingerprint is checked AFTER decryption and is a check rather than a
+secret: SHA-256 of 32 random bytes gives nothing away, and it catches a package
+whose wrapped key was swapped for another valid one.
+
+A wrong passphrase is a `WrongPassphraseError`, kept distinct from
+`BackupFormatError` for the reason the backup screen already draws: "you
+mistyped" and "this file is not what you think" send a user to different
+places.
+
+**How it was proven.** Parity in BOTH directions against the desktop's own
+module, because a format only one side can produce is not a shared format:
+
+* `tool/emit_recovery_package.py` writes `test/desktop_key_recovery.json` with
+  the desktop's own `export_recovery_package`, under a fixed key
+  (`bytes(range(32))`) so the Dart test asserts the exact bytes rather than
+  that something 32 bytes long came back.
+* `tool/emit_mobile_recovery.dart` writes one with THIS app's code, and the
+  same script's `--verify` mode opens it with the desktop's
+  `read_recovery_package`. Run, and it does.
+
+Then fifteen tests over a real profile on disk: the round trip, the shape, a
+refusal that leaves no file at all (not even the `.tmp` it stages through),
+six malformed files that must all come back as one kind of error, the size
+ceiling, a tampered fingerprint, the wrong passphrase, all three import
+outcomes, the zero count on an empty profile, and the stranger's key that must
+change nothing.
+
+Checked for teeth, all four measured: skipping the database check, skipping
+the fingerprint check, removing the size ceiling, and folding "unchanged" into
+"replaced" each fail the suite, and it passes again when they are put back.
+
+**What the screen needed that the service did not.** The two new sections sit
+AFTER restore rather than between it and the backup section: the common flow
+first, the recovery case last. And the l10n leak test grew a second case for
+this screen — it is pushed from Settings, so the tab walk never reaches it,
+and it carries more prose than any tab does.
 
 ### Paying card debt — `lib/screens/pay_debt_sheet.dart`
 

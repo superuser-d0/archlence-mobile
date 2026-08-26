@@ -1179,4 +1179,62 @@ class AppLocalizationsTr extends AppLocalizations {
   String monthYearShort(String month, String year) {
     return '$month\'$year';
   }
+
+  @override
+  String get recoverySectionExport => 'Yalnızca anahtar';
+
+  @override
+  String get recoveryExportExplanation =>
+      'Bir anahtar kurtarma paketi yalnızca şifreleme anahtarını taşır — hesap yok, işlem yok. Verilerin durduğu ama anahtarın gittiği gün içindir: yeniden kurulum, telefon sıfırlama, ya da anahtar deposunu boşaltacak şekilde değiştirilmiş bir ekran kilidi.\n\nTam bir yedek başka bir soruya cevap verir. Onu geri yüklemek, alındığından beri kaydedilen her şeyi de silerdi.';
+
+  @override
+  String get recoveryExportAction => 'Anahtarı dışa aktar ve paylaş';
+
+  @override
+  String get recoveryExportShareSubject => 'Archlence anahtar kurtarma';
+
+  @override
+  String get recoveryExported =>
+      'Anahtar yazıldı ve doğrulandı. Bu telefondan başka bir yerde sakla — hem ona hem parolasına sahip olan biri verilerini okuyabilir.';
+
+  @override
+  String get recoverySectionImport => 'Anahtarı geri koy';
+
+  @override
+  String get recoveryImportExplanation =>
+      'Şifreleme anahtarını dosyadakiyle değiştirir — ama önce, bu telefondaki veriyi açtığını doğrular. Hesaplarına ve işlemlerine dokunulmaz; veriyi açmayan bir anahtar hiçbir şeyi değiştirmez.';
+
+  @override
+  String get recoveryImportPassphrase => 'Paketin parolası';
+
+  @override
+  String get recoveryImportAction => 'Bir dosya seç ve anahtarı geri koy';
+
+  @override
+  String get recoveryImportConfirmButton => 'İçe aktar';
+
+  @override
+  String get recoveryFileTypeLabel => 'Archlence anahtar kurtarma';
+
+  @override
+  String get recoveryImportBusy =>
+      'Anahtar verilerine karşı doğrulanıyor. Uygulamayı kapatma.';
+
+  @override
+  String recoveryImportedStored(int records) {
+    return 'Anahtar yerine kondu. Onunla $records şifreli alan açıldı.';
+  }
+
+  @override
+  String recoveryImportedReplaced(int records) {
+    return 'Anahtar değiştirildi. Onunla $records şifreli alan açıldı.';
+  }
+
+  @override
+  String get recoveryImportedUnchanged =>
+      'Bu zaten bu telefondaki anahtar. Hiçbir şey değişmedi.';
+
+  @override
+  String get recoveryVerifiedNothing =>
+      'Burada karşılaştırılacak şifreli bir şey yoktu; anahtar sınanmadan kabul edildi.';
 }

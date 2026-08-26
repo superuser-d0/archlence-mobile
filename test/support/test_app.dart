@@ -48,6 +48,7 @@ Widget testApp(
   Widget child, {
   LocaleChoice? language,
   Locale? locale,
+  ProfileSwap? swapProfile,
 }) {
   // The real root, so the scope's placement above the Navigator is the one
   // production uses rather than a copy of it that could drift.
@@ -56,6 +57,12 @@ Widget testApp(
     theme: obsidianPrimeTheme(),
     selectLocale: (language ?? LocaleChoice()).select,
     locale: locale,
+    // Runs the work and nothing else. In the app this closes the service
+    // graph and builds another one over what the work left behind; a widget
+    // test has no graph to close, and a screen gated on the scope being
+    // PRESENT — Backup & Restore's key rows are — would otherwise be tested
+    // in its unavailable state.
+    swapProfile: swapProfile ?? (work) => work(),
     home: Scaffold(body: child),
   );
 }
@@ -74,13 +81,20 @@ Future<void> pumpScreen(
   Size size = const Size(800, 2400),
   LocaleChoice? language,
   Locale? locale,
+  ProfileSwap? swapProfile,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
 
   await tester.pumpWidget(
-    testApp(services, child, language: language, locale: locale),
+    testApp(
+      services,
+      child,
+      language: language,
+      locale: locale,
+      swapProfile: swapProfile,
+    ),
   );
   await tester.pumpAndSettle();
 }

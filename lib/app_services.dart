@@ -10,6 +10,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:path/path.dart' as p;
 
 import 'backup/backup_service.dart';
+import 'backup/key_recovery_service.dart';
 import 'crypto/field_crypto.dart';
 import 'crypto/key_provider.dart';
 import 'data/database.dart';
@@ -32,6 +33,7 @@ class AppServices {
     this.keyProtection,
     this.screenLock,
     this.backup,
+    this.keyRecovery,
   ) : accounts = AccountService(db, crypto),
       assets = AssetService(db, crypto),
       savings = SavingsService(db, crypto);
@@ -46,6 +48,7 @@ class AppServices {
     KeyProtectionStatus? keyProtection,
     ScreenLock? screenLock,
     BackupService? backup,
+    KeyRecoveryService? keyRecovery,
   }) {
     final services = AppServices._(
       db,
@@ -53,6 +56,7 @@ class AppServices {
       keyProtection,
       screenLock ?? ScreenLock(),
       backup,
+      keyRecovery,
     );
     services.transactions = TransactionService(db, crypto, services.accounts);
     services.recurring = RecurringService(db, crypto, services.accounts);
@@ -103,6 +107,11 @@ class AppServices {
       FieldCrypto(keyProvider),
       keyProtection: keyProvider.status,
       backup: backup,
+      keyRecovery: KeyRecoveryService(
+        databasePath: p.join(directory, 'finance.db'),
+        keyProvider: keyProvider,
+        backup: backup,
+      ),
     );
   }
 
@@ -132,6 +141,10 @@ class AppServices {
   /// that cannot back anything up has to SAY so, not draw a button that
   /// quietly does nothing.
   final BackupService? backup;
+
+  /// The key on its own — exporting it, and putting one back. Null in tests
+  /// with no profile on disk, for the same reason [backup] is.
+  final KeyRecoveryService? keyRecovery;
 
   final AccountService accounts;
   final AssetService assets;

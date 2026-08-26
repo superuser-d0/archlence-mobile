@@ -2189,6 +2189,102 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{month}\'{year}'**
   String monthYearShort(String month, String year);
+
+  /// No description provided for @recoverySectionExport.
+  ///
+  /// In en, this message translates to:
+  /// **'Just the key'**
+  String get recoverySectionExport;
+
+  /// No description provided for @recoveryExportExplanation.
+  ///
+  /// In en, this message translates to:
+  /// **'A key recovery package holds the encryption key and nothing else — no accounts, no transactions. It is for the day the data is still here and the key is not: a reinstall, a phone reset, a screen lock changed in a way that emptied the key store.\n\nA whole backup answers a different question. Restoring one would also throw away everything recorded since it was made.'**
+  String get recoveryExportExplanation;
+
+  /// No description provided for @recoveryExportAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Export and share the key'**
+  String get recoveryExportAction;
+
+  /// No description provided for @recoveryExportShareSubject.
+  ///
+  /// In en, this message translates to:
+  /// **'Archlence key recovery'**
+  String get recoveryExportShareSubject;
+
+  /// No description provided for @recoveryExported.
+  ///
+  /// In en, this message translates to:
+  /// **'The key was written and checked. Keep it somewhere other than this phone — anyone holding it AND its passphrase can read your data.'**
+  String get recoveryExported;
+
+  /// No description provided for @recoverySectionImport.
+  ///
+  /// In en, this message translates to:
+  /// **'Put a key back'**
+  String get recoverySectionImport;
+
+  /// No description provided for @recoveryImportExplanation.
+  ///
+  /// In en, this message translates to:
+  /// **'Replaces the encryption key with the one in the file, after checking that it opens the data already on this phone. Your accounts and transactions are not touched, and a key that does not open them changes nothing.'**
+  String get recoveryImportExplanation;
+
+  /// No description provided for @recoveryImportPassphrase.
+  ///
+  /// In en, this message translates to:
+  /// **'The package\'s passphrase'**
+  String get recoveryImportPassphrase;
+
+  /// No description provided for @recoveryImportAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a file and put the key back'**
+  String get recoveryImportAction;
+
+  /// The system file picker's confirm button.
+  ///
+  /// In en, this message translates to:
+  /// **'Import'**
+  String get recoveryImportConfirmButton;
+
+  /// Names the file kind in the system file picker.
+  ///
+  /// In en, this message translates to:
+  /// **'Archlence key recovery'**
+  String get recoveryFileTypeLabel;
+
+  /// No description provided for @recoveryImportBusy.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking the key against your data. Do not close the app.'**
+  String get recoveryImportBusy;
+
+  /// No description provided for @recoveryImportedStored.
+  ///
+  /// In en, this message translates to:
+  /// **'The key is in place. {records} encrypted fields opened with it.'**
+  String recoveryImportedStored(int records);
+
+  /// No description provided for @recoveryImportedReplaced.
+  ///
+  /// In en, this message translates to:
+  /// **'The key was replaced. {records} encrypted fields opened with it.'**
+  String recoveryImportedReplaced(int records);
+
+  /// No description provided for @recoveryImportedUnchanged.
+  ///
+  /// In en, this message translates to:
+  /// **'That is already the key on this phone. Nothing was changed.'**
+  String get recoveryImportedUnchanged;
+
+  /// Appended when the import verified zero fields. 'Verified' and 'verified nothing' are not the same reassurance, and on a fresh profile any key at all would have passed.
+  ///
+  /// In en, this message translates to:
+  /// **'There was nothing encrypted here to check it against, so the key was accepted untested.'**
+  String get recoveryVerifiedNothing;
 }
 
 class _AppLocalizationsDelegate

@@ -347,5 +347,21 @@
   "assetsHoldingName": "{name} ({code})",
   "assetsPurchaseLine": "Alış: {price} × {quantity}",
   "assetsCost": "Maliyet",
-  "monthYearShort": "{month}'{year}"
+  "monthYearShort": "{month}'{year}",
+  "recoverySectionExport": "Yalnızca anahtar",
+  "recoveryExportExplanation": "Bir anahtar kurtarma paketi yalnızca şifreleme anahtarını taşır — hesap yok, işlem yok. Verilerin durduğu ama anahtarın gittiği gün içindir: yeniden kurulum, telefon sıfırlama, ya da anahtar deposunu boşaltacak şekilde değiştirilmiş bir ekran kilidi.\n\nTam bir yedek başka bir soruya cevap verir. Onu geri yüklemek, alındığından beri kaydedilen her şeyi de silerdi.",
+  "recoveryExportAction": "Anahtarı dışa aktar ve paylaş",
+  "recoveryExportShareSubject": "Archlence anahtar kurtarma",
+  "recoveryExported": "Anahtar yazıldı ve doğrulandı. Bu telefondan başka bir yerde sakla — hem ona hem parolasına sahip olan biri verilerini okuyabilir.",
+  "recoverySectionImport": "Anahtarı geri koy",
+  "recoveryImportExplanation": "Şifreleme anahtarını dosyadakiyle değiştirir — ama önce, bu telefondaki veriyi açtığını doğrular. Hesaplarına ve işlemlerine dokunulmaz; veriyi açmayan bir anahtar hiçbir şeyi değiştirmez.",
+  "recoveryImportPassphrase": "Paketin parolası",
+  "recoveryImportAction": "Bir dosya seç ve anahtarı geri koy",
+  "recoveryImportConfirmButton": "İçe aktar",
+  "recoveryFileTypeLabel": "Archlence anahtar kurtarma",
+  "recoveryImportBusy": "Anahtar verilerine karşı doğrulanıyor. Uygulamayı kapatma.",
+  "recoveryImportedStored": "Anahtar yerine kondu. Onunla {records} şifreli alan açıldı.",
+  "recoveryImportedReplaced": "Anahtar değiştirildi. Onunla {records} şifreli alan açıldı.",
+  "recoveryImportedUnchanged": "Bu zaten bu telefondaki anahtar. Hiçbir şey değişmedi.",
+  "recoveryVerifiedNothing": "Burada karşılaştırılacak şifreli bir şey yoktu; anahtar sınanmadan kabul edildi."
 }
