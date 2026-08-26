@@ -5,17 +5,20 @@ import '../crypto/key_provider.dart';
 import '../theme/obsidian_prime.dart';
 import '../widgets/not_yet.dart';
 import '../widgets/surfaces.dart';
+import 'backup_screen.dart';
 
 /// Settings, grouped into sections rather than one flat list.
 ///
-/// One row here reports real state: where the encryption key is held. It used
-/// to be a hard-coded sentence claiming an owner-only file, which on a device
-/// with a working Keystore said the exact opposite of the truth — the worst
-/// thing on this screen to be wrong about.
+/// Three rows here do something real: the encryption key reports where it is
+/// actually held, the resume lock switches the gate, and Backup & Restore
+/// opens the screen that writes and reads packages. The key row used to be a
+/// hard-coded sentence claiming an owner-only file, which on a device with a
+/// working Keystore said the exact opposite of the truth — the worst thing on
+/// this screen to be wrong about.
 ///
-/// Everything else is marked unavailable. The two switches went with them:
-/// they moved local state and nothing else, so a user could turn "Dark Mode"
-/// off and watch nothing happen.
+/// Everything else is marked unavailable. The two decorative switches went
+/// with them: they moved local state and nothing else, so a user could turn
+/// "Dark Mode" off and watch nothing happen.
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
@@ -127,6 +130,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         const SizedBox(height: Spacing.sectionGap),
 
+        const SectionLabel('Your Data'),
+        const SizedBox(height: Spacing.stackSm),
+        _SettingsGroup(
+          children: [
+            _SettingsTile(
+              icon: Icons.backup_outlined,
+              title: 'Backup & Restore',
+              subtitle: ServicesScope.of(context).backup == null
+                  ? 'Not available in this build.'
+                  : 'Write a backup you can keep, or restore one — including '
+                        'a backup made by the desktop app.',
+              subtitleMaxLines: 3,
+              available: ServicesScope.of(context).backup != null,
+              onTap: ServicesScope.of(context).backup == null
+                  ? null
+                  : () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const BackupScreen(),
+                      ),
+                    ),
+            ),
+          ],
+        ),
+        const SizedBox(height: Spacing.sectionGap),
+
         const SectionLabel('Appearance & Privacy'),
         const SizedBox(height: Spacing.stackSm),
         _SettingsGroup(
@@ -207,6 +235,7 @@ class _SettingsTile extends StatelessWidget {
     this.subtitleMaxLines = 2,
     this.danger = false,
     this.available = false,
+    this.onTap,
   });
 
   final IconData icon;
@@ -215,20 +244,23 @@ class _SettingsTile extends StatelessWidget {
   final int subtitleMaxLines;
   final bool danger;
 
-  /// A row that reports real state but opens nothing — neither tappable nor
-  /// unfinished, so it carries no chip and no chevron.
+  /// A row that reports real state, whether or not it opens anything.
   ///
-  /// NOTHING on this screen is tappable yet, which is why there is no `onTap`
-  /// at all: a parameter nobody passes is a parameter nobody checks. It comes
-  /// back with the first row that has a destination.
+  /// Three shapes, and they are distinguishable at a glance because the
+  /// difference matters: available with an [onTap] gets a chevron because it
+  /// has somewhere to go; available without one reports state and stays put;
+  /// unavailable carries the chip that says so.
   final bool available;
+
+  /// Where the row goes, or null when it goes nowhere.
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final tint = danger ? ObsidianPalette.error : ObsidianPalette.onSurface;
 
-    return Padding(
+    final row = Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -273,11 +305,24 @@ class _SettingsTile extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          // No chevron anywhere: a chevron promises a destination, and none
-          // of these rows has one.
-          if (!available) const NotYetChip(),
+          // A chevron promises a destination, so only a row that has one gets
+          // it. The chip says the opposite.
+          if (!available)
+            const NotYetChip()
+          else if (onTap != null)
+            const Icon(
+              Icons.chevron_right,
+              size: 18,
+              color: ObsidianPalette.onSurfaceVariant,
+            ),
         ],
       ),
+    );
+
+    if (onTap == null) return row;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(onTap: onTap, child: row),
     );
   }
 }

@@ -1,7 +1,11 @@
-/// Settings, and the one row on it that reports real state.
+/// Settings: the rows that report real state, and the one that opens a screen.
 library;
 
+import 'dart:io';
+
 import 'package:archlence_mobile/app_services.dart';
+import 'package:archlence_mobile/backup/backup_service.dart';
+import 'package:archlence_mobile/screens/backup_screen.dart';
 import 'package:archlence_mobile/crypto/field_crypto.dart';
 import 'package:archlence_mobile/crypto/key_provider.dart';
 import 'package:archlence_mobile/data/database.dart';
@@ -25,15 +29,30 @@ void main() {
   AppServices servicesWith(
     KeyProtectionStatus? status, {
     bool lockAvailable = true,
+    BackupService? backup,
   }) => AppServices.forDatabase(
     db,
     FieldCrypto(FixedKeyProvider.arbitrary()),
     keyProtection: status,
+    backup: backup,
     screenLock: ScreenLock(
       storage: FakeSecureStorage({}),
       auth: FakePlatformAuth()..supported = lockAvailable,
     ),
   );
+
+  /// A backup service over a directory that exists but holds nothing.
+  ///
+  /// The row only asks whether there IS one; what it can do is proven in
+  /// `test/backup_service_test.dart` against a real profile.
+  BackupService backupService() {
+    final directory = Directory.systemTemp.createTempSync('settings-');
+    addTearDown(() => directory.deleteSync(recursive: true));
+    return BackupService(
+      databasePath: '${directory.path}/finance.db',
+      keyProvider: FixedKeyProvider.arbitrary(),
+    );
+  }
 
   testWidgets('a hardware-backed key is reported as such', (tester) async {
     await pumpScreen(
@@ -175,14 +194,55 @@ void main() {
       const SettingsScreen(),
     );
 
-    // Ten rows; only the encryption-key one reports something real.
-    expect(find.byType(NotYetChip), findsNWidgets(9));
+    // Eleven rows. Two report something real without going anywhere — the
+    // encryption key and the lock — and Backup & Restore is unavailable here
+    // because this graph has no profile on disk behind it.
+    expect(find.byType(NotYetChip), findsNWidgets(10));
     // Exactly one switch: the screen lock, which does something. The two that
     // used to be here moved local state and nothing else, so a user could
     // turn Dark Mode off and watch nothing happen.
     expect(find.byType(Switch), findsOneWidget);
     expect(find.text('Lock when I come back'), findsOneWidget);
-    // No chevron anywhere — a chevron promises a destination.
+    // No chevron anywhere — a chevron promises a destination, and with no
+    // backup service behind it this build has none.
     expect(find.byIcon(Icons.chevron_right), findsNothing);
+  });
+
+  testWidgets('Backup & Restore opens when there is a profile behind it', (
+    tester,
+  ) async {
+    await pumpScreen(
+      tester,
+      servicesWith(
+        const KeyProtectionStatus('Android Keystore', true),
+        backup: backupService(),
+      ),
+      const SettingsScreen(),
+    );
+
+    // The one chevron on the screen, on the one row that goes somewhere.
+    expect(find.byIcon(Icons.chevron_right), findsOneWidget);
+    expect(find.byType(NotYetChip), findsNWidgets(9));
+
+    await tester.tap(find.text('Backup & Restore'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(BackupScreen), findsOneWidget);
+  });
+
+  testWidgets('and says so plainly when there is not', (tester) async {
+    // Not a button that opens a screen which then reports it can do nothing:
+    // the row itself carries the chip, like every other row that leads
+    // nowhere.
+    await pumpScreen(
+      tester,
+      servicesWith(const KeyProtectionStatus('Android Keystore', true)),
+      const SettingsScreen(),
+    );
+
+    expect(find.text('Not available in this build.'), findsOneWidget);
+    await tester.tap(find.text('Backup & Restore'));
+    await tester.pumpAndSettle();
+    expect(find.byType(BackupScreen), findsNothing);
   });
 }

@@ -31,7 +31,9 @@ class ArchlenceApp extends StatefulWidget {
 enum _Destination { onboarding, shell }
 
 class _ArchlenceAppState extends State<ArchlenceApp> {
-  late final Future<(AppServices, _Destination)> _startUp = _start();
+  // Not `final`: a restore replaces the database file, which means closing
+  // this graph and building another one over what the restore put there.
+  late Future<(AppServices, _Destination)> _startUp = _start();
   _Destination? _override;
 
   Future<(AppServices, _Destination)> _start() async {
@@ -43,6 +45,29 @@ class _ArchlenceAppState extends State<ArchlenceApp> {
     );
   }
 
+  /// Closes the database, lets [work] replace the profile, and opens again.
+  ///
+  /// The `finally` is the point: if the restore fails, its own rollback has
+  /// already put the previous data back, and the app has to come back up on
+  /// that rather than sit on a closed database. The error is re-thrown so the
+  /// screen that asked can say what happened.
+  Future<void> _swapProfile(Future<void> Function() work) async {
+    final (services, _) = await _startUp;
+    await services.close();
+    try {
+      await work();
+    } finally {
+      // A block body. `setState(() => _startUp = _start())` returns the
+      // assignment's value — a Future — which Flutter asserts on and then
+      // swallows, leaving the state unchanged. See
+      // `test/no_async_set_state_test.dart`.
+      setState(() {
+        _startUp = _start();
+        _override = null;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<(AppServices, _Destination)>(
@@ -51,6 +76,7 @@ class _ArchlenceAppState extends State<ArchlenceApp> {
         final resolved = snapshot.data;
         return ArchlenceRoot(
           services: resolved?.$1,
+          swapProfile: _swapProfile,
           theme: obsidianPrimeTheme(),
           home: switch ((snapshot.error, resolved)) {
             (final Object error, _) => _StartUpFailed(error: error),

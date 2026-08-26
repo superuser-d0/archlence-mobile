@@ -51,7 +51,16 @@ String sqliteDate(DateTime when) => sqliteTimestamp(when).substring(0, 10);
 /// Matches `PRAGMA user_version` on the desktop, which tracks its own
 /// migrations. Kept at the value the current schema corresponds to so that a
 /// database opened by either app agrees about how far it has been migrated.
-const int schemaVersion = 1;
+///
+/// It is 2 because `database/init_db.py` stamps `SCHEMA_VERSION = 2`, and the
+/// dump in `schema.dart` was taken from a database it had finished with. This
+/// used to say 1, which was simply wrong, and the cost was not cosmetic: a
+/// database RESTORED FROM A DESKTOP BACKUP carries the stamp 2, drift saw a
+/// file from a future it had no migration for, and the app refused to open
+/// its own data. Nothing caught it until a desktop backup was actually
+/// restored in a test — the shape was right, only the number was wrong, so
+/// every schema comparison passed.
+const int schemaVersion = 2;
 
 @DriftDatabase(tables: [])
 class ArchlenceDatabase extends _$ArchlenceDatabase {
@@ -71,7 +80,7 @@ class ArchlenceDatabase extends _$ArchlenceDatabase {
       ArchlenceDatabase(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -94,6 +103,22 @@ class ArchlenceDatabase extends _$ArchlenceDatabase {
           ],
         );
       }
+    },
+    onUpgrade: (m, from, to) async {
+      // The only step there is. Version 1 was this app's own mis-stamp: the
+      // schema it wrote was already the desktop's version-2 shape, so there
+      // is nothing to change but the number, which drift writes itself once
+      // this returns.
+      if (from == 1) return;
+      // Anything else is a database from a desktop old enough to predate the
+      // current schema. Its migration is a Python script of `ALTER TABLE`s
+      // that this app does not carry, and inventing a partial version of it
+      // would produce a database that resembles the desktop's without being
+      // it. Saying so is the honest answer.
+      throw StateError(
+        'This database was written for schema version $from. Open it in the '
+        'desktop app once to bring it up to date, then back it up again.',
+      );
     },
     beforeOpen: (details) async {
       // The desktop declares transactions.account_id as a foreign key;

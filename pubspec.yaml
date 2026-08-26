@@ -17,6 +17,10 @@ dependencies:
   # Encrypted local store + the key that protects it.
   drift: ^2.28.2
   sqlite3_flutter_libs: ^0.5.42
+  # Used DIRECTLY, not only through drift: a backup is a SQLite-level copy of
+  # the database, which needs sqlite3's own online-backup API rather than a
+  # copy of the file's bytes.
+  sqlite3: ^3.5.2
   flutter_secure_storage: ^9.2.4
   cryptography: ^2.7.0
 
@@ -28,6 +32,21 @@ dependencies:
   intl: ^0.20.2
   local_auth: ^3.0.2
   archive: ^4.2.0
+
+  # Getting a backup OFF the phone and a backup file back ON to it. Both go
+  # through the platform's own pickers rather than a folder this app writes
+  # into: since Android 11 an app cannot hand another app a path, and a backup
+  # the user cannot move somewhere else is not a backup.
+  #
+  # `file_selector` rather than `file_picker`: the latter's current release
+  # needs `win32: ^6`, which `flutter_secure_storage` 9 forbids through its
+  # Windows sibling. That sibling is compiled even for an Android build, so
+  # the conflict is real rather than theoretical, and resolving it would mean
+  # moving the key store to `flutter_secure_storage` 11 — a change to where
+  # the encryption key LIVES, which belongs in a change that can be verified
+  # on a real device rather than in one about backups.
+  share_plus: ^12.0.2
+  file_selector: ^1.1.0
 
 dev_dependencies:
   flutter_test:

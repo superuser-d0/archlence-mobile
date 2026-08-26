@@ -127,24 +127,36 @@ class GradientButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final button = DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: ObsidianPalette.primaryGradient,
-        borderRadius: BorderRadius.circular(Radii.md),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onPressed,
+    // A null callback has to LOOK like a null callback.
+    //
+    // It did not: the gradient was painted at full strength whatever
+    // `onPressed` held, so a button waiting on a field the user had not
+    // filled in was indistinguishable from one that would work, and tapping
+    // it did nothing at all. Found by opening the backup screen on the
+    // emulator and looking at it — every finder in the widget test was
+    // checking `onPressed`, which was correctly null the whole time.
+    final enabled = onPressed != null;
+    final button = Opacity(
+      opacity: enabled ? 1 : 0.38,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: ObsidianPalette.primaryGradient,
           borderRadius: BorderRadius.circular(Radii.md),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
-            child: Text(
-              label,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: ObsidianPalette.onPrimary,
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onPressed,
+            borderRadius: BorderRadius.circular(Radii.md),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
+              child: Text(
+                label,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: ObsidianPalette.onPrimary,
+                ),
               ),
             ),
           ),
