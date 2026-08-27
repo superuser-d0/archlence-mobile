@@ -95,6 +95,31 @@
   },
   "settingsSectionAccount": "Account & Preferences",
   "settingsCategorySettings": "Category Settings",
+  "settingsCategorySubtitle": "Which categories your household must have",
+  "categorySettingsTitle": "Category Settings",
+  "assetsSplitTitle": "Essential and chosen",
+  "assetsSplitEmpty": "Nothing recorded in this period, so there is nothing to split.",
+  "assetsSplitNothingMarked": "No category is marked as one you must have yet. Settings \u203a Category Settings decides which are.",
+  "@assetsSplitNothingMarked": {
+    "description": "Shown under the split card when every category is still 'extra', so the bars would sit at one end and look broken rather than untouched."
+  },
+  "categorySettingsExplainer": "Mark the categories your household must have. Everything else counts as a choice, and the Assets tab splits the two so you can see how much of a month was up to you.\n\nThis is the only thing that can be changed here: categories cannot be added, renamed or removed, because their names are what every transaction is filed under \u2014 in this app and in the desktop one.",
+  "@categorySettingsExplainer": {
+    "description": "The card at the top of Category Settings, saying what the switches do and why nothing else on the screen does."
+  },
+  "categorySettingsIncome": "INCOME",
+  "categorySettingsExpense": "EXPENSE",
+  "categoryMainIncome": "Main income",
+  "categoryExtraIncome": "Extra income",
+  "categoryEssentialExpense": "Essential",
+  "@categoryEssentialExpense": {
+    "description": "Under an expense category whose switch is on. The word differs from the income side on purpose: a salary is a main income, rent is an essential expense."
+  },
+  "categoryExtraExpense": "A choice",
+  "categorySettingsWriteFailed": "That category is no longer there. Reopen this screen.",
+  "@categorySettingsWriteFailed": {
+    "description": "Shown when the switch's write matched no row \u2014 the category went away underneath, most likely through a restore."
+  },
   "settingsLanguage": "Language",
   "settingsLanguageSystem": "System language",
   "@settingsLanguageSystem": {

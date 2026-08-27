@@ -4,7 +4,9 @@ library;
 import 'package:archlence_mobile/app_services.dart';
 import 'package:archlence_mobile/data/database.dart';
 import 'package:archlence_mobile/screens/assets_screen.dart';
+import 'package:archlence_mobile/widgets/summary_row.dart';
 import 'package:archlence_mobile/services/account_service.dart';
+import 'package:flutter/material.dart';
 import 'package:drift/drift.dart' show Variable;
 import 'package:flutter_test/flutter_test.dart';
 
@@ -67,13 +69,24 @@ void main() {
 
     await pump(tester);
 
+    // Scoped to the summary row on purpose. The split card underneath prints
+    // the same total when every expense falls on one side of the main/extra
+    // line, and a bare `findsWidgets` here would pass with the SUMMARY
+    // showing the wrong figure — the exact shape of assertion this suite has
+    // been caught by before.
+    Finder inSummary(String amount) => find.descendant(
+      of: find.byType(SummaryRow),
+      matching: find.text(amount),
+    );
+
     // The screen opens on '1 Year', so the 2019 row is outside it.
-    expect(find.text('900,00 ₺'), findsOneWidget);
+    expect(inSummary('900,00 ₺'), findsOneWidget);
+    // Nowhere on the screen, not just nowhere in the summary.
     expect(find.text('40.000,00 ₺'), findsNothing);
 
     await tester.tap(find.text('All Time'));
     await tester.pumpAndSettle();
-    expect(find.text('40.900,00 ₺'), findsOneWidget);
+    expect(inSummary('40.900,00 ₺'), findsOneWidget);
   });
 
   testWidgets('net balance carries an explicit sign', (tester) async {
@@ -94,6 +107,132 @@ void main() {
     await pump(tester);
 
     expect(find.text('+3.800,00 ₺'), findsOneWidget);
+  });
+
+  group('the essential/chosen split', () {
+    testWidgets('divides expense by the importance the categories carry', (
+      tester,
+    ) async {
+      // 'Ev Kirası' is seeded 'main' and 'Emlak Vergisi' 'extra', so the two
+      // rows land on opposite sides of the bar without this test writing to
+      // the categories table at all.
+      final accountId = await cashAccount();
+      await services.transactions.addTransaction(
+        accountId: accountId,
+        amount: 3000,
+        transactionType: 'expense',
+        category: 'Ev Kirası',
+      );
+      await services.transactions.addTransaction(
+        accountId: accountId,
+        amount: 1000,
+        transactionType: 'expense',
+        category: 'Emlak Vergisi',
+      );
+
+      await pump(tester);
+
+      expect(find.text('Essential and chosen'), findsOneWidget);
+      expect(find.text('3.000,00 ₺'), findsOneWidget);
+      expect(find.text('1.000,00 ₺'), findsOneWidget);
+      // The shares are printed, not only drawn: %75 / %25 of 4.000.
+      expect(find.text('%75'), findsOneWidget);
+      expect(find.text('%25'), findsOneWidget);
+    });
+
+    testWidgets('the bar is actually drawn, at the widths it claims', (
+      tester,
+    ) async {
+      // This assertion exists because the first version of the bar was in the
+      // tree, laid out, and INVISIBLE: the row centred its children and a
+      // `ColoredBox` with no child asks for no height, so both sides came out
+      // 10px wide and 0px tall. Every other test here passed, because they
+      // assert the figures and the figures were right. Measuring the painted
+      // size is the only assertion that could have caught it.
+      final accountId = await cashAccount();
+      await services.transactions.addTransaction(
+        accountId: accountId,
+        amount: 3000,
+        transactionType: 'expense',
+        category: 'Ev Kirası',
+      );
+      await services.transactions.addTransaction(
+        accountId: accountId,
+        amount: 1000,
+        transactionType: 'expense',
+        category: 'Emlak Vergisi',
+      );
+
+      await pump(tester);
+
+      final segments = find.descendant(
+        of: find.byType(ClipRRect),
+        matching: find.byType(ColoredBox),
+      );
+      expect(segments, findsNWidgets(2));
+
+      final essential = tester.getSize(segments.at(0));
+      final chosen = tester.getSize(segments.at(1));
+      expect(essential.height, greaterThan(0));
+      expect(chosen.height, greaterThan(0));
+      // 3.000 against 1.000, so three times the width, within a pixel of
+      // rounding.
+      expect(essential.width / chosen.width, closeTo(3, 0.01));
+    });
+
+    testWidgets('follows the switch, not the seed', (tester) async {
+      final accountId = await cashAccount();
+      await services.transactions.addTransaction(
+        accountId: accountId,
+        amount: 500,
+        transactionType: 'expense',
+        category: 'Emlak Vergisi',
+      );
+      // The whole point of the settings screen: flipping this moves the money
+      // from one side of the bar to the other.
+      await services.categories.setImportance('Emlak Vergisi', isMain: true);
+
+      await pump(tester);
+
+      expect(find.text('Essential'), findsOneWidget);
+      expect(find.text('%100'), findsOneWidget);
+      expect(find.text('A choice'), findsOneWidget);
+      expect(find.text('%0'), findsOneWidget);
+    });
+
+    testWidgets('says nothing is marked rather than drawing an empty bar', (
+      tester,
+    ) async {
+      final accountId = await cashAccount();
+      await services.transactions.addTransaction(
+        accountId: accountId,
+        amount: 40,
+        transactionType: 'expense',
+        category: 'Emlak Vergisi',
+      );
+
+      await pump(tester);
+
+      // Every category involved is 'extra', so the bar sits at one end. A
+      // reader has to be told that is a setting and not a broken chart.
+      expect(
+        find.textContaining('No category is marked as one you must have'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('an empty period says so instead of splitting nothing', (
+      tester,
+    ) async {
+      await cashAccount();
+
+      await pump(tester);
+
+      expect(
+        find.textContaining('there is nothing to split'),
+        findsOneWidget,
+      );
+    });
   });
 
   testWidgets('the distribution names real categories and their shares', (

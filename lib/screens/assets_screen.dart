@@ -6,6 +6,7 @@ import '../app_services.dart';
 import '../l10n/app_localizations.dart';
 import '../money/financial_decimal.dart';
 import '../services/asset_service.dart';
+import '../services/financial_summary.dart';
 import '../services/live_price_service.dart';
 import '../services/savings_service.dart';
 import '../services/transaction_service.dart';
@@ -40,15 +41,20 @@ class AssetsScreen extends StatefulWidget {
 /// Everything the page draws, read in one pass so the summary, the chart and
 /// the list cannot disagree with each other mid-load.
 class _AssetsData {
-  const _AssetsData({
+  _AssetsData({
     required this.entries,
     required this.openingTotal,
     required this.holdings,
     required this.goals,
     required this.livePrices,
-  });
+  }) : summary = summarizeTransactions(entries);
 
   final List<PeriodEntry> entries;
+
+  /// The period's four buckets. Computed once here rather than per widget
+  /// that wants a number out of it, so the summary line, the split card and
+  /// the net figure cannot disagree.
+  final FinancialSummary summary;
 
   /// Opening balances inside the window. They never reach `transactions`, so
   /// without this a user who has just opened a funded account sees an empty
@@ -64,23 +70,15 @@ class _AssetsData {
   /// `lib/services/live_price_service.dart`.
   final Map<int, CachedPrice> livePrices;
 
-  Decimal get income {
-    var total = Decimal.zero;
-    for (final entry in entries) {
-      if (entry.isIncome) total += entry.amount;
-    }
-    return fiat(total);
-  }
+  /// These three came from two inline loops over [entries] before the summary
+  /// port. They read from it now so there is ONE definition of what counts as
+  /// income on this screen — the split card underneath must not be able to add
+  /// up to a different total than the line above it.
+  Decimal get income => summary.totalIncome;
 
-  Decimal get expense {
-    var total = Decimal.zero;
-    for (final entry in entries) {
-      if (entry.isExpense) total += entry.amount;
-    }
-    return fiat(total);
-  }
+  Decimal get expense => summary.totalExpense;
 
-  Decimal get net => fiat(income - expense);
+  Decimal get net => summary.net;
 
   /// What the holdings cost, never what they are worth.
   Decimal get holdingsCost {
@@ -247,7 +245,10 @@ class _AssetsBody extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: Spacing.stackLg),
+        const SizedBox(height: Spacing.stackMd),
+
+        Padding(padding: horizontal, child: _SplitCard(summary: data.summary)),
+        const SizedBox(height: Spacing.stackMd),
 
         Padding(
           padding: horizontal,
@@ -385,6 +386,232 @@ class _Slice {
 
 /// Where the period's money came from and went, by category.
 ///
+/// What the period was SPENT ON having to be, against what it chose to be.
+///
+/// The visible half of `categories.importance` — the column this app read and
+/// never used until the settings screen gave the user a way to set it. Two
+/// bars rather than one: income splits main/extra and expense splits
+/// essential/chosen, and putting all four on one scale would invite reading a
+/// salary against the rent as if they were parts of the same whole.
+///
+/// **It says when it has nothing to say.** A household that has marked nothing
+/// essential gets a sentence pointing at the screen that decides it, not two
+/// bars silently pinned to one end — which looks like a bug in the chart
+/// rather than a setting nobody has touched.
+class _SplitCard extends StatelessWidget {
+  const _SplitCard({required this.summary});
+
+  final FinancialSummary summary;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final text = Theme.of(context).textTheme;
+
+    return AppCard(
+      padding: const EdgeInsets.all(Spacing.gutter),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(l10n.assetsSplitTitle, style: text.titleLarge),
+          const SizedBox(height: Spacing.stackSm),
+          if (summary.isEmpty)
+            Text(
+              l10n.assetsSplitEmpty,
+              style: text.bodyMedium?.copyWith(
+                color: ObsidianPalette.onSurfaceVariant,
+              ),
+            )
+          else ...[
+            if (summary.totalIncome > Decimal.zero) ...[
+              _SplitBar(
+                firstLabel: l10n.categoryMainIncome,
+                first: summary.mainIncome,
+                firstColor: ObsidianPalette.tertiary,
+                secondLabel: l10n.categoryExtraIncome,
+                second: summary.extraIncome,
+                secondColor: ObsidianPalette.secondary,
+              ),
+              const SizedBox(height: Spacing.stackMd),
+            ],
+            if (summary.totalExpense > Decimal.zero)
+              _SplitBar(
+                firstLabel: l10n.categoryEssentialExpense,
+                first: summary.essentialExpense,
+                firstColor: ObsidianPalette.error,
+                secondLabel: l10n.categoryExtraExpense,
+                second: summary.extraExpense,
+                secondColor: ObsidianPalette.primary,
+              ),
+            if (summary.essentialExpense == Decimal.zero &&
+                summary.mainIncome == Decimal.zero) ...[
+              const SizedBox(height: Spacing.stackSm),
+              Text(
+                l10n.assetsSplitNothingMarked,
+                style: text.bodySmall?.copyWith(
+                  color: ObsidianPalette.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// One two-part bar with both figures spelled out under it.
+///
+/// The numbers are printed as well as drawn. A proportion bar answers "how
+/// much of it", never "how much" — and this app does not make a user estimate
+/// an amount off a width.
+class _SplitBar extends StatelessWidget {
+  const _SplitBar({
+    required this.firstLabel,
+    required this.first,
+    required this.firstColor,
+    required this.secondLabel,
+    required this.second,
+    required this.secondColor,
+  });
+
+  final String firstLabel;
+  final Decimal first;
+  final Color firstColor;
+  final String secondLabel;
+  final Decimal second;
+  final Color secondColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final total = first + second;
+    // Guarded because a bar of nothing would divide by zero; the caller only
+    // draws this when the total is positive, and this keeps that true here
+    // rather than by remote agreement.
+    final firstShare = total > Decimal.zero
+        ? (first / total).toDouble()
+        : 0.0;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(Radii.full),
+          child: SizedBox(
+            height: 10,
+            child: Row(
+              // STRETCH, not the default centre. A `ColoredBox` with no child
+              // asks for no height at all, so a centred row gave each side a
+              // full width and a height of ZERO: the bar was in the tree, laid
+              // out, and invisible. Every widget test passed — they assert the
+              // figures, and the figures were right. It took opening the
+              // screen on the emulator to see the empty strip.
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (firstShare > 0)
+                  Expanded(
+                    flex: (firstShare * 1000).round(),
+                    child: ColoredBox(color: firstColor),
+                  ),
+                if (firstShare < 1)
+                  Expanded(
+                    flex: ((1 - firstShare) * 1000).round(),
+                    child: ColoredBox(color: secondColor),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: Spacing.stackSm),
+        Row(
+          children: [
+            Expanded(
+              child: _SplitLegend(
+                label: firstLabel,
+                amount: first,
+                share: firstShare,
+                color: firstColor,
+              ),
+            ),
+            Expanded(
+              child: _SplitLegend(
+                label: secondLabel,
+                amount: second,
+                share: 1 - firstShare,
+                color: secondColor,
+                alignEnd: true,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _SplitLegend extends StatelessWidget {
+  const _SplitLegend({
+    required this.label,
+    required this.amount,
+    required this.share,
+    required this.color,
+    this.alignEnd = false,
+  });
+
+  final String label;
+  final Decimal amount;
+
+  /// This side's part of the bar, 0..1. Printed as well as drawn: a width
+  /// answers "how much of it", and a reader should not have to estimate the
+  /// proportion off one.
+  final double share;
+
+  final Color color;
+  final bool alignEnd;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return Column(
+      crossAxisAlignment: alignEnd
+          ? CrossAxisAlignment.end
+          : CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: alignEnd
+              ? MainAxisAlignment.end
+              : MainAxisAlignment.start,
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            ),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                label,
+                overflow: TextOverflow.ellipsis,
+                style: text.bodySmall?.copyWith(
+                  color: ObsidianPalette.onSurfaceVariant,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 2),
+        Text(formatLira(amount), style: text.bodyMedium),
+        Text(
+          formatPercent(Decimal.parse((share * 100).toStringAsFixed(1))),
+          style: text.bodySmall?.copyWith(
+            color: ObsidianPalette.onSurfaceVariant,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 /// Income and expense are shown TOGETHER, as the desktop does: the chart is a
 /// distribution of everything that moved, not of spending alone. Opening
 /// balances get their own slice because they never reach `transactions` and a

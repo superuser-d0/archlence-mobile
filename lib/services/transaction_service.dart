@@ -97,8 +97,14 @@ class PeriodEntry {
   final String category;
   final String transactionDate;
 
-  /// 'essential' or 'extra' — from the `categories` table, defaulting to
-  /// 'extra' for a category that has no row there.
+  /// `'main'` or `'extra'` — from the `categories` table, defaulting to
+  /// `'extra'` for a category that has no row there.
+  ///
+  /// This said `'essential'` until the summary port was written, and nothing
+  /// had ever compared the value, so the wrong word cost nothing until the
+  /// moment it would have cost a bucket. 'Essential' is the name of the
+  /// EXPENSE bucket that a 'main' importance lands in — see
+  /// `financial_summary.dart` — not a value this column ever holds.
   final String importance;
 
   bool get isIncome => incomeTransactionTypes.contains(type);

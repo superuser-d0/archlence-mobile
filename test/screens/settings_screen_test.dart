@@ -195,21 +195,22 @@ void main() {
       const SettingsScreen(),
     );
 
-    // Twelve rows. Four do something real — the encryption key and the lock
-    // report state without going anywhere, and Language and BIST share
-    // prices each open a sheet — and Backup & Restore is unavailable here
-    // because this graph has no profile on disk behind it. The count is
-    // unchanged from before the BIST row existed: it was ADDED and it is
-    // live, so it carries no chip of its own.
-    expect(find.byType(NotYetChip), findsNWidgets(9));
+    // Twelve rows. Five do something real — the encryption key and the lock
+    // report state without going anywhere, Language and BIST share prices
+    // each open a sheet, and Category Settings opens a screen — and Backup &
+    // Restore is unavailable here because this graph has no profile on disk
+    // behind it. One chip fewer than before Category Settings was wired: it
+    // was not added, it stopped being a placeholder.
+    expect(find.byType(NotYetChip), findsNWidgets(8));
     // Exactly one switch: the screen lock, which does something. The two that
     // used to be here moved local state and nothing else, so a user could
     // turn Dark Mode off and watch nothing happen.
     expect(find.byType(Switch), findsOneWidget);
     expect(find.text('Lock when I come back'), findsOneWidget);
-    // Two chevrons: Language and BIST share prices. A chevron promises a
-    // destination, and with no backup service behind it that row has none.
-    expect(find.byIcon(Icons.chevron_right), findsNWidgets(2));
+    // Three chevrons: Category Settings, Language and BIST share prices. A
+    // chevron promises a destination, and with no backup service behind it
+    // that row has none.
+    expect(find.byIcon(Icons.chevron_right), findsNWidgets(3));
   });
 
   testWidgets('Backup & Restore opens when there is a profile behind it', (
@@ -224,10 +225,12 @@ void main() {
       const SettingsScreen(),
     );
 
-    // Three chevrons now: Language, BIST share prices and Backup & Restore,
-    // the three rows that go somewhere.
-    expect(find.byIcon(Icons.chevron_right), findsNWidgets(3));
-    expect(find.byType(NotYetChip), findsNWidgets(8));
+    // Four chevrons now: Category Settings, Language, BIST share prices and
+    // Backup & Restore, the four rows that go somewhere.
+    expect(find.byIcon(Icons.chevron_right), findsNWidgets(4));
+    // One fewer chip than in the test above, for the same reason there is one
+    // more chevron: Backup & Restore has a profile behind it here.
+    expect(find.byType(NotYetChip), findsNWidgets(7));
 
     await tester.tap(find.text('Backup & Restore'));
     await tester.pumpAndSettle();

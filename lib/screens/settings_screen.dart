@@ -10,6 +10,7 @@ import '../widgets/not_yet.dart';
 import '../widgets/sheet_frame.dart';
 import '../widgets/surfaces.dart';
 import 'backup_screen.dart';
+import 'category_settings_screen.dart';
 
 /// Settings, grouped into sections rather than one flat list.
 ///
@@ -85,6 +86,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
             _SettingsTile(
               icon: Icons.sell_outlined,
               title: l10n.settingsCategorySettings,
+              subtitle: l10n.settingsCategorySubtitle,
+              subtitleMaxLines: 2,
+              available: true,
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const CategorySettingsScreen(),
+                ),
+              ),
             ),
             const _LanguageTile(),
             const _SharesKeyTile(),

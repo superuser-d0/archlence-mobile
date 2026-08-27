@@ -128,6 +128,49 @@ class AppLocalizationsTr extends AppLocalizations {
   String get settingsCategorySettings => 'Kategori Ayarları';
 
   @override
+  String get settingsCategorySubtitle => 'Hangi kategoriler hane için zorunlu';
+
+  @override
+  String get categorySettingsTitle => 'Kategori Ayarları';
+
+  @override
+  String get assetsSplitTitle => 'Zorunlu ve tercih';
+
+  @override
+  String get assetsSplitEmpty =>
+      'Bu dönemde kayıt yok, bölünecek bir şey de yok.';
+
+  @override
+  String get assetsSplitNothingMarked =>
+      'Henüz zorunlu işaretlenmiş kategori yok. Hangilerinin zorunlu olduğuna Ayarlar › Kategori Ayarları karar veriyor.';
+
+  @override
+  String get categorySettingsExplainer =>
+      'Hanenin zorunlu olarak karşıladığı kategorileri işaretleyin. Geri kalanı tercih sayılır; Varlıklar sekmesi ikisini ayırır, böylece ayın ne kadarının size bağlı olduğunu görürsünüz.\n\nBurada değiştirilebilecek tek şey budur: kategori eklenemez, adı değiştirilemez, silinemez — çünkü her işlem, hem bu uygulamada hem masaüstünde, kategori adıyla kaydedilir.';
+
+  @override
+  String get categorySettingsIncome => 'GELİR';
+
+  @override
+  String get categorySettingsExpense => 'GİDER';
+
+  @override
+  String get categoryMainIncome => 'Ana gelir';
+
+  @override
+  String get categoryExtraIncome => 'Ek gelir';
+
+  @override
+  String get categoryEssentialExpense => 'Zorunlu';
+
+  @override
+  String get categoryExtraExpense => 'Tercih';
+
+  @override
+  String get categorySettingsWriteFailed =>
+      'Bu kategori artık yok. Ekranı yeniden açın.';
+
+  @override
   String get settingsLanguage => 'Dil';
 
   @override

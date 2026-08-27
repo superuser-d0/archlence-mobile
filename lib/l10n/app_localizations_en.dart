@@ -128,6 +128,50 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsCategorySettings => 'Category Settings';
 
   @override
+  String get settingsCategorySubtitle =>
+      'Which categories your household must have';
+
+  @override
+  String get categorySettingsTitle => 'Category Settings';
+
+  @override
+  String get assetsSplitTitle => 'Essential and chosen';
+
+  @override
+  String get assetsSplitEmpty =>
+      'Nothing recorded in this period, so there is nothing to split.';
+
+  @override
+  String get assetsSplitNothingMarked =>
+      'No category is marked as one you must have yet. Settings › Category Settings decides which are.';
+
+  @override
+  String get categorySettingsExplainer =>
+      'Mark the categories your household must have. Everything else counts as a choice, and the Assets tab splits the two so you can see how much of a month was up to you.\n\nThis is the only thing that can be changed here: categories cannot be added, renamed or removed, because their names are what every transaction is filed under — in this app and in the desktop one.';
+
+  @override
+  String get categorySettingsIncome => 'INCOME';
+
+  @override
+  String get categorySettingsExpense => 'EXPENSE';
+
+  @override
+  String get categoryMainIncome => 'Main income';
+
+  @override
+  String get categoryExtraIncome => 'Extra income';
+
+  @override
+  String get categoryEssentialExpense => 'Essential';
+
+  @override
+  String get categoryExtraExpense => 'A choice';
+
+  @override
+  String get categorySettingsWriteFailed =>
+      'That category is no longer there. Reopen this screen.';
+
+  @override
   String get settingsLanguage => 'Language';
 
   @override

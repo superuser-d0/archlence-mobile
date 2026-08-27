@@ -326,6 +326,84 @@ abstract class AppLocalizations {
   /// **'Category Settings'**
   String get settingsCategorySettings;
 
+  /// No description provided for @settingsCategorySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Which categories your household must have'**
+  String get settingsCategorySubtitle;
+
+  /// No description provided for @categorySettingsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Category Settings'**
+  String get categorySettingsTitle;
+
+  /// No description provided for @assetsSplitTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Essential and chosen'**
+  String get assetsSplitTitle;
+
+  /// No description provided for @assetsSplitEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing recorded in this period, so there is nothing to split.'**
+  String get assetsSplitEmpty;
+
+  /// Shown under the split card when every category is still 'extra', so the bars would sit at one end and look broken rather than untouched.
+  ///
+  /// In en, this message translates to:
+  /// **'No category is marked as one you must have yet. Settings › Category Settings decides which are.'**
+  String get assetsSplitNothingMarked;
+
+  /// The card at the top of Category Settings, saying what the switches do and why nothing else on the screen does.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark the categories your household must have. Everything else counts as a choice, and the Assets tab splits the two so you can see how much of a month was up to you.\n\nThis is the only thing that can be changed here: categories cannot be added, renamed or removed, because their names are what every transaction is filed under — in this app and in the desktop one.'**
+  String get categorySettingsExplainer;
+
+  /// No description provided for @categorySettingsIncome.
+  ///
+  /// In en, this message translates to:
+  /// **'INCOME'**
+  String get categorySettingsIncome;
+
+  /// No description provided for @categorySettingsExpense.
+  ///
+  /// In en, this message translates to:
+  /// **'EXPENSE'**
+  String get categorySettingsExpense;
+
+  /// No description provided for @categoryMainIncome.
+  ///
+  /// In en, this message translates to:
+  /// **'Main income'**
+  String get categoryMainIncome;
+
+  /// No description provided for @categoryExtraIncome.
+  ///
+  /// In en, this message translates to:
+  /// **'Extra income'**
+  String get categoryExtraIncome;
+
+  /// Under an expense category whose switch is on. The word differs from the income side on purpose: a salary is a main income, rent is an essential expense.
+  ///
+  /// In en, this message translates to:
+  /// **'Essential'**
+  String get categoryEssentialExpense;
+
+  /// No description provided for @categoryExtraExpense.
+  ///
+  /// In en, this message translates to:
+  /// **'A choice'**
+  String get categoryExtraExpense;
+
+  /// Shown when the switch's write matched no row — the category went away underneath, most likely through a restore.
+  ///
+  /// In en, this message translates to:
+  /// **'That category is no longer there. Reopen this screen.'**
+  String get categorySettingsWriteFailed;
+
   /// No description provided for @settingsLanguage.
   ///
   /// In en, this message translates to:

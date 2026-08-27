@@ -25,6 +25,12 @@ desktop app wrote — replacing the database and the encryption key under a
 journal that survives the process being killed. Proven in both directions
 against `services/backup_service.py` itself.
 
+**And it knows what a household chose.** Category Settings marks which
+categories are ones a household must have; the Assets tab splits income and
+spending along that line and prints both halves. The desktop's own
+`financial_summary_service` does the bucketing, checked against vectors that
+module generated itself.
+
 **And it speaks Turkish.** Every label in the app comes from `lib/l10n/`,
 which carries Turkish and English in full. A phone set to either gets that
 language; a phone set to anything else gets Turkish, and Settings can override
@@ -67,7 +73,7 @@ The share provider is the one piece of the price layer whose live response
 has NOT been seen by this codebase — checking it needs a key that belongs to
 whoever signs up for it. See "Shares, on the user's own key".
 
-672 unit tests and 12 device tests pass. `flutter analyze` is clean, no
+696 unit tests and 12 device tests pass. `flutter analyze` is clean, no
 control in the app is inert, and it runs on the emulator.
 
 ## Pick up here
@@ -82,19 +88,8 @@ stating: none of 1-5 is a new feature. Every one of them is a PORT of a
 desktop service that this file had not accounted for — see "What is NOT coming
 from the desktop", which was wrong about `services/` being fully triaged.
 
-1. **Category settings, and the main/extra split.** Port
-   `financial_summary_service.py` (81 lines, pure aggregation, so a parity
-   fixture can be generated from it like the money layer's), then the Settings
-   screen the `NOT YET` chip stands in for: one switch per category writing
-   `importance`, which is EXACTLY and only what the desktop's own screen does
-   (`main.py:2077`). Not a CRUD screen — the desktop cannot add, rename or
-   delete a category either, and inventing that here would fork a schema that
-   is a shared contract.
-
-   The switch must have a VISIBLE effect on this device, or it is a control
-   that looks live and does nothing — the thing this app refuses everywhere
-   else. So the four buckets (main income, extra income, essential expense,
-   extra expense) land on the Assets tab beside the distribution.
+1. ~~**Category settings, and the main/extra split.**~~ DONE — see "Category
+   settings, and the main/extra split" under "Done, and how it was proven".
 
 2. **Search.** Port `search_service.py` and light up the disabled field on
    Home. Its scope is already settled and does not need re-deciding: account
@@ -374,7 +369,7 @@ Long, and grouped roughly by layer rather than by date:
 | Layer | Sections |
 | --- | --- |
 | Foundations | Money · Encryption · Database · The REAL column's drift |
-| Services | Accounts · Transactions · Holdings · Recurring payments · The monthly budget · Savings goals · Price fetching · Shares on the user's own key |
+| Services | Accounts · Transactions · Holdings · Recurring payments · The monthly budget · Savings goals · Price fetching · Shares on the user's own key · Category settings and the main/extra split |
 | Backup | The backup's cryptographic core · The package around it · Restoring · The key on its own |
 | Security | The screen lock |
 | Language | i18n · What i18n did NOT cover |
@@ -1475,6 +1470,92 @@ real test. The failure mode is mild by construction — a shape mismatch means
 the holding stays at cost exactly as it does with no key at all. Nothing
 breaks and no wrong number appears; the shares simply do not light up. If
 that happens, the response body is what to look at first.
+
+### Category settings, and the main/extra split
+
+Item 1 of the road to 1.0. `categories.importance` was a column this app read
+and never used; it now has a screen that sets it and a card that shows what it
+did.
+
+**The port is `financial_summary_service.py`,** and it is four buckets: main
+income, extra income, essential expense, extra expense. The mapping is
+asymmetric and that is the desktop's, not a slip — 'main' files income under
+`mainIncome` and an expense under `essentialExpense`, because a salary is a
+main income and rent is an essential expense and the two words are not
+interchangeable.
+
+**Every expectation comes from the desktop's own function.**
+`tool/emit_summary_vectors.py` CALLS `summarize_transactions` over encrypted
+rows it builds with the desktop's own `encrypt`, and writes one line per case:
+each summarised ALONE, so a row landing in the wrong bucket names itself
+instead of hiding inside a total, plus a final `ALL` line that sums them. The
+amounts are all different on purpose — with one figure repeated down the
+column, two buckets swapped would produce the same file.
+
+Three things the vectors pinned down that a hand-written test would have
+guessed at: a NULL importance is 'extra' rather than an error, a value from
+neither list is also 'extra' rather than a throw, and a transaction that is
+neither income nor expense is DROPPED rather than counted as zero somewhere.
+
+**Checked for teeth,** three ways, each failing the suite: the expense buckets
+swapped, a neither-side type counted as income, and a missing importance read
+as 'main'.
+
+**And a doc comment that was wrong in the one place it mattered.**
+`PeriodEntry.importance` said the column holds `'essential'` or `'extra'`. It
+holds `'main'` or `'extra'` — 'essential' is the name of the BUCKET a main
+expense lands in. Nothing had ever compared the value, so the wrong word cost
+nothing right up until the moment it would have cost a bucket. The constant
+lives in `category_service.dart` now and both files import it.
+
+**The screen is a list and a switch, and nothing else.** No add, no rename, no
+delete. The desktop has none either: `init_db.py` seeds the list and the only
+write in that whole codebase is `main.py:2077`'s
+`UPDATE categories SET importance`. Inventing more here would fork a schema
+that is a contract shared with the desktop, and it would do it in the worst
+possible place — `transactions.category` stores the NAME, so a rename would
+split a household's history in two, with neither app able to tell the halves
+were ever one thing. The screen says all this on itself, in a card at the top,
+rather than leaving a user to conclude it is unfinished.
+
+**No Save button.** Every other write in this app goes through a form because
+it moves money or creates a row that has to balance. This one flips a flag on
+a row that already exists, and a screen of sixty switches behind one Save is a
+screen where somebody changes three, leaves, and loses all three. A write that
+matches no row puts the switch back and says so instead of throwing — the row
+went away underneath, most likely through a restore.
+
+**The visible half is `_SplitCard` on the Assets tab.** Two bars, income and
+expense kept apart so nobody reads a salary against the rent as parts of one
+whole, with both figures and both percentages printed as well as drawn — a
+width answers "how much of it", never "how much". A household that has marked
+nothing essential gets a sentence pointing at the screen that decides it,
+because two bars pinned to one end look like a broken chart rather than an
+untouched setting.
+
+The tab's `income`, `expense` and `net` now read from the same summary instead
+of from two inline loops. One definition, so the card underneath cannot add up
+to a different total than the line above it.
+
+**What running it caught, that eleven new tests did not.** The bar did not
+draw. It was in the tree and laid out, and `Row` centres its children by
+default while a `ColoredBox` with no child asks for no height at all — so both
+segments came out full width and ZERO tall. Every test passed, because they
+asserted the figures and the figures were right. The fix is
+`crossAxisAlignment: stretch`; the assertion that would have caught it measures
+`tester.getSize` on the painted segments and checks the 3:1 ratio, and it fails
+if the stretch is removed again.
+
+That is the third time this file has recorded a defect of exactly this shape:
+invisible in the source, invisible to tests that assert values, obvious in the
+first second on a device.
+
+**One test changed rather than being loosened.** The Assets summary assertion
+started matching two widgets, because the split card prints the same total when
+every expense falls on one side of the line. `findsWidgets` would have made it
+pass — and made it pass with the SUMMARY showing the wrong figure, which is on
+the list of assertions this suite has already been caught by. It is scoped to
+`find.descendant(of: find.byType(SummaryRow))` instead.
 
 ### Paying card debt — `lib/screens/pay_debt_sheet.dart`
 

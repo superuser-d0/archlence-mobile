@@ -20,6 +20,7 @@ import 'services/asset_purchase_service.dart';
 import 'services/asset_sale_service.dart';
 import 'services/asset_service.dart';
 import 'services/budget_service.dart';
+import 'services/category_service.dart';
 import 'services/live_price_service.dart';
 import 'services/recurring_service.dart';
 import 'services/savings_service.dart';
@@ -40,7 +41,8 @@ class AppServices {
     this.sharesApiKey,
   ) : accounts = AccountService(db, crypto),
       assets = AssetService(db, crypto),
-      savings = SavingsService(db, crypto);
+      savings = SavingsService(db, crypto),
+      categories = CategoryService(db);
 
   /// Builds the whole graph over an already-open database.
   ///
@@ -173,6 +175,11 @@ class AppServices {
   final AccountService accounts;
   final AssetService assets;
   final SavingsService savings;
+
+  /// The category list, and the main/extra switch on Settings. Takes no
+  /// [FieldCrypto]: nothing in `categories` is encrypted — a category NAME is
+  /// not a household's business, and the desktop stores it plain too.
+  final CategoryService categories;
 
   late final TransactionService transactions;
   late final RecurringService recurring;
