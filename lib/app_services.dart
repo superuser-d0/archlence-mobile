@@ -20,6 +20,7 @@ import 'services/asset_purchase_service.dart';
 import 'services/asset_sale_service.dart';
 import 'services/asset_service.dart';
 import 'services/budget_service.dart';
+import 'services/calendar_service.dart';
 import 'services/category_service.dart';
 import 'services/live_price_service.dart';
 import 'services/recurring_service.dart';
@@ -44,7 +45,8 @@ class AppServices {
       assets = AssetService(db, crypto),
       savings = SavingsService(db, crypto),
       categories = CategoryService(db),
-      search = SearchService(db, crypto);
+      search = SearchService(db, crypto),
+      calendar = CalendarService(db, crypto);
 
   /// Builds the whole graph over an already-open database.
   ///
@@ -177,6 +179,9 @@ class AppServices {
   final AccountService accounts;
   final AssetService assets;
   final SavingsService savings;
+
+  /// The month grid and one day's transactions, behind the Tools calendar.
+  final CalendarService calendar;
 
   /// The Home search box. Reads names straight out of SQL and decrypts a
   /// bounded window of descriptions — see the service for why the window is

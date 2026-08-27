@@ -955,6 +955,96 @@ class AppLocalizationsTr extends AppLocalizations {
   String get budgetLeft => 'Kalan';
 
   @override
+  String get monthJan => 'Ocak';
+
+  @override
+  String get monthFeb => 'Şubat';
+
+  @override
+  String get monthMar => 'Mart';
+
+  @override
+  String get monthApr => 'Nisan';
+
+  @override
+  String get monthMay => 'Mayıs';
+
+  @override
+  String get monthJun => 'Haziran';
+
+  @override
+  String get monthJul => 'Temmuz';
+
+  @override
+  String get monthAug => 'Ağustos';
+
+  @override
+  String get monthSep => 'Eylül';
+
+  @override
+  String get monthOct => 'Ekim';
+
+  @override
+  String get monthNov => 'Kasım';
+
+  @override
+  String get monthDec => 'Aralık';
+
+  @override
+  String get weekdayShortMon => 'P';
+
+  @override
+  String get weekdayShortTue => 'S';
+
+  @override
+  String get weekdayShortWed => 'Ç';
+
+  @override
+  String get weekdayShortThu => 'P';
+
+  @override
+  String get weekdayShortFri => 'C';
+
+  @override
+  String get weekdayShortSat => 'C';
+
+  @override
+  String get weekdayShortSun => 'P';
+
+  @override
+  String get calendarTitle => 'Takvim';
+
+  @override
+  String get calendarPreviousMonth => 'Önceki ay';
+
+  @override
+  String get calendarNextMonth => 'Sonraki ay';
+
+  @override
+  String get calendarNothingThisMonth => 'Bu ay kayıt yok.';
+
+  @override
+  String get calendarPickADay =>
+      'Ne olduğunu görmek için işaretli bir güne dokunun.';
+
+  @override
+  String get calendarNothingOnDay => 'Bu gün bir şey yok.';
+
+  @override
+  String get calendarUnreadable => 'Bu tutar okunamıyor';
+
+  @override
+  String calendarDayTotal(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count işlem',
+      one: '1 işlem',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get monthShortJan => 'Oca';
 
   @override

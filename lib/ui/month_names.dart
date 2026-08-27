@@ -27,3 +27,36 @@ String shortMonthName(AppLocalizations l10n, int month) => switch (month) {
   11 => l10n.monthShortNov,
   _ => l10n.monthShortDec,
 };
+
+/// The full month name, for a calendar heading where three letters read as an
+/// abbreviation of nothing.
+String fullMonthName(AppLocalizations l10n, int month) => switch (month) {
+  1 => l10n.monthJan,
+  2 => l10n.monthFeb,
+  3 => l10n.monthMar,
+  4 => l10n.monthApr,
+  5 => l10n.monthMay,
+  6 => l10n.monthJun,
+  7 => l10n.monthJul,
+  8 => l10n.monthAug,
+  9 => l10n.monthSep,
+  10 => l10n.monthOct,
+  11 => l10n.monthNov,
+  _ => l10n.monthDec,
+};
+
+/// The one-or-two letter weekday heading, Monday first.
+///
+/// Monday first because both languages this app speaks start the week there;
+/// the day numbers are laid out against this, so changing it changes where
+/// every date lands.
+String shortWeekdayName(AppLocalizations l10n, int weekday) =>
+    switch (weekday) {
+      DateTime.monday => l10n.weekdayShortMon,
+      DateTime.tuesday => l10n.weekdayShortTue,
+      DateTime.wednesday => l10n.weekdayShortWed,
+      DateTime.thursday => l10n.weekdayShortThu,
+      DateTime.friday => l10n.weekdayShortFri,
+      DateTime.saturday => l10n.weekdayShortSat,
+      _ => l10n.weekdayShortSun,
+    };

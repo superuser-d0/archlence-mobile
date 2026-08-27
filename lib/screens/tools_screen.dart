@@ -5,6 +5,7 @@ import '../theme/obsidian_prime.dart';
 import '../ui/app_locale.dart';
 import '../widgets/not_yet.dart';
 import '../widgets/surfaces.dart';
+import 'calendar_screen.dart';
 import 'budget_screen.dart';
 import 'savings_screen.dart';
 
@@ -26,8 +27,17 @@ class ToolsScreen extends StatelessWidget {
       ObsidianPalette.primary,
       destination: _Destination.budget,
     ),
-    _Tool(l10n.toolCalendar, Icons.event_note_outlined, ObsidianPalette.tertiary),
-    _Tool(l10n.toolCalculator, Icons.calculate_outlined, ObsidianPalette.primary),
+    _Tool(
+      l10n.toolCalendar,
+      Icons.event_note_outlined,
+      ObsidianPalette.tertiary,
+      destination: _Destination.calendar,
+    ),
+    _Tool(
+      l10n.toolCalculator,
+      Icons.calculate_outlined,
+      ObsidianPalette.primary,
+    ),
     _Tool(l10n.toolInterestReturn, Icons.percent, ObsidianPalette.secondary),
     _Tool(
       l10n.toolCompoundInterest,
@@ -96,7 +106,7 @@ class ToolsScreen extends StatelessWidget {
 }
 
 /// Which screen a tool opens. Absent means it has no port yet.
-enum _Destination { budget, savings }
+enum _Destination { budget, savings, calendar }
 
 class _Tool {
   const _Tool(
@@ -125,6 +135,7 @@ class _ToolCard extends StatelessWidget {
     final builder = switch (tool.destination) {
       _Destination.budget => (BuildContext _) => const BudgetScreen(),
       _Destination.savings => (BuildContext _) => const SavingsScreen(),
+      _Destination.calendar => (BuildContext _) => const CalendarScreen(),
       null => null,
     };
     if (builder == null) return;

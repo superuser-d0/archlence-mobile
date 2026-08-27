@@ -25,6 +25,10 @@ desktop app wrote — replacing the database and the encryption key under a
 journal that survives the process being killed. Proven in both directions
 against `services/backup_service.py` itself.
 
+**And it has a calendar.** A month grid marks the days that had activity and
+opens only the day tapped — the grid needs no encryption key at all, because
+which days had rows is the one thing the plain `transaction_date` can answer.
+
 **And it can find things.** The Home search box was a disabled placeholder;
 it now searches account names, category names and the descriptions of recent
 transactions, folding Turkish properly so "ISI" finds "ısı" and "sirket" finds
@@ -78,7 +82,7 @@ The share provider is the one piece of the price layer whose live response
 has NOT been seen by this codebase — checking it needs a key that belongs to
 whoever signs up for it. See "Shares, on the user's own key".
 
-721 unit tests and 12 device tests pass. `flutter analyze` is clean, no
+748 unit tests and 12 device tests pass. `flutter analyze` is clean, no
 control in the app is inert, and it runs on the emulator.
 
 ## Pick up here
@@ -100,10 +104,8 @@ from the desktop", which was wrong about `services/` being fully triaged.
    under "Done, and how it was proven". The scope written here was wrong, and
    the reason it was wrong is in that section.
 
-3. **The calendar.** Port `calendar_service.py` (94 lines) and wire the Tools
-   card. Same encryption constraint as everywhere: the month grid counts rows
-   in SQL over the plain `transaction_date`, and only a tapped day's rows are
-   decrypted.
+3. ~~**The calendar.**~~ DONE — see "The calendar — `lib/screens/calendar_screen.dart`"
+   under "Done, and how it was proven".
 
 4. **The four calculators.** `calculate_interest`, `calculate_compound` and
    `calculate_loan` out of `mixins/calculator_mixin.py`, plus the basic one.
@@ -371,7 +373,7 @@ Long, and grouped roughly by layer rather than by date:
 | Layer | Sections |
 | --- | --- |
 | Foundations | Money · Encryption · Database · The REAL column's drift |
-| Services | Accounts · Transactions · Holdings · Recurring payments · The monthly budget · Savings goals · Price fetching · Shares on the user's own key · Category settings and the main/extra split · Search |
+| Services | Accounts · Transactions · Holdings · Recurring payments · The monthly budget · Savings goals · Price fetching · Shares on the user's own key · Category settings and the main/extra split · Search · The calendar |
 | Backup | The backup's cryptographic core · The package around it · Restoring · The key on its own |
 | Security | The screen lock |
 | Language | i18n · What i18n did NOT cover |
@@ -1639,6 +1641,62 @@ one field would have put a parameter on every widget in between.
 never recorded that", which can be false: a description older than the window
 is outside what the search opens. The line under it names the three places, so
 the absence is informative rather than misleading.
+
+### The calendar — `lib/screens/calendar_screen.dart`
+
+Item 3 of the road to 1.0, and the smallest of them: `calendar_service.py` is
+94 lines and the port is two queries.
+
+**The split between SQL and Dart IS the design, and it is worth stating
+because it is what makes the screen affordable.** `amount` and `description`
+are AES-encrypted, so neither can be grouped or filtered in SQL. But what a
+month grid needs is a DAY and a COUNT, and both come off the plain
+`transaction_date` — so drawing a month opens nothing at all, and only the day
+a user taps is decrypted. There is a test for exactly that: a
+`CalendarService` built over a key provider with nothing to give still returns
+the month's marked days, and raises only when asked for a day's contents.
+
+**No `localtime`, unlike `DashboardPeriod`.** That enum compares against
+`now` and must convert; this compares against a date the caller names, and the
+stored stamp is already local. Adding a conversion here would shift every day
+of the grid by the timezone offset — the same trap, in the opposite
+direction, as the one the period predicates were written to avoid.
+
+**The one deliberate departure: an unreadable amount.** The desktop logs it and
+substitutes 0.0. This does not, for the reason settled once for the whole app
+in "A corrupt row is reported, never counted as zero" — a day listing a real
+expense as ₺0,00 is a wrong number presented as a right one, and on a phone
+the log has no reader. The row STAYS in the list, because dropping it would
+hide that anything happened, and says it cannot be read where its figure would
+be. A description that will not open does not take the amount down with it.
+
+**`readStoredAmount` and `readStoredText` moved out of `TransactionService`**
+and became top-level, because the calendar reads the same rows and has to
+treat a broken one the same way. Two copies of that would have been two places
+to forget the rule.
+
+**What the grid draws, and what it refuses to.** A dot per day with activity,
+never a count: the number of transactions on the 14th is not something anyone
+reads off a 7-column grid on a phone, and drawing it would crowd the cell.
+Days with nothing are still TAPPABLE — "was there anything on the 6th" is a
+real question and a dead cell leaves it unanswered — and answer "nothing on
+this day". The next-month arrow is disabled at the current month, because a
+future month can only hold `pending` rows, which the grid does not mark, so
+every one of them is empty by construction.
+
+**Changing month drops the selection.** Carrying day 31 from a 31-day month
+into a 30-day one would open a day that does not exist.
+
+**Checked for teeth,** six ways across the two files, each failing the suite:
+dropping the completed-status filter from the month query, substituting zero
+for a corrupt amount in the service AND again in the row that draws it,
+removing the month's zero-padding (`'2026-3'` matches nothing), marking every
+day of the grid, and letting the selection survive a month change.
+
+**The dot is counted by measuring what is painted,** not by finding text.
+There is no text on a dot, and after the split bar drew itself at zero height
+with every text assertion passing, "is it in the tree" is not a question this
+suite accepts as an answer to "is it drawn".
 
 ### Paying card debt — `lib/screens/pay_debt_sheet.dart`
 

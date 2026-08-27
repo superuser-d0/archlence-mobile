@@ -79,6 +79,42 @@ enum DashboardPeriod {
   };
 }
 
+/// Decrypts a stored amount, or returns null if that row will not open.
+///
+/// Top-level rather than private to [TransactionService] because the calendar
+/// reads the same rows and must treat a broken one the same way. Two copies of
+/// this would be two places to forget the rule the roadmap settled: a corrupt
+/// row is REPORTED, never counted as zero. The desktop substitutes 0.0 and
+/// logs; on a phone that log has no reader and a false ₺0,00 is the exact
+/// failure the money layer exists to prevent.
+///
+/// A missing KEY is rethrown, never swallowed. It says nothing about any
+/// particular row, and turning it into "every row is corrupt" would report a
+/// settings problem as data loss.
+Future<Decimal?> readStoredAmount(FieldCrypto crypto, Object? stored) async {
+  try {
+    return fiat(await crypto.decryptField(stored));
+  } on KeyUnavailableError {
+    rethrow;
+  } on Exception {
+    return null;
+  }
+}
+
+/// Decrypts a stored text column, or returns null if it will not open.
+///
+/// A blank stored value is not an error: the desktop leaves null and empty
+/// unencrypted, so this gives back an empty string for them.
+Future<String?> readStoredText(FieldCrypto crypto, Object? stored) async {
+  try {
+    return (await crypto.decryptField(stored))?.trim() ?? '';
+  } on KeyUnavailableError {
+    rethrow;
+  } on Exception {
+    return null;
+  }
+}
+
 /// One completed transaction, as the dashboard reads it.
 class PeriodEntry {
   const PeriodEntry({
@@ -790,25 +826,10 @@ class TransactionService {
   /// A missing key is rethrown: it says nothing about this row, and treating
   /// every row as corrupt because of it would misreport a settings problem as
   /// data loss.
-  Future<Decimal?> _readAmount(Object? stored) async {
-    try {
-      return fiat(await _crypto.decryptField(stored));
-    } on KeyUnavailableError {
-      rethrow;
-    } on Exception {
-      return null;
-    }
-  }
+  Future<Decimal?> _readAmount(Object? stored) =>
+      readStoredAmount(_crypto, stored);
 
-  Future<String?> _readText(Object? stored) async {
-    try {
-      return (await _crypto.decryptField(stored))?.trim() ?? '';
-    } on KeyUnavailableError {
-      rethrow;
-    } on Exception {
-      return null;
-    }
-  }
+  Future<String?> _readText(Object? stored) => readStoredText(_crypto, stored);
 
   static String _dayOf(String? stamp) =>
       stamp == null || stamp.length < 10 ? '' : stamp.substring(0, 10);

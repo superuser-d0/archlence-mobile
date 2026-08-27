@@ -962,6 +962,96 @@ class AppLocalizationsEn extends AppLocalizations {
   String get budgetLeft => 'Left';
 
   @override
+  String get monthJan => 'January';
+
+  @override
+  String get monthFeb => 'February';
+
+  @override
+  String get monthMar => 'March';
+
+  @override
+  String get monthApr => 'April';
+
+  @override
+  String get monthMay => 'May';
+
+  @override
+  String get monthJun => 'June';
+
+  @override
+  String get monthJul => 'July';
+
+  @override
+  String get monthAug => 'August';
+
+  @override
+  String get monthSep => 'September';
+
+  @override
+  String get monthOct => 'October';
+
+  @override
+  String get monthNov => 'November';
+
+  @override
+  String get monthDec => 'December';
+
+  @override
+  String get weekdayShortMon => 'M';
+
+  @override
+  String get weekdayShortTue => 'T';
+
+  @override
+  String get weekdayShortWed => 'W';
+
+  @override
+  String get weekdayShortThu => 'T';
+
+  @override
+  String get weekdayShortFri => 'F';
+
+  @override
+  String get weekdayShortSat => 'S';
+
+  @override
+  String get weekdayShortSun => 'S';
+
+  @override
+  String get calendarTitle => 'Calendar';
+
+  @override
+  String get calendarPreviousMonth => 'Previous month';
+
+  @override
+  String get calendarNextMonth => 'Next month';
+
+  @override
+  String get calendarNothingThisMonth => 'Nothing recorded this month.';
+
+  @override
+  String get calendarPickADay =>
+      'Pick a marked day to see what happened on it.';
+
+  @override
+  String get calendarNothingOnDay => 'Nothing on this day.';
+
+  @override
+  String get calendarUnreadable => 'This amount cannot be read';
+
+  @override
+  String calendarDayTotal(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count transactions',
+      one: '1 transaction',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get monthShortJan => 'Jan';
 
   @override

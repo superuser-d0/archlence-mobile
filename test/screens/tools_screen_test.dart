@@ -4,6 +4,7 @@ library;
 import 'package:archlence_mobile/app_services.dart';
 import 'package:archlence_mobile/data/database.dart';
 import 'package:archlence_mobile/screens/budget_screen.dart';
+import 'package:archlence_mobile/screens/calendar_screen.dart';
 import 'package:archlence_mobile/screens/savings_screen.dart';
 import 'package:archlence_mobile/screens/tools_screen.dart';
 import 'package:archlence_mobile/services/account_service.dart';
@@ -66,9 +67,21 @@ void main() {
       // cannot tell from a slow one.
       await pumpScreen(tester, services, const ToolsScreen());
 
-      expect(find.text('NOT YET'), findsNWidgets(7));
+      // Six now, not seven: Calendar stopped being a placeholder. The count
+      // has to move DOWN as cards are wired, or a card could be given a
+      // destination and keep its chip.
+      expect(find.text('NOT YET'), findsNWidgets(6));
       expect(find.text('Monthly\nBudget'), findsOneWidget);
       expect(find.text('Savings\nGoal'), findsOneWidget);
+      expect(find.text('Calendar'), findsOneWidget);
+    });
+
+    testWidgets('Calendar opens the calendar screen', (tester) async {
+      await pumpScreen(tester, services, const ToolsScreen());
+      await tester.tap(find.text('Calendar'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(CalendarScreen), findsOneWidget);
     });
 
     testWidgets('Monthly Budget opens the budget screen', (tester) async {

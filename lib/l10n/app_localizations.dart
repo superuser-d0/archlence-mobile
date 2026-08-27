@@ -1788,6 +1788,168 @@ abstract class AppLocalizations {
   /// **'Left'**
   String get budgetLeft;
 
+  /// No description provided for @monthJan.
+  ///
+  /// In en, this message translates to:
+  /// **'January'**
+  String get monthJan;
+
+  /// No description provided for @monthFeb.
+  ///
+  /// In en, this message translates to:
+  /// **'February'**
+  String get monthFeb;
+
+  /// No description provided for @monthMar.
+  ///
+  /// In en, this message translates to:
+  /// **'March'**
+  String get monthMar;
+
+  /// No description provided for @monthApr.
+  ///
+  /// In en, this message translates to:
+  /// **'April'**
+  String get monthApr;
+
+  /// No description provided for @monthMay.
+  ///
+  /// In en, this message translates to:
+  /// **'May'**
+  String get monthMay;
+
+  /// No description provided for @monthJun.
+  ///
+  /// In en, this message translates to:
+  /// **'June'**
+  String get monthJun;
+
+  /// No description provided for @monthJul.
+  ///
+  /// In en, this message translates to:
+  /// **'July'**
+  String get monthJul;
+
+  /// No description provided for @monthAug.
+  ///
+  /// In en, this message translates to:
+  /// **'August'**
+  String get monthAug;
+
+  /// No description provided for @monthSep.
+  ///
+  /// In en, this message translates to:
+  /// **'September'**
+  String get monthSep;
+
+  /// No description provided for @monthOct.
+  ///
+  /// In en, this message translates to:
+  /// **'October'**
+  String get monthOct;
+
+  /// No description provided for @monthNov.
+  ///
+  /// In en, this message translates to:
+  /// **'November'**
+  String get monthNov;
+
+  /// No description provided for @monthDec.
+  ///
+  /// In en, this message translates to:
+  /// **'December'**
+  String get monthDec;
+
+  /// No description provided for @weekdayShortMon.
+  ///
+  /// In en, this message translates to:
+  /// **'M'**
+  String get weekdayShortMon;
+
+  /// No description provided for @weekdayShortTue.
+  ///
+  /// In en, this message translates to:
+  /// **'T'**
+  String get weekdayShortTue;
+
+  /// No description provided for @weekdayShortWed.
+  ///
+  /// In en, this message translates to:
+  /// **'W'**
+  String get weekdayShortWed;
+
+  /// No description provided for @weekdayShortThu.
+  ///
+  /// In en, this message translates to:
+  /// **'T'**
+  String get weekdayShortThu;
+
+  /// No description provided for @weekdayShortFri.
+  ///
+  /// In en, this message translates to:
+  /// **'F'**
+  String get weekdayShortFri;
+
+  /// No description provided for @weekdayShortSat.
+  ///
+  /// In en, this message translates to:
+  /// **'S'**
+  String get weekdayShortSat;
+
+  /// No description provided for @weekdayShortSun.
+  ///
+  /// In en, this message translates to:
+  /// **'S'**
+  String get weekdayShortSun;
+
+  /// No description provided for @calendarTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Calendar'**
+  String get calendarTitle;
+
+  /// No description provided for @calendarPreviousMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous month'**
+  String get calendarPreviousMonth;
+
+  /// No description provided for @calendarNextMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Next month'**
+  String get calendarNextMonth;
+
+  /// No description provided for @calendarNothingThisMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing recorded this month.'**
+  String get calendarNothingThisMonth;
+
+  /// No description provided for @calendarPickADay.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a marked day to see what happened on it.'**
+  String get calendarPickADay;
+
+  /// No description provided for @calendarNothingOnDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing on this day.'**
+  String get calendarNothingOnDay;
+
+  /// Shown in place of a figure when the stored amount will not decrypt. The row stays listed — dropping it would hide that anything happened — but no number is invented for it.
+  ///
+  /// In en, this message translates to:
+  /// **'This amount cannot be read'**
+  String get calendarUnreadable;
+
+  /// No description provided for @calendarDayTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 transaction} other{{count} transactions}}'**
+  String calendarDayTotal(int count);
+
   /// Three-letter month, for the budget's month chips. Held here rather than taken from `intl`'s date symbols so that both languages are visible in one file and neither needs date data loaded at startup.
   ///
   /// In en, this message translates to:
