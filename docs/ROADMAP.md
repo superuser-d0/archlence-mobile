@@ -72,13 +72,76 @@ control in the app is inert, and it runs on the emulator.
 
 ## Pick up here
 
-**Make the release keystore.** Five minutes and one `keytool` command,
-written out in `android/key.properties.example`. Everything else is written
-and waiting on it: the moment that file exists, `flutter build apk --release`
-produces something another person can install. It is not a coding task, and
-it is not one to delegate — the keystore is the app's identity and its
-password should never be typed into this repository. It is the only thing
-left on this list; open work 2 has what has not been considered at all.
+**The road to 1.0, in order.** Each numbered item is its own session, and each
+one closes a `NOT YET` the user can see. The order is deliberate: 1 unlocks a
+service the later ones read, and 6 is last because it is the only one that
+cannot be undone by a rebuild.
+
+The size of this list is smaller than it looks, and the reason is worth
+stating: none of 1-5 is a new feature. Every one of them is a PORT of a
+desktop service that this file had not accounted for — see "What is NOT coming
+from the desktop", which was wrong about `services/` being fully triaged.
+
+1. **Category settings, and the main/extra split.** Port
+   `financial_summary_service.py` (81 lines, pure aggregation, so a parity
+   fixture can be generated from it like the money layer's), then the Settings
+   screen the `NOT YET` chip stands in for: one switch per category writing
+   `importance`, which is EXACTLY and only what the desktop's own screen does
+   (`main.py:2077`). Not a CRUD screen — the desktop cannot add, rename or
+   delete a category either, and inventing that here would fork a schema that
+   is a shared contract.
+
+   The switch must have a VISIBLE effect on this device, or it is a control
+   that looks live and does nothing — the thing this app refuses everywhere
+   else. So the four buckets (main income, extra income, essential expense,
+   extra expense) land on the Assets tab beside the distribution.
+
+2. **Search.** Port `search_service.py` and light up the disabled field on
+   Home. Its scope is already settled and does not need re-deciding: account
+   names and category names only. Transaction descriptions are AES-encrypted,
+   so searching them means decrypting a working set rather than pushing the
+   filter into SQL — the desktop measured 1.1s over 50,000 transactions and
+   drew the boundary there.
+
+3. **The calendar.** Port `calendar_service.py` (94 lines) and wire the Tools
+   card. Same encryption constraint as everywhere: the month grid counts rows
+   in SQL over the plain `transaction_date`, and only a tapped day's rows are
+   decrypted.
+
+4. **The four calculators.** `calculate_interest`, `calculate_compound` and
+   `calculate_loan` out of `mixins/calculator_mixin.py`, plus the basic one.
+   Four Tools cards open at once, nothing here touches a service, and the
+   arithmetic is exactly the kind that earns generated parity vectors rather
+   than hand-derived expectations. `export_plan_to_pdf` does NOT come: it is a
+   desktop affordance.
+
+5. **The balance ring's change chip.** Port `dashboard_period_service.py` (94
+   lines). The chip is currently omitted rather than wrong — an empty one drew
+   a green pill with an upward arrow — and this service is the definition that
+   lets it come back: a nominal balance change over a canonical period, not
+   the cash-flow growth rate that reported a misleading +/-100% whenever the
+   previous period was empty.
+
+6. **The verification round, and the signature.** Three things, then a build
+   somebody else can install:
+
+   * Configure a PIN on the `archlence_pixel` AVD and exercise the screen
+     lock. `local_auth` has never run against a device that HAS a lock; the
+     emulator has been reporting, correctly, that it has none.
+   * A restore carried through to the end on a release build. Everything up to
+     the file picker was driven in the R8 round; the restore itself was not.
+   * **Make the release keystore.** Five minutes and one `keytool` command,
+     written out in `android/key.properties.example`. It is not a coding task,
+     and it is not one to delegate — the keystore is the app's identity and
+     its password should never be typed into this repository.
+
+**Deliberately NOT in 1.0,** so that the omissions are decisions rather than
+drift: the Home forecast card (it needs `dashboard`, `insights`, `projection`
+and `financial_metrics` together, which is a project, not a session), the
+history "time machine" (`history_service.py`, 321 lines, plus
+`balance_events` replay behaviour), the What-If sandbox, Reset Data, tablet
+layouts and the accessibility pass. Each keeps its `NOT YET` chip, which is
+the honest thing for them to say.
 
 One thing worth doing the first time a BIST key is entered: check that the
 share prices actually appear. That path is tested against canned responses
@@ -1588,10 +1651,15 @@ the two card switches — the only writes in the app so far.
 twelve-month trend, and `AssetService`/`SavingsService` for holdings and
 goals. Three deliberate departures:
 
-- Holdings are shown AT COST and say so. There is no price feed, so the
-  mockup's "Current" column, its `+7.858,53 ₺ (+1.52%) Today` chip and its
-  "Last updated: 23:00" line are all figures that do not exist. A cost basis
-  presented as a market value is a lie the user cannot see through.
+- Holdings were shown AT COST and said so, because when this was written there
+  was no price feed: the mockup's "Current" column, its
+  `+7.858,53 ₺ (+1.52%) Today` chip and its "Last updated: 23:00" line were
+  all figures that did not exist, and a cost basis presented as a market value
+  is a lie the user cannot see through. **Since then the price layer arrived**
+  — see "Price fetching" and "Shares, on the user's own key". Crypto, gold and
+  currency now carry a live price and the time it was got; shares do unless no
+  BIST key is set, and each tile says which of the two it is showing. The rule
+  did not change, only the number of holdings it applies to.
 - The single hard-coded "Emergency Fund" became the savings goals, however
   many there are. Showing only the first would hide the rest.
 - The trend is bucketed in Dart, not in SQL: `transactions.amount` is
@@ -1924,8 +1992,21 @@ gives by default, and anything to do with more than one user or device.
 
 ### What is NOT coming from the desktop
 
-For the avoidance of re-deriving this each session — the desktop's `services/`
-is fully accounted for. What has not been ported is not forgotten:
+For the avoidance of re-deriving this each session. **This list used to open
+by claiming the desktop's `services/` was fully accounted for, and it was
+not.** Six modules were neither ported nor named here: `search_service`,
+`calendar_service`, `dashboard_period_service`, `financial_summary_service`,
+`history_service` and `queries`. The first four are items 1-5 of "Pick up
+here"; `history_service` has its own entry below; and
+`queries.py` is a 77-line helper whose only mobile-relevant call,
+`get_categories`, already lives in `TransactionService.getCategories`.
+
+The lesson is the same one R8 taught two entries above: an absence is not
+evidence. Nothing had checked this list AGAINST `ls services/`, so the six
+that were never mentioned looked exactly like the ones that had been
+considered and dismissed.
+
+What has not been ported is not forgotten:
 
 - **Dashboard, insight, projection and metrics services.** They compute the
   Home tab's forecast and health score. Those cards are drawn with a `NOT YET`
@@ -1938,10 +2019,18 @@ is fully accounted for. What has not been ported is not forgotten:
   this app does not know is refused with a message saying to open it on the
   desktop once; see "The package around it".
 - **Price machinery** (`price_service`, `price_providers`, `price_guard`,
-  `asset_price_worker`, `crypto_top100`, `brand_icon_service`, `logo_service`).
-  Item 1.
+  `asset_price_worker`, `crypto_top100`). Ported — see "Price fetching" and
+  "Shares, on the user's own key". `brand_icon_service` and `logo_service` are
+  the exceptions and are not coming: both fetch a logo per holding from the
+  network, which is a request per symbol to somebody else's server for
+  decoration.
 - **Backup service.** Ported. `key_recovery_service.py` is the exception —
   see "What the backup work did NOT port".
+- **`history_service`.** The "time machine": the balance at any past date,
+  reconstructed from the nearest `daily_balance_snapshot` and then replaying
+  `balance_events` forward to the target. Out of 1.0 by size rather than by
+  principle — 321 lines, two tables whose write behaviour would have to be
+  matched exactly, and nothing in the app asks for it yet.
 - **`background_task_manager`.** Flutter has its own answer; the desktop's
   thread pool does not port.
 
