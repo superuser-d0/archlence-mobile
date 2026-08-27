@@ -609,6 +609,12 @@
   "@calcProjectionNote": {
     "description": "On every calculator. The app writes money elsewhere, and a screen full of figures that look like the rest of the app has to say it changes nothing."
   },
+  "a11yRecordTransaction": "Record a transaction",
+  "@a11yRecordTransaction": {
+    "description": "Tooltip on the floating button, which is an icon with no text. It is what a screen reader announces, so it says what the button DOES rather than naming the icon."
+  },
+  "a11yAddBudgetLine": "Add a budget line",
+  "a11yAddGoal": "Add a savings goal",
   "calendarTitle": "Calendar",
   "calendarPreviousMonth": "Previous month",
   "calendarNextMonth": "Next month",

@@ -1123,6 +1123,15 @@ class AppLocalizationsEn extends AppLocalizations {
       'A projection, not a record. Nothing here is written to your accounts.';
 
   @override
+  String get a11yRecordTransaction => 'Record a transaction';
+
+  @override
+  String get a11yAddBudgetLine => 'Add a budget line';
+
+  @override
+  String get a11yAddGoal => 'Add a savings goal';
+
+  @override
   String get calendarTitle => 'Calendar';
 
   @override

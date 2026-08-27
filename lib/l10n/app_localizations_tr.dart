@@ -1114,6 +1114,15 @@ class AppLocalizationsTr extends AppLocalizations {
       'Bu bir tahmin, kayıt değil. Buradaki hiçbir şey hesaplarınıza yazılmaz.';
 
   @override
+  String get a11yRecordTransaction => 'İşlem kaydet';
+
+  @override
+  String get a11yAddBudgetLine => 'Bütçe kalemi ekle';
+
+  @override
+  String get a11yAddGoal => 'Birikim hedefi ekle';
+
+  @override
   String get calendarTitle => 'Takvim';
 
   @override

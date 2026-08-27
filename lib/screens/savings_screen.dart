@@ -50,6 +50,9 @@ class _SavingsScreenState extends State<SavingsScreen> {
               final created = await showNewGoalSheet(context);
               if (created != null) _reload();
             },
+            // The tooltip is the semantic label: an icon-only
+            // button announces as nothing without it.
+            tooltip: context.l10n.a11yAddGoal,
             icon: const Icon(Icons.add),
           ),
         ],

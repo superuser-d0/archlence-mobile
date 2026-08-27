@@ -98,7 +98,7 @@ The share provider is the one piece of the price layer whose live response
 has NOT been seen by this codebase — checking it needs a key that belongs to
 whoever signs up for it. See "Shares, on the user's own key".
 
-804 unit tests and 12 device tests pass. `flutter analyze` is clean, no
+834 unit tests and 12 device tests pass. `flutter analyze` is clean, no
 control in the app is inert, and it runs on the emulator.
 
 ## Pick up here
@@ -151,7 +151,12 @@ So that the omissions are decisions rather than drift. Each keeps its
   change chip, and the balance at a past day".
 * **The What-If sandbox and Reset Data** — the last two dimmed cards in Tools,
   seven of whose nine are now live.
-* **Tablet layouts and an accessibility pass** — never considered at all.
+* **Tablet layouts** — never considered at all.
+* **The rest of accessibility.** A first pass is done — labels, tap targets
+  and contrast on every screen, against Flutter's own guidelines; see "The
+  accessibility pass". What it cannot see is reading order, label quality and
+  large font scales, and those need a person with TalkBack on rather than
+  another test.
 * **`--split-per-abi`** — the APK is 65MB because it carries three ABIs. A
   shipping decision rather than a code one.
 
@@ -389,7 +394,7 @@ Long, and grouped roughly by layer rather than by date:
 | Security | The screen lock · The verification round |
 | Language | i18n · What i18n did NOT cover |
 | Shipping | The icon and the launch screen · What running it caught · Release signing · R8 |
-| Screens | The screen–service join · The wired tabs · Every control is live or visibly unavailable · Screens (as first built) |
+| Screens | The accessibility pass · The screen–service join · The wired tabs · Every control is live or visibly unavailable · Screens (as first built) |
 | Write flows | The first write flow · Recording a transaction · Buying and selling a holding · Savings goals (sheets) · A budget line · Managing a subscription · Paying card debt · The first run · Backup & Restore |
 
 Each section says what the thing does, which departures from the desktop or
@@ -1908,6 +1913,64 @@ back through the Turkish folding, which had never met a desktop-written row.
 **Cleaned up afterwards:** the throwaway keystore, the APK it signed, the
 device PIN, the pushed backup, and the app itself.
 
+### The accessibility pass — `test/screens/accessibility_test.dart`
+
+Not one of the six numbered items; started because this file had just called
+it "the one that affects every user of the app rather than some of them, and
+the one nothing in this repo would notice the absence of". Every screen is
+checked by tests that read the widget tree directly, which is exactly what a
+screen reader does NOT do.
+
+**The thresholds are Flutter's, not this repo's.** `androidTapTargetGuideline`
+is Material's 48x48, `textContrastGuideline` is WCAG AA, and
+`labeledTapTargetGuideline` is "a tappable node has a label". Inventing
+numbers here would have been inventing a standard.
+
+Ten screens, three guidelines, run on a PHONE-sized surface rather than the
+2400px one the other screen tests use — a tap target's size is the thing being
+measured, and measuring it on a surface no phone has would measure nothing.
+The screens are seeded first: an empty app passes all three trivially.
+
+**Contrast passed everywhere.** Obsidian Prime holds WCAG AA as drawn, which
+is worth knowing rather than assuming.
+
+**Four unlabelled controls, all icon-only.** The floating button that records
+a transaction — the app's most-used control, announced as "button" — plus the
+add buttons on Budget and Savings, and the sixty switches on Category
+Settings, which a reader announced as sixty identical "on, switch" with the
+category's name in a separate node beside them.
+
+**The calendar's cells cannot meet 48x48, and the exemption is bounded.**
+Seven 48dp columns need 336dp; a 360dp phone spends 48 on the screen margin
+and 16 on the card, leaving 296 — 42dp a column. The card's own padding was
+cut from 32 to 16 to buy what it could, the cells are now 48 TALL since height
+is the free dimension, and Material's own date picker makes the same trade.
+The test excludes that ONE screen from that ONE guideline, by name, and pins
+42x48 in its own assertion — so the cells cannot shrink further under cover of
+the exemption, and the calendar is still held to the other two guidelines.
+
+**And the mutation check caught a fix that was worse than the defect.** The
+first attempt at the category switches wrote a label by hand onto a
+`Semantics` wrapper and put `ExcludeSemantics` around the switch, so a reader
+would not hear the state twice. It read beautifully. It also removed the
+switch's TAP ACTION — leaving the row unreachable to exactly the assistive
+tech it was written for — and it PASSED the guideline, because a node that is
+not tappable cannot be an unlabelled tappable node.
+
+Deleting the label left the suite green, which is what said so. `MergeSemantics`
+is the answer: it keeps the action and reads the name, the side word and the
+state as one thing.
+
+That is the second time in two sessions that a green mutation was the finding
+rather than a false alarm. The habit is worth its cost.
+
+**What this cannot see, and does not claim to.** These guidelines read the
+semantics tree. They catch an unlabelled control and a target too small to
+hit. They do not catch a reading ORDER that makes no sense, a label that is
+present and useless, or a layout that breaks at 200% font scale. Those need a
+person with TalkBack on, and this file says so rather than implying the box is
+ticked.
+
 ### Paying card debt — `lib/screens/pay_debt_sheet.dart`
 
 The last write flow. Two things it gets right by refusing rather than
@@ -2426,10 +2489,10 @@ decision rather than a code one.
 Widening beyond a phone (tablet layouts), accessibility beyond what Material
 gives by default, and anything to do with more than one user or device.
 
-Of these the accessibility pass is the one that affects every user of the app
-rather than some of them, and it is the one nothing in this repo would notice
-the absence of: every screen is checked by tests that read the widget tree
-directly, which is exactly what a screen reader does NOT do.
+A FIRST accessibility pass has since been done — see "The accessibility pass"
+— covering labels, tap targets and contrast on every screen against Flutter's
+own guidelines. What it does not cover is named there: reading order, label
+quality, and large font scales. Those need a person with TalkBack on.
 
 ### What is NOT coming from the desktop
 

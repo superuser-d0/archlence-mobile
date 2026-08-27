@@ -92,6 +92,10 @@ class _AppShellState extends State<AppShell> {
         floatingActionButton: _tab == 3 || _tab == 4
             ? null
             : FloatingActionButton(
+                // A tooltip, which is also the SEMANTIC LABEL: this button is
+                // an icon and nothing else, so without one a screen reader
+                // announces the app's most-used control as "button".
+                tooltip: context.l10n.a11yRecordTransaction,
                 onPressed: () async {
                   final recorded = await showAddTransactionSheet(context);
                   if (recorded != null) setState(() => _revision++);

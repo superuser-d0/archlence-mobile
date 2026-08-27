@@ -82,6 +82,9 @@ class _BudgetScreenState extends State<BudgetScreen> {
               );
               if (saved ?? false) _reload();
             },
+            // The tooltip is the semantic label: an icon-only
+            // button announces as nothing without it.
+            tooltip: context.l10n.a11yAddBudgetLine,
             icon: const Icon(Icons.add),
           ),
         ],

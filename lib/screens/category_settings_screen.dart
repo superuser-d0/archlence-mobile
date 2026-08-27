@@ -51,9 +51,8 @@ class _CategorySettingsScreenState extends State<CategorySettingsScreen> {
     final messenger = ScaffoldMessenger.of(context);
     setState(() => _pending[category.name] = isMain);
 
-    final wrote = await ServicesScope.of(
-      context,
-    ).categories.setImportance(category.name, isMain: isMain);
+    final wrote = await ServicesScope.of(context).categories
+        .setImportance(category.name, isMain: isMain);
     if (!mounted) return;
     if (wrote) return;
 
@@ -121,8 +120,14 @@ class _CategoryList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final income = [for (final c in categories) if (c.isIncome) c];
-    final expense = [for (final c in categories) if (!c.isIncome) c];
+    final income = [
+      for (final c in categories)
+        if (c.isIncome) c,
+    ];
+    final expense = [
+      for (final c in categories)
+        if (!c.isIncome) c,
+    ];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -189,34 +194,52 @@ class _CategoryRow extends StatelessWidget {
         horizontal: Spacing.gutter,
         vertical: 6,
       ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(category.name, style: text.bodyMedium),
-                const SizedBox(height: 2),
-                Text(
-                  // The word changes with the side: a salary is a main income
-                  // and rent is an essential expense, and calling rent "main"
-                  // would be the desktop's column leaking into the screen.
-                  isMain
-                      ? (category.isIncome
-                            ? l10n.categoryMainIncome
-                            : l10n.categoryEssentialExpense)
-                      : (category.isIncome
-                            ? l10n.categoryExtraIncome
-                            : l10n.categoryExtraExpense),
-                  style: text.bodySmall?.copyWith(
-                    color: ObsidianPalette.onSurfaceVariant,
+      // MERGED, so the row is one thing to a screen reader.
+      //
+      // Without this the switch is a node of its own: sixty identical
+      // controls announced as "on, switch", with the category's name in a
+      // separate node beside them and nothing joining the two.
+      //
+      // The first attempt wrote a label by hand onto a `Semantics` wrapper
+      // and put `ExcludeSemantics` around the switch, so a reader would not
+      // hear the state twice. It read beautifully and it removed the switch's
+      // TAP ACTION — leaving the row unreachable to exactly the assistive tech
+      // it was meant to serve, and PASSING the guideline, because a node that
+      // is not tappable cannot be an unlabelled tappable node.
+      //
+      // The mutation check is what caught it: deleting the label left the
+      // suite green. Merging instead keeps the action and reads the name, the
+      // side word and the state as one thing.
+      child: MergeSemantics(
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(category.name, style: text.bodyMedium),
+                  const SizedBox(height: 2),
+                  Text(
+                    // The word changes with the side: a salary is a main income
+                    // and rent is an essential expense, and calling rent "main"
+                    // would be the desktop's column leaking into the screen.
+                    isMain
+                        ? (category.isIncome
+                              ? l10n.categoryMainIncome
+                              : l10n.categoryEssentialExpense)
+                        : (category.isIncome
+                              ? l10n.categoryExtraIncome
+                              : l10n.categoryExtraExpense),
+                    style: text.bodySmall?.copyWith(
+                      color: ObsidianPalette.onSurfaceVariant,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          Switch(value: isMain, onChanged: onChanged),
-        ],
+            Switch(value: isMain, onChanged: onChanged),
+          ],
+        ),
       ),
     );
   }

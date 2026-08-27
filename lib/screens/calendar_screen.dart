@@ -201,7 +201,14 @@ class _MonthGrid extends StatelessWidget {
     final today = DateTime.now();
 
     return AppCard(
-      padding: const EdgeInsets.all(Spacing.gutter),
+      // Narrower side padding than every other card in the app, and it is the
+      // grid that forces it: seven columns have to fit a phone, and each
+      // point of padding comes straight off a tap target that is already
+      // under Material's 48dp. See the note on [_DayCell].
+      padding: const EdgeInsets.symmetric(
+        horizontal: Spacing.stackSm,
+        vertical: Spacing.gutter,
+      ),
       child: Column(
         children: [
           Row(
@@ -225,7 +232,10 @@ class _MonthGrid extends StatelessWidget {
             itemCount: leading + daysInMonth,
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 7,
-              mainAxisExtent: 44,
+              // 48, Material's minimum. The WIDTH cannot reach it — see
+              // [_DayCell] — so the one dimension that is free is given all
+              // of it.
+              mainAxisExtent: 48,
             ),
             itemBuilder: (context, index) {
               if (index < leading) return const SizedBox.shrink();
@@ -256,6 +266,19 @@ class _MonthGrid extends StatelessWidget {
   }
 }
 
+/// One day of the month grid.
+///
+/// **These are under Material's 48x48 minimum in one dimension, and cannot
+/// not be.** Seven 48dp columns need 336dp. A 360dp phone spends 48 on the
+/// screen margin and 16 on the card's own padding — already cut from 32 for
+/// this reason — which leaves 296, or 42dp a column. Material's own date
+/// picker has the same constraint and answers it the same way.
+///
+/// So the cells are 42 x 48: the height is the dimension that is free, and it
+/// gets all of the minimum. The
+/// residual is recorded rather than hidden: `accessibility_test.dart` excludes
+/// this screen from the tap-target guideline BY NAME, and pins the size these
+/// cells actually achieve so they cannot quietly shrink again.
 class _DayCell extends StatelessWidget {
   const _DayCell({
     required this.day,
@@ -282,8 +305,8 @@ class _DayCell extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            width: 30,
-            height: 30,
+            width: 32,
+            height: 32,
             alignment: Alignment.center,
             decoration: BoxDecoration(
               shape: BoxShape.circle,

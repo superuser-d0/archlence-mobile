@@ -2100,6 +2100,24 @@ abstract class AppLocalizations {
   /// **'A projection, not a record. Nothing here is written to your accounts.'**
   String get calcProjectionNote;
 
+  /// Tooltip on the floating button, which is an icon with no text. It is what a screen reader announces, so it says what the button DOES rather than naming the icon.
+  ///
+  /// In en, this message translates to:
+  /// **'Record a transaction'**
+  String get a11yRecordTransaction;
+
+  /// No description provided for @a11yAddBudgetLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a budget line'**
+  String get a11yAddBudgetLine;
+
+  /// No description provided for @a11yAddGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a savings goal'**
+  String get a11yAddGoal;
+
   /// No description provided for @calendarTitle.
   ///
   /// In en, this message translates to:
