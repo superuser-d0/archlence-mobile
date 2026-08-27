@@ -249,6 +249,7 @@
   "sellAssetPayInto": "Yatırılacak hesap",
   "homeActiveSubscriptions": "Aktif Aboneliklerim",
   "homeNetWorth": "Net Servet",
+  "homeNetWorthOverMonth": "Net De\u011fer \u00b7 30 g\u00fcn",
   "homeCash": "Nakit",
   "homeCardDebt": "Kart Borcu",
   "homeNoSubscriptions": "Henüz tekrarlanan bir şey yok. Kartla ödenen bir abonelik kendiliğinden fark edilir ve buraya düşer.",

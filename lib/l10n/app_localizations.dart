@@ -1596,6 +1596,12 @@ abstract class AppLocalizations {
   /// **'Net Worth'**
   String get homeNetWorth;
 
+  /// No description provided for @homeNetWorthOverMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Net Worth · 30 days'**
+  String get homeNetWorthOverMonth;
+
   /// No description provided for @homeCash.
   ///
   /// In en, this message translates to:

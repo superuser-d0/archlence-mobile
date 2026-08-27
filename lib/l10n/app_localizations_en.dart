@@ -856,6 +856,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeNetWorth => 'Net Worth';
 
   @override
+  String get homeNetWorthOverMonth => 'Net Worth · 30 days';
+
+  @override
   String get homeCash => 'Cash';
 
   @override

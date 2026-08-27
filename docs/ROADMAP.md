@@ -25,6 +25,11 @@ desktop app wrote — replacing the database and the encryption key under a
 journal that survives the process being killed. Proven in both directions
 against `services/backup_service.py` itself.
 
+**And the ring says which way it went.** The balance ring's change chip is
+back: what the net worth moved over the last 30 days, in lira and per cent,
+against a baseline read out of the balance ledger. When the ledger cannot
+answer for that day it draws nothing at all rather than a zero.
+
 **And it can work a figure out.** Four calculators — a plain one with its own
 keypad, deposit interest, compound growth, and a Turkish consumer loan with
 KKDF, BSMV and a full payment plan. Seven of the nine Tools cards are live;
@@ -87,7 +92,7 @@ The share provider is the one piece of the price layer whose live response
 has NOT been seen by this codebase — checking it needs a key that belongs to
 whoever signs up for it. See "Shares, on the user's own key".
 
-785 unit tests and 12 device tests pass. `flutter analyze` is clean, no
+803 unit tests and 12 device tests pass. `flutter analyze` is clean, no
 control in the app is inert, and it runs on the emulator.
 
 ## Pick up here
@@ -115,12 +120,8 @@ from the desktop", which was wrong about `services/` being fully triaged.
 4. ~~**The four calculators.**~~ DONE — see "The four calculators" under
    "Done, and how it was proven".
 
-5. **The balance ring's change chip.** Port `dashboard_period_service.py` (94
-   lines). The chip is currently omitted rather than wrong — an empty one drew
-   a green pill with an upward arrow — and this service is the definition that
-   lets it come back: a nominal balance change over a canonical period, not
-   the cash-flow growth rate that reported a misleading +/-100% whenever the
-   previous period was empty.
+5. ~~**The balance ring's change chip.**~~ DONE — see "The change chip, and
+   the balance at a past day" under "Done, and how it was proven".
 
 6. **The verification round, and the signature.** Three things, then a build
    somebody else can install:
@@ -374,7 +375,7 @@ Long, and grouped roughly by layer rather than by date:
 | Layer | Sections |
 | --- | --- |
 | Foundations | Money · Encryption · Database · The REAL column's drift |
-| Services | Accounts · Transactions · Holdings · Recurring payments · The monthly budget · Savings goals · Price fetching · Shares on the user's own key · Category settings and the main/extra split · Search · The calendar · The four calculators |
+| Services | Accounts · Transactions · Holdings · Recurring payments · The monthly budget · Savings goals · Price fetching · Shares on the user's own key · Category settings and the main/extra split · Search · The calendar · The four calculators · The change chip |
 | Backup | The backup's cryptographic core · The package around it · Restoring · The key on its own |
 | Security | The screen lock |
 | Language | i18n · What i18n did NOT cover |
@@ -1773,6 +1774,68 @@ POSITION: each digit's centre against the one that should sit above and beside
 it, so 7-8-9 over 4-5-6 over 1-2-3 is a fact the suite checks rather than a
 layout someone eyeballed.
 
+### The change chip, and the balance at a past day
+
+Item 5 of the road to 1.0, and the one whose plan was wrong about its own
+dependencies.
+
+**"Pick up here" listed this as a 94-line port and it was not.**
+`dashboard_period_service.py` is 94 lines and pure, but its baseline comes
+from `history_service.get_balance_at` — the 321-line time machine this file
+puts OUT of 1.0 by name. The plan named a dependency it had already excluded.
+
+What it needed turned out to be one question out of that module, not the
+module: what the accounts held at the end of a given day.
+
+**And answering it BACKWARDS removed the rest.** The desktop starts at the
+nearest `daily_balance_snapshot` and replays every event forwards.
+`BalanceHistoryService.totalAt` takes what the accounts hold NOW and subtracts
+every event since the day asked about. The two are algebraically the same
+whenever the ledger is complete — `sum(all) - sum(after d)` is `sum(up to d)`
+— so this is a reduction rather than a different answer, and it needs no
+snapshot at all. Which is just as well: `daily_balance_snapshot` is in the
+schema, shared with the desktop, and nothing in this app writes it.
+
+Where the two CAN differ, the backward derivation is the better one. It
+anchors on `SUM(accounts.balance)`, which is the figure the ring itself shows,
+so the history cannot tell a second story about the balance printed above it.
+
+**Before the ledger begins, the answer is "not known", never zero** — the
+desktop's rule, kept, and the one that matters most here. A date earlier than
+the oldest event is a date this app has no information about, and answering
+zero would tell a user they had no money at all. That null travels from the
+service through `BalanceChange.isKnown` to the ring, which then draws no chip.
+
+**The percentage refuses to be invented too.** A change from an actual zero
+has no finite percentage; zero to zero is the one well-defined no-change case
+and answers 0%. Those two rules are adjacent and easy to swap, so they have
+their own vectors — and when the percentage is absent the chip still shows the
+lira figure, which is true either way.
+
+**The vectors come from calling the desktop.** `dashboard_period_service` takes
+its balance reader as an ARGUMENT, so `tool/emit_period_vectors.py` drives it
+with a stub and every window, baseline and percentage in the fixture is the
+module's own output. Writing that generator caught a mistake in itself: a case
+labelled `today` had been handed the `1 Ay` filter, and the fixture's baseline
+came out a month early. The `history_service` half has no such fixture — it
+needs a database — so it is tested against a ledger this suite builds, and the
+reduction above is stated in the file rather than assumed.
+
+**Four mutations fail the suite:** a zero baseline reported as 0%, an
+off-by-one that makes the window exclusive, an unknown baseline treated as
+zero, and a day boundary that excludes the day itself.
+
+**One period, named on the ring.** Home has no period selector — the Assets
+tab is where periods are picked — so the chip is fixed at 30 days and the ring
+says so: "Net Worth · 30 days" when there is a figure, plain "Net Worth" when
+there is not. A change over an unstated period is a number nobody can check.
+
+**And the test caught what the emulator would have.** The chip carries both a
+lira figure and a percentage, and `+250,00 ₺ · +%25` overflowed the 256px ring
+by 53 pixels. `TrendChip` now shrinks its label to fit, exactly as the balance
+above it already did — an overflow here is not a debug stripe, it is a chip
+clipped mid-number, which reads as a different amount.
+
 ### Paying card debt — `lib/screens/pay_debt_sheet.dart`
 
 The last write flow. Two things it gets right by refusing rather than
@@ -2324,10 +2387,16 @@ What has not been ported is not forgotten:
 - **Backup service.** Ported. `key_recovery_service.py` is the exception —
   see "What the backup work did NOT port".
 - **`history_service`.** The "time machine": the balance at any past date,
-  reconstructed from the nearest `daily_balance_snapshot` and then replaying
-  `balance_events` forward to the target. Out of 1.0 by size rather than by
-  principle — 321 lines, two tables whose write behaviour would have to be
-  matched exactly, and nothing in the app asks for it yet.
+  `diff_between`, and event attribution by source. Out of 1.0 by size rather
+  than by principle — 321 lines, two tables whose write behaviour would have
+  to be matched exactly.
+
+  **One question out of it IS ported**, because the change chip needed it:
+  what the accounts held at the end of a given day, in
+  `lib/services/balance_history.dart`. It derives backwards from the current
+  balance instead of replaying forwards from a snapshot, which is why
+  `daily_balance_snapshot` still has nothing writing it. See "The change chip,
+  and the balance at a past day".
 - **`background_task_manager`.** Flutter has its own answer; the desktop's
   thread pool does not port.
 
@@ -2372,6 +2441,7 @@ each reads that project's own modules:
 | `tool/emit_summary_vectors.py` | `test/summary_vectors.txt` |
 | `tool/emit_search_folding.py` | `lib/services/search_folding.dart` + `test/search_folding_vectors.txt` |
 | `tool/emit_calculator_vectors.py` | `test/calculator_vectors.txt` |
+| `tool/emit_period_vectors.py` | `test/period_vectors.txt` |
 | `tool/emit_aead_vectors.dart` | the Dart-written AEAD envelopes the desktop reads back |
 | `tool/emit_mobile_backup.dart` | a package for the desktop to read back |
 

@@ -118,21 +118,113 @@ void main() {
     expect(find.textContaining('Nothing recurring yet'), findsOneWidget);
   });
 
-  testWidgets('no change chip is drawn when there is no change to report', (
-    tester,
-  ) async {
-    // Caught on the emulator, not in a test: an empty label still drew the
-    // chip, so the ring showed a bare green pill with an upward arrow and no
-    // number — which reads as a gain.
-    await services.accounts.createAccount(
-      name: 'Maaş',
-      accountType: AccountType.checking,
-      initialBalance: 100,
-    );
+  group('the change chip', () {
+    /// Moves every event written so far back to [daysAgo], so a test can put
+    /// the ledger's beginning before the chip's 30-day window.
+    Future<void> backdate(int daysAgo) async {
+      final when = DateTime.now().subtract(Duration(days: daysAgo));
+      final stamp =
+          '${when.year.toString().padLeft(4, '0')}-'
+          '${when.month.toString().padLeft(2, '0')}-'
+          '${when.day.toString().padLeft(2, '0')} 09:00:00';
+      await db.customUpdate(
+        'UPDATE balance_events SET ts = ?',
+        variables: [Variable<String>(stamp)],
+        updates: const {},
+      );
+    }
 
-    await pump(tester);
+    testWidgets('none is drawn when the ledger cannot answer', (tester) async {
+      // Caught on the emulator, not in a test: an empty label still drew the
+      // chip, so the ring showed a bare green pill with an upward arrow and no
+      // number — which reads as a gain.
+      //
+      // The reason it cannot answer has changed since. The period services
+      // used to be unported; now the account is opened TODAY, so the
+      // baseline — thirty days back — falls before the ledger begins, and
+      // "I do not know" is the honest answer.
+      await services.accounts.createAccount(
+        name: 'Maaş',
+        accountType: AccountType.checking,
+        initialBalance: 100,
+      );
 
-    expect(find.byType(TrendChip), findsNothing);
+      await pump(tester);
+
+      expect(find.byType(TrendChip), findsNothing);
+      expect(find.text('Net Worth'), findsOneWidget);
+    });
+
+    testWidgets('a real move is drawn in lira and per cent', (tester) async {
+      final id = await services.accounts.createAccount(
+        name: 'Maaş',
+        accountType: AccountType.checking,
+        initialBalance: 1000,
+      );
+      await backdate(40);
+      await services.transactions.addTransaction(
+        accountId: id,
+        amount: 250,
+        transactionType: 'income',
+        category: 'Maaş',
+      );
+
+      await pump(tester);
+
+      expect(find.byType(TrendChip), findsOneWidget);
+      expect(find.text('+250,00 ₺ · +%25'), findsOneWidget);
+      // The window is named, so the figure is never a change over an
+      // unstated period.
+      expect(find.text('Net Worth · 30 days'), findsOneWidget);
+    });
+
+    testWidgets('a fall is drawn as a fall', (tester) async {
+      final id = await services.accounts.createAccount(
+        name: 'Maaş',
+        accountType: AccountType.checking,
+        initialBalance: 1000,
+      );
+      await backdate(40);
+      await services.transactions.addTransaction(
+        accountId: id,
+        amount: 400,
+        transactionType: 'expense',
+        category: 'Market',
+      );
+
+      await pump(tester);
+
+      expect(find.text('-400,00 ₺ · -%40'), findsOneWidget);
+      expect(
+        tester.widget<TrendChip>(find.byType(TrendChip)).positive,
+        isFalse,
+      );
+    });
+
+    testWidgets('a move off zero shows the lira and no percentage', (
+      tester,
+    ) async {
+      // The rule that is easiest to get backwards: there is no finite
+      // percentage from a real zero, and inventing one would be worse than
+      // leaving it out. The lira figure is true either way.
+      final id = await services.accounts.createAccount(
+        name: 'Maaş',
+        accountType: AccountType.checking,
+        initialBalance: 0,
+      );
+      await backdate(40);
+      await services.transactions.addTransaction(
+        accountId: id,
+        amount: 500,
+        transactionType: 'income',
+        category: 'Maaş',
+      );
+
+      await pump(tester);
+
+      expect(find.text('+500,00 ₺'), findsOneWidget);
+      expect(find.textContaining('%'), findsNothing);
+    });
   });
 
   group('the search box', () {

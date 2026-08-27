@@ -6,8 +6,10 @@ import 'package:flutter/material.dart';
 import '../app_services.dart';
 import '../app_shell.dart';
 import '../services/account_service.dart';
+import '../services/dashboard_period.dart';
 import '../services/recurring_service.dart';
 import '../services/search_service.dart';
+import '../services/transaction_service.dart';
 import '../theme/obsidian_prime.dart';
 import '../ui/app_locale.dart';
 import '../ui/async_data.dart';
@@ -32,6 +34,14 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
+/// The window the ring's change chip reports over.
+///
+/// Fixed rather than chosen, because Home has no period selector — the Assets
+/// tab is where periods are picked. A month is the desktop's own middle
+/// option and the one a household thinks in; the ring says which window it is
+/// so the figure is never a change over an unstated period.
+const DashboardPeriod _changePeriod = DashboardPeriod.month;
+
 class _HomeScreenState extends State<HomeScreen> {
   Future<_HomeData>? _data;
 
@@ -49,8 +59,17 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<_HomeData> _load() async {
     final services = ServicesScope.of(context);
+    final netWorth = await services.accounts.getNetWorth();
     return _HomeData(
-      netWorth: await services.accounts.getNetWorth(),
+      netWorth: netWorth,
+      // Read in the same pass as the balance it is a change TO. Two loads
+      // could answer from either side of a write, and a chip that disagreed
+      // with the figure above it is worse than no chip.
+      change: await balanceChangeFor(
+        services.balanceHistory,
+        period: _changePeriod,
+        currentBalance: netWorth.net,
+      ),
       subscriptions: await services.recurring.getActiveRecurringPayments(),
     );
   }
@@ -121,9 +140,18 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 class _HomeData {
-  const _HomeData({required this.netWorth, required this.subscriptions});
+  const _HomeData({
+    required this.netWorth,
+    required this.change,
+    required this.subscriptions,
+  });
 
   final NetWorth netWorth;
+
+  /// How the balance moved over [_changePeriod]. Its [BalanceChange.isKnown]
+  /// is false when the ledger cannot answer, and then no chip is drawn.
+  final BalanceChange change;
+
   final List<RecurringPayment> subscriptions;
 }
 
@@ -148,12 +176,16 @@ class _HomeBody extends StatelessWidget {
         Center(
           child: BalanceRing(
             amount: formatLira(worth.net),
-            // The change over a period needs the dashboard's period queries,
-            // which are not ported. An empty label draws no figure rather
-            // than a made-up one.
-            changeLabel: '',
-            changeIsPositive: worth.net >= Decimal.zero,
-            periodLabel: context.l10n.homeNetWorth,
+            // Empty when the ledger cannot answer — a date before it began,
+            // or no events at all. The ring drops the chip entirely then,
+            // because an empty green pill with an upward arrow reads as a
+            // gain.
+            changeLabel: _changeLabel(context, data.change),
+            changeIsPositive:
+                (data.change.nominal ?? Decimal.zero) >= Decimal.zero,
+            periodLabel: data.change.isKnown
+                ? context.l10n.homeNetWorthOverMonth
+                : context.l10n.homeNetWorth,
             progress: progress,
           ),
         ),
@@ -178,6 +210,20 @@ class _HomeBody extends StatelessWidget {
       ],
     );
   }
+}
+
+/// The chip's text: the move in lira, and the percentage when there is one.
+///
+/// **The percentage is dropped rather than faked.** A balance that was zero a
+/// month ago and is 500 now has no finite percentage — the desktop refuses to
+/// give one, and so does this. The lira figure is always true, so it carries
+/// the chip on its own.
+String _changeLabel(BuildContext context, BalanceChange change) {
+  final nominal = change.nominal;
+  if (nominal == null) return '';
+  final percent = change.percent;
+  if (percent == null) return formatSignedLira(nominal);
+  return '${formatSignedLira(nominal)} · ${formatPercent(percent, signed: true)}';
 }
 
 class _Subscriptions extends StatelessWidget {

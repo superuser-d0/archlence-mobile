@@ -849,6 +849,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get homeNetWorth => 'Net Servet';
 
   @override
+  String get homeNetWorthOverMonth => 'Net Değer · 30 gün';
+
+  @override
   String get homeCash => 'Nakit';
 
   @override

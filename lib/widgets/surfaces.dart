@@ -93,13 +93,24 @@ class TrendChip extends StatelessWidget {
         color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(Radii.full),
       ),
+      // `Flexible` + `FittedBox`, for the same reason the balance above it
+      // shrinks: the chip lives inside a 256px ring and a label carrying both
+      // a lira figure and a percentage overflows it. Overflow here is not a
+      // stripe in a debug build and a clean release — it is a chip clipped
+      // mid-number, which reads as a different amount.
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            label,
-            style: Theme.of(context).textTheme.labelMedium
-                ?.copyWith(color: color),
+          Flexible(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                label,
+                maxLines: 1,
+                style: Theme.of(context).textTheme.labelMedium
+                    ?.copyWith(color: color),
+              ),
+            ),
           ),
           const SizedBox(width: 2),
           Icon(

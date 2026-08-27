@@ -502,6 +502,7 @@
   "sellAssetPayInto": "Pay into",
   "homeActiveSubscriptions": "My Active Subscriptions",
   "homeNetWorth": "Net Worth",
+  "homeNetWorthOverMonth": "Net Worth · 30 days",
   "homeCash": "Cash",
   "homeCardDebt": "Card Debt",
   "homeNoSubscriptions": "Nothing recurring yet. A subscription paid by card is noticed automatically and lands here.",
