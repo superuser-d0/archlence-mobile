@@ -25,6 +25,11 @@ desktop app wrote — replacing the database and the encryption key under a
 journal that survives the process being killed. Proven in both directions
 against `services/backup_service.py` itself.
 
+**And it can find things.** The Home search box was a disabled placeholder;
+it now searches account names, category names and the descriptions of recent
+transactions, folding Turkish properly so "ISI" finds "ısı" and "sirket" finds
+"Şirket". Tapping a result goes where that thing lives.
+
 **And it knows what a household chose.** Category Settings marks which
 categories are ones a household must have; the Assets tab splits income and
 spending along that line and prints both halves. The desktop's own
@@ -73,7 +78,7 @@ The share provider is the one piece of the price layer whose live response
 has NOT been seen by this codebase — checking it needs a key that belongs to
 whoever signs up for it. See "Shares, on the user's own key".
 
-696 unit tests and 12 device tests pass. `flutter analyze` is clean, no
+721 unit tests and 12 device tests pass. `flutter analyze` is clean, no
 control in the app is inert, and it runs on the emulator.
 
 ## Pick up here
@@ -91,12 +96,9 @@ from the desktop", which was wrong about `services/` being fully triaged.
 1. ~~**Category settings, and the main/extra split.**~~ DONE — see "Category
    settings, and the main/extra split" under "Done, and how it was proven".
 
-2. **Search.** Port `search_service.py` and light up the disabled field on
-   Home. Its scope is already settled and does not need re-deciding: account
-   names and category names only. Transaction descriptions are AES-encrypted,
-   so searching them means decrypting a working set rather than pushing the
-   filter into SQL — the desktop measured 1.1s over 50,000 transactions and
-   drew the boundary there.
+2. ~~**Search.**~~ DONE — see "Search, and the Turkish letters that break it"
+   under "Done, and how it was proven". The scope written here was wrong, and
+   the reason it was wrong is in that section.
 
 3. **The calendar.** Port `calendar_service.py` (94 lines) and wire the Tools
    card. Same encryption constraint as everywhere: the month grid counts rows
@@ -369,7 +371,7 @@ Long, and grouped roughly by layer rather than by date:
 | Layer | Sections |
 | --- | --- |
 | Foundations | Money · Encryption · Database · The REAL column's drift |
-| Services | Accounts · Transactions · Holdings · Recurring payments · The monthly budget · Savings goals · Price fetching · Shares on the user's own key · Category settings and the main/extra split |
+| Services | Accounts · Transactions · Holdings · Recurring payments · The monthly budget · Savings goals · Price fetching · Shares on the user's own key · Category settings and the main/extra split · Search |
 | Backup | The backup's cryptographic core · The package around it · Restoring · The key on its own |
 | Security | The screen lock |
 | Language | i18n · What i18n did NOT cover |
@@ -1557,6 +1559,87 @@ pass — and made it pass with the SUMMARY showing the wrong figure, which is on
 the list of assertions this suite has already been caught by. It is scoped to
 `find.descendant(of: find.byType(SummaryRow))` instead.
 
+### Search, and the Turkish letters that break it
+
+Item 2 of the road to 1.0. The Home search field was disabled with the label
+"Search — not yet"; it works.
+
+**The scope in "Pick up here" was wrong, and the way it was wrong is the
+lesson.** It said account and category names only, with a measured reason —
+descriptions are AES-encrypted, so searching them means decrypting rather than
+filtering in SQL, and the desktop clocked 1.1s over 50,000 transactions. That
+sentence is a faithful summary of `search_service.py`'s DOCSTRING. The module
+underneath it defines `search_transactions` and calls it from `search`: the
+scope widened and the header did not follow. Reading the prose would have
+shipped a search that quietly found less than the desktop's.
+
+That is the third entry in this file where a claim inside a file turned out
+not to be the file's behaviour — after R8's absent `isMinifyEnabled` and the
+`'essential'` doc comment. The habit that catches it is the same one every
+time: open the code the sentence is about.
+
+**So descriptions are searched, the way the desktop searches them:** the most
+recent 500 rows, ordered and windowed in SQL over the plain
+`transaction_date`, then decrypted one at a time. A row that will not decrypt
+is SKIPPED — one broken record must not make the box useless — but a missing
+KEY propagates, because "no results" would tell a user their profile is empty
+when it is unreadable. The screen draws `DataUnavailable` for that, not an
+empty panel.
+
+**Turkish folding is the real work, and Dart cannot do it.** `normalize()` is
+`casefold` -> NFKD -> drop combining marks -> `ı`->`i` -> collapse whitespace,
+and it is what makes "ISI" find "ısı" and "sirket" find "Şirket". Dart has no
+Unicode normalisation in its core library, and this is not worth a dependency.
+
+`tool/emit_search_folding.py` precomputes the whole chain per character,
+straight from the desktop's function, into `lib/services/search_folding.dart`
+— 2,808 entries for every codepoint below U+3000 that folding changes.
+
+**The generator proves its own premise before it writes anything.** Folding
+character by character and collapsing whitespace afterwards is only equal to
+running the whole-string function if no character's expansion interacts with
+its neighbours' — and one does: U+00A0 decomposes to a SPACE, so a naive table
+that folded and collapsed in the wrong order would turn `a\u00A0b` into `ab`
+where the desktop gives `a b`. The script checks the equality over every
+covered codepoint and 60,000 random strings and refuses to write the file if
+one disagrees.
+
+**And it records where the port CANNOT match.** Coverage stops at U+3000, so
+`ﬁ` (U+FB01) passes through where the desktop expands it to `fi`. Rather than
+quietly trimming that case out of the fixture, the generator writes it as a
+`DIVERGES` line carrying both answers, and a test asserts the port lands on
+its side of it. Widening the table deletes the line and fails that test until
+the fixture is regenerated — a known gap that cannot rot into an unknown one.
+
+**Ranking, because containment alone gives the wrong order.** 0 exact, 1
+prefix, 2 contained, ties keeping input order, so typing "Nakit" puts "Nakit"
+above "Nakit Olmayan". An empty query returns NOTHING rather than everything:
+focusing the box must not dump the whole profile onto the screen.
+
+**Checked for teeth,** three ways, each failing the suite: folding with a
+plain `toLowerCase` instead of the table (23 assertions fall), collapsing the
+rank to a containment check, and letting one unreadable row abort the search
+instead of being skipped.
+
+**The panel is inline, under the field.** The desktop gives its reason — its
+dropdown grabbed focus and made a second keystroke impossible — and the mobile
+one is the same shape: the keyboard is up and the field has focus, and taking
+either away between characters is the one thing a search box must not do.
+Debounced 300ms like the desktop, and an answer to a query the user has
+already typed past is dropped rather than drawn.
+
+**A result goes where the thing lives,** which is what the desktop does: an
+account or a transaction to Cards, where accounts and their statements are,
+and a category to Category Settings — a destination that only exists because
+item 1 built it. `AppShellScope` is the new inherited widget that lets a
+screen move the shell; it exists because passing a callback from the shell to
+one field would have put a parameter on every widget in between.
+
+**An empty panel says where it looked.** "Nothing found" alone reads as "I
+never recorded that", which can be false: a description older than the window
+is outside what the search opens. The line under it names the three places, so
+the absence is informative rather than misleading.
+
 ### Paying card debt — `lib/screens/pay_debt_sheet.dart`
 
 The last write flow. Two things it gets right by refusing rather than
@@ -2153,6 +2236,8 @@ each reads that project's own modules:
 | `tool/emit_backup_vectors.py` | `test/backup_vectors.txt` |
 | `tool/emit_backup_package.py` | `test/desktop_backup.archlence-backup` |
 | `tool/emit_default_categories.py` | `lib/data/default_categories.dart` |
+| `tool/emit_summary_vectors.py` | `test/summary_vectors.txt` |
+| `tool/emit_search_folding.py` | `lib/services/search_folding.dart` + `test/search_folding_vectors.txt` |
 | `tool/emit_aead_vectors.dart` | the Dart-written AEAD envelopes the desktop reads back |
 | `tool/emit_mobile_backup.dart` | a package for the desktop to read back |
 

@@ -252,7 +252,17 @@
   "homeCash": "Nakit",
   "homeCardDebt": "Kart Borcu",
   "homeNoSubscriptions": "Henüz tekrarlanan bir şey yok. Kartla ödenen bir abonelik kendiliğinden fark edilir ve buraya düşer.",
-  "homeSearchDisabled": "Arama — henüz yok",
+  "homeSearchHint": "Hesap, kategori, son not ara",
+  "homeSearchClear": "Temizle",
+  "homeSearchNoResults": "Bir \u015fey bulunamad\u0131",
+  "homeSearchScope": "Hesap adlar\u0131nda, kategori adlar\u0131nda ve son i\u015flemlerin a\u00e7\u0131klamalar\u0131nda arand\u0131.",
+  "homeSearchMore": "{count} sonu\u00e7 daha g\u00f6sterilmedi",
+  "@homeSearchMore": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "searchKindAccount": "Hesap",
+  "searchKindCategory": "Kategori",
+  "searchKindTransaction": "\u0130\u015flem",
   "homeMyWallet": "Cüzdanım",
   "homeForecastTitle": "Algoritmik Öngörü",
   "homeForecastPending": "Harcama eğilimleri ve ay sonu projeksiyonu, içgörü ve projeksiyon servisleriyle birlikte gelecek.",

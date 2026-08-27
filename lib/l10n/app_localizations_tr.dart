@@ -859,7 +859,31 @@ class AppLocalizationsTr extends AppLocalizations {
       'Henüz tekrarlanan bir şey yok. Kartla ödenen bir abonelik kendiliğinden fark edilir ve buraya düşer.';
 
   @override
-  String get homeSearchDisabled => 'Arama — henüz yok';
+  String get homeSearchHint => 'Hesap, kategori, son not ara';
+
+  @override
+  String get homeSearchClear => 'Temizle';
+
+  @override
+  String get homeSearchNoResults => 'Bir şey bulunamadı';
+
+  @override
+  String get homeSearchScope =>
+      'Hesap adlarında, kategori adlarında ve son işlemlerin açıklamalarında arandı.';
+
+  @override
+  String homeSearchMore(int count) {
+    return '$count sonuç daha gösterilmedi';
+  }
+
+  @override
+  String get searchKindAccount => 'Hesap';
+
+  @override
+  String get searchKindCategory => 'Kategori';
+
+  @override
+  String get searchKindTransaction => 'İşlem';
 
   @override
   String get homeMyWallet => 'Cüzdanım';

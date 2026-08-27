@@ -1614,11 +1614,53 @@ abstract class AppLocalizations {
   /// **'Nothing recurring yet. A subscription paid by card is noticed automatically and lands here.'**
   String get homeNoSubscriptions;
 
-  /// No description provided for @homeSearchDisabled.
+  /// No description provided for @homeSearchHint.
   ///
   /// In en, this message translates to:
-  /// **'Search — not yet'**
-  String get homeSearchDisabled;
+  /// **'Search accounts, categories, notes'**
+  String get homeSearchHint;
+
+  /// No description provided for @homeSearchClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get homeSearchClear;
+
+  /// No description provided for @homeSearchNoResults.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing found'**
+  String get homeSearchNoResults;
+
+  /// Under 'Nothing found'. Saying where it looked matters: an older description is outside the window the search opens, so an empty panel does not mean the record is not there.
+  ///
+  /// In en, this message translates to:
+  /// **'Searched account names, category names and the descriptions of recent transactions.'**
+  String get homeSearchScope;
+
+  /// No description provided for @homeSearchMore.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} more not shown'**
+  String homeSearchMore(int count);
+
+  /// No description provided for @searchKindAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get searchKindAccount;
+
+  /// No description provided for @searchKindCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Category'**
+  String get searchKindCategory;
+
+  /// No description provided for @searchKindTransaction.
+  ///
+  /// In en, this message translates to:
+  /// **'Transaction'**
+  String get searchKindTransaction;
 
   /// No description provided for @homeMyWallet.
   ///

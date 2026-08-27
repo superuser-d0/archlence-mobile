@@ -39,3 +39,31 @@ class FixedKeyProvider implements KeyProvider {
   @override
   Future<void> deleteKey({required List<int> expectedCurrent}) async {}
 }
+
+/// A [KeyProvider] with nothing to give.
+///
+/// Stands in for the case a phone really can reach: the Keystore entry is
+/// gone after a reinstall or a screen-lock change, so every encrypted field
+/// is unreadable. The distinction that matters is between THIS and one row
+/// failing — a service must not report an empty result when the answer is
+/// "locked".
+class UnavailableKeyProvider implements KeyProvider {
+  @override
+  Future<Uint8List?> loadKey() async => null;
+
+  @override
+  Future<Uint8List> getOrCreateKey() async =>
+      throw const KeyUnavailableError('no key in this test');
+
+  @override
+  Future<void> storeKey(List<int> key) async {}
+
+  @override
+  Future<void> replaceKey(
+    List<int> key, {
+    required List<int> expectedCurrent,
+  }) async {}
+
+  @override
+  Future<void> deleteKey({required List<int> expectedCurrent}) async {}
+}

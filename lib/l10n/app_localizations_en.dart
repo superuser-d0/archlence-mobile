@@ -866,7 +866,31 @@ class AppLocalizationsEn extends AppLocalizations {
       'Nothing recurring yet. A subscription paid by card is noticed automatically and lands here.';
 
   @override
-  String get homeSearchDisabled => 'Search — not yet';
+  String get homeSearchHint => 'Search accounts, categories, notes';
+
+  @override
+  String get homeSearchClear => 'Clear';
+
+  @override
+  String get homeSearchNoResults => 'Nothing found';
+
+  @override
+  String get homeSearchScope =>
+      'Searched account names, category names and the descriptions of recent transactions.';
+
+  @override
+  String homeSearchMore(int count) {
+    return '$count more not shown';
+  }
+
+  @override
+  String get searchKindAccount => 'Account';
+
+  @override
+  String get searchKindCategory => 'Category';
+
+  @override
+  String get searchKindTransaction => 'Transaction';
 
   @override
   String get homeMyWallet => 'My Wallet';

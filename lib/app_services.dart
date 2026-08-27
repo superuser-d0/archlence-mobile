@@ -24,6 +24,7 @@ import 'services/category_service.dart';
 import 'services/live_price_service.dart';
 import 'services/recurring_service.dart';
 import 'services/savings_service.dart';
+import 'services/search_service.dart';
 import 'services/shares_api_key.dart';
 import 'security/screen_lock.dart';
 import 'services/transaction_service.dart';
@@ -42,7 +43,8 @@ class AppServices {
   ) : accounts = AccountService(db, crypto),
       assets = AssetService(db, crypto),
       savings = SavingsService(db, crypto),
-      categories = CategoryService(db);
+      categories = CategoryService(db),
+      search = SearchService(db, crypto);
 
   /// Builds the whole graph over an already-open database.
   ///
@@ -175,6 +177,11 @@ class AppServices {
   final AccountService accounts;
   final AssetService assets;
   final SavingsService savings;
+
+  /// The Home search box. Reads names straight out of SQL and decrypts a
+  /// bounded window of descriptions — see the service for why the window is
+  /// what makes searching an encrypted column affordable at all.
+  final SearchService search;
 
   /// The category list, and the main/extra switch on Settings. Takes no
   /// [FieldCrypto]: nothing in `categories` is encrypted — a category NAME is

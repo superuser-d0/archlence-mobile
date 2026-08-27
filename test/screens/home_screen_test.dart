@@ -3,13 +3,16 @@ library;
 
 import 'package:archlence_mobile/app_services.dart';
 import 'package:archlence_mobile/data/database.dart';
+import 'package:archlence_mobile/screens/category_settings_screen.dart';
 import 'package:archlence_mobile/screens/home_screen.dart';
 import 'package:archlence_mobile/services/account_service.dart';
 import 'package:archlence_mobile/services/recurring_service.dart';
 import 'package:archlence_mobile/widgets/surfaces.dart';
 import 'package:drift/drift.dart' show Variable;
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../support/fixed_key_provider.dart';
 import '../support/test_app.dart';
 
 void main() {
@@ -130,6 +133,125 @@ void main() {
     await pump(tester);
 
     expect(find.byType(TrendChip), findsNothing);
+  });
+
+  group('the search box', () {
+    /// Types [query] and lets the debounce elapse.
+    ///
+    /// `pump(Duration)` rather than `pumpAndSettle`: the field waits 300ms
+    /// before it searches anything, and settling would return the instant the
+    /// timer was scheduled with nothing on screen yet.
+    Future<void> type(WidgetTester tester, String query) async {
+      await tester.enterText(find.byType(TextField), query);
+      await tester.pump(const Duration(milliseconds: 350));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('it is live, not the disabled placeholder it used to be', (
+      tester,
+    ) async {
+      await pump(tester);
+      expect(find.text('Search — not yet'), findsNothing);
+
+      // Asserted by TYPING rather than by reading `TextField.enabled`, which
+      // is null by default and derives from the decoration — so `isTrue`
+      // fails on a perfectly live field. The question is what the user can
+      // do, which is the same lesson the disabled-button defect taught.
+      await tester.enterText(find.byType(TextField), 'maas');
+      await tester.pump();
+      expect(find.text('maas'), findsOneWidget);
+    });
+
+    testWidgets('nothing is searched until the user types', (tester) async {
+      await services.accounts.createAccount(
+        name: 'Maaş',
+        accountType: AccountType.checking,
+        initialBalance: 100,
+      );
+      await pump(tester);
+
+      // No panel at all, rather than one listing the whole profile.
+      expect(find.text('Account'), findsNothing);
+      expect(find.text('Nothing found'), findsNothing);
+    });
+
+    testWidgets('an account is found without its accents', (tester) async {
+      await services.accounts.createAccount(
+        name: 'Şirket Hesabı',
+        accountType: AccountType.checking,
+        initialBalance: 100,
+      );
+      await pump(tester);
+      await type(tester, 'sirket');
+
+      expect(find.text('Şirket Hesabı'), findsOneWidget);
+      expect(find.text('Account'), findsOneWidget);
+    });
+
+    testWidgets('a query that matches nothing says where it looked', (
+      tester,
+    ) async {
+      await pump(tester);
+      await type(tester, 'zzzzzz');
+
+      expect(find.text('Nothing found'), findsOneWidget);
+      // Without this line an empty panel reads as "I never recorded it",
+      // which may be false for a description outside the search window.
+      expect(
+        find.textContaining('descriptions of recent transactions'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('clearing the field takes the panel with it', (tester) async {
+      await pump(tester);
+      await type(tester, 'maas');
+      expect(find.text('Maaş'), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField), '');
+      await tester.pump(const Duration(milliseconds: 350));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Category'), findsNothing);
+    });
+
+    testWidgets('at most five results are drawn, and the rest are counted', (
+      tester,
+    ) async {
+      // Seven seeded categories contain "ev"; only five may be drawn.
+      await pump(tester);
+      await type(tester, 'e');
+
+      // Exactly five rows drawn — not "at most", which would also pass if
+      // the panel drew nothing at all.
+      expect(find.byIcon(Icons.sell_outlined), findsNWidgets(5));
+      expect(find.textContaining('more not shown'), findsOneWidget);
+    });
+
+    testWidgets('a category result opens the screen that owns it', (
+      tester,
+    ) async {
+      await pump(tester);
+      await type(tester, 'maas');
+
+      await tester.tap(find.text('Maaş'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(CategorySettingsScreen), findsOneWidget);
+    });
+
+    testWidgets('a locked profile is not reported as an empty one', (
+      tester,
+    ) async {
+      // The one answer this app never gives: "no results" when the truth is
+      // that nothing could be read.
+      final locked = testServices(db, keyProvider: UnavailableKeyProvider());
+      await tester.pumpWidget(testApp(locked, const HomeScreen()));
+      await tester.pumpAndSettle();
+      await type(tester, 'maas');
+
+      expect(find.text('Nothing found'), findsNothing);
+    });
   });
 
   testWidgets('the insight cards draw no figure they cannot compute', (

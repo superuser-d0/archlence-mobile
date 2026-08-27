@@ -7,6 +7,7 @@ library;
 
 import 'package:archlence_mobile/app_services.dart';
 import 'package:archlence_mobile/crypto/field_crypto.dart';
+import 'package:archlence_mobile/crypto/key_provider.dart';
 import 'package:archlence_mobile/data/database.dart';
 import 'package:archlence_mobile/services/live_price_service.dart';
 import 'package:archlence_mobile/services/price_providers.dart';
@@ -36,10 +37,16 @@ Future<String> _refusingHttpGet(
 ///
 /// [httpGet] lets a test that specifically wants to drive live pricing hand
 /// in its own fake; every other test gets one that refuses to be called.
+///
+/// [keyProvider] is for the one case a screen has to get right and cannot be
+/// shown any other way: a profile whose encryption key is gone. Every service
+/// then raises rather than returning nothing, and a screen must say so
+/// instead of drawing an empty result.
 AppServices testServices(
   ArchlenceDatabase db, {
   HttpGet? httpGet,
   SharesApiKey? sharesApiKey,
+  KeyProvider? keyProvider,
 }) {
   // One instance, shared by the price service and the Settings row, exactly
   // as production wires it. Two would let a test pass while the app it
@@ -52,7 +59,7 @@ AppServices testServices(
       sharesApiKey ?? SharesApiKey(storage: const FakeSecureStorage({}));
   return AppServices.forDatabase(
     db,
-    FieldCrypto(FixedKeyProvider.arbitrary()),
+    FieldCrypto(keyProvider ?? FixedKeyProvider.arbitrary()),
     sharesApiKey: keyStore,
     livePrices: LivePriceService(
       db: db,

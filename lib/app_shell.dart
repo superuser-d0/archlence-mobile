@@ -22,6 +22,43 @@ class AppShell extends StatefulWidget {
 /// Height of the [NavigationBar], mirroring `navigationBarTheme.height`.
 const _navBarHeight = 68.0;
 
+/// Lets a screen inside the shell move the shell to another tab.
+///
+/// Search needs it and nothing else does yet: a result the user taps has to
+/// take them where that thing LIVES, and an account lives on Cards. Passing a
+/// callback down through Home's whole widget tree would put a parameter on
+/// every widget between here and the field; an inherited scope puts it only
+/// where it is read. [AppShell] is above the Navigator, so this survives a
+/// pushed screen the way `ServicesScope` deliberately does not.
+class AppShellScope extends InheritedWidget {
+  const AppShellScope({
+    required this.selectTab,
+    required super.child,
+    super.key,
+  });
+
+  /// Moves the shell to [index]. Out-of-range values are ignored rather than
+  /// throwing: the caller is a UI event, not a contract.
+  final void Function(int index) selectTab;
+
+  static AppShellScope? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<AppShellScope>();
+
+  @override
+  bool updateShouldNotify(AppShellScope oldWidget) =>
+      selectTab != oldWidget.selectTab;
+}
+
+/// The tab indices the shell draws, named so a caller does not pass a bare
+/// integer that silently means something else after a reorder.
+abstract final class ShellTab {
+  static const int home = 0;
+  static const int assets = 1;
+  static const int cards = 2;
+  static const int tools = 3;
+  static const int settings = 4;
+}
+
 class _AppShellState extends State<AppShell> {
   int _tab = 0;
 
@@ -33,58 +70,66 @@ class _AppShellState extends State<AppShell> {
   /// screen growing a subscription to the database.
   int _revision = 0;
 
+  void _selectTab(int index) {
+    if (index < 0 || index > 4 || index == _tab) return;
+    setState(() => _tab = index);
+  }
+
   @override
   Widget build(BuildContext context) {
     final media = MediaQuery.of(context);
 
-    return Scaffold(
-      extendBody: true,
-      extendBodyBehindAppBar: true,
-      appBar: const _GlassHeader(),
-      // Recording a transaction is the app's most frequent action, so it gets
-      // the one floating button. Cards deliberately has none — the reference
-      // design put one there on top of its own "+ ADD" and it landed on the
-      // Freeze Card switch.
-      floatingActionButton: _tab == 3 || _tab == 4
-          ? null
-          : FloatingActionButton(
-              onPressed: () async {
-                final recorded = await showAddTransactionSheet(context);
-                if (recorded != null) setState(() => _revision++);
-              },
-              child: const Icon(Icons.add),
+    return AppShellScope(
+      selectTab: _selectTab,
+      child: Scaffold(
+        extendBody: true,
+        extendBodyBehindAppBar: true,
+        appBar: const _GlassHeader(),
+        // Recording a transaction is the app's most frequent action, so it gets
+        // the one floating button. Cards deliberately has none — the reference
+        // design put one there on top of its own "+ ADD" and it landed on the
+        // Freeze Card switch.
+        floatingActionButton: _tab == 3 || _tab == 4
+            ? null
+            : FloatingActionButton(
+                onPressed: () async {
+                  final recorded = await showAddTransactionSheet(context);
+                  if (recorded != null) setState(() => _revision++);
+                },
+                child: const Icon(Icons.add),
+              ),
+        // Both bars are translucent and sit ON TOP of the body, so the body's
+        // own inset must grow by their height — otherwise the first and last
+        // items of every screen scroll underneath them and are unreachable.
+        // Screens read this back through `MediaQuery.paddingOf`.
+        body: MediaQuery(
+          data: media.copyWith(
+            padding: media.padding.copyWith(
+              top: media.padding.top + kToolbarHeight,
+              bottom: media.padding.bottom + _navBarHeight,
             ),
-      // Both bars are translucent and sit ON TOP of the body, so the body's
-      // own inset must grow by their height — otherwise the first and last
-      // items of every screen scroll underneath them and are unreachable.
-      // Screens read this back through `MediaQuery.paddingOf`.
-      body: MediaQuery(
-        data: media.copyWith(
-          padding: media.padding.copyWith(
-            top: media.padding.top + kToolbarHeight,
-            bottom: media.padding.bottom + _navBarHeight,
+          ),
+          child: KeyedSubtree(
+            key: ValueKey('$_tab-$_revision'),
+            child: switch (_tab) {
+              0 => const HomeScreen(),
+              1 => const AssetsScreen(),
+              2 => const CardsScreen(),
+              3 => const ToolsScreen(),
+              _ => const SettingsScreen(),
+            },
           ),
         ),
-        child: KeyedSubtree(
-          key: ValueKey('$_tab-$_revision'),
-          child: switch (_tab) {
-            0 => const HomeScreen(),
-            1 => const AssetsScreen(),
-            2 => const CardsScreen(),
-            3 => const ToolsScreen(),
-            _ => const SettingsScreen(),
-          },
-        ),
-      ),
-      bottomNavigationBar: GlassBar(
-        border: const Border(
-          top: BorderSide(color: ObsidianPalette.cardStroke),
-        ),
-        child: NavigationBar(
-          backgroundColor: Colors.transparent,
-          selectedIndex: _tab,
-          onDestinationSelected: (index) => setState(() => _tab = index),
-          destinations: _destinations(context),
+        bottomNavigationBar: GlassBar(
+          border: const Border(
+            top: BorderSide(color: ObsidianPalette.cardStroke),
+          ),
+          child: NavigationBar(
+            backgroundColor: Colors.transparent,
+            selectedIndex: _tab,
+            onDestinationSelected: _selectTab,
+            destinations: _destinations(context),
+          ),
         ),
       ),
     );
