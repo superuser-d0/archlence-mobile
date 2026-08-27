@@ -54,10 +54,16 @@ Wire-compatible with the desktop's, checked in both directions against
 phone, no backend of ours. Shares stay at cost, because there is still no
 keyless BIST source; the tab says so, per holding, rather than leaving a
 blanket disclaimer that would be wrong for three-quarters of a portfolio the
-moment the other three kinds have an answer.
+moment the other three kinds have an answer. One correction landed here after
+the fact: the release manifest had no internet permission, so this worked in
+every build except the one that ships — see "The permission a release build
+did not have", including what is still unverified about the fix.
 
-661 unit tests and 12 device tests pass. `flutter analyze` is clean, no
-control in the app is inert, and it runs on the emulator.
+661 unit tests and 12 device tests pass, `flutter analyze` is clean, and no
+control in the app is inert. What that does NOT cover: the last time the app
+itself was opened on a device was the icon and launch-screen work, and two
+screens have been built since — key recovery, and the priced holding tiles.
+Both are proven by test and neither has been run. See "Pick up here".
 
 ## Pick up here
 
@@ -66,10 +72,18 @@ written out in `android/key.properties.example`. Everything else is written
 and waiting on it: the moment that file exists, `flutter build apk --release`
 produces something another person can install. It is not a coding task, and
 it is not one to delegate — the keystore is the app's identity and its
-password should never be typed into this repository. It is the only thing
-left on this list; open work 2 has what has not been considered at all, and
-the user-supplied BIST key described under "Price fetching" is worth doing
-only once someone wants it enough to type an API key into Settings.
+password should never be typed into this repository.
+
+**Then run it on the VM.** Two screens have been built since the app was last
+opened on a device, and writing that down found a release-only defect before
+any device did — see "The permission a release build did not have". Open work
+1 lists what to open and what to run. It is the only item here that needs a
+device rather than a decision, and it is the one that has historically caught
+what review did not.
+
+Open work 3 has what has not been considered at all, and the user-supplied
+BIST key described under "Price fetching" is worth doing only once someone
+wants it enough to type an API key into Settings.
 
 ## Settled decisions
 
@@ -1163,7 +1177,7 @@ alone: it sums purchase price across a portfolio that can hold a share at
 cost beside a crypto holding at a live price in the same list, and blending
 those into one number would present a figure that is part market value and
 part cost basis with no way to tell which parts are which from the total
-alone. The roadmap's own item 5 asked for this PER HOLDING, not as a new
+alone. The price-fetching item asked for this PER HOLDING, not as a new
 aggregate, and the tiles are where it landed.
 
 **Every widget test needed a seam it didn't have before.** The moment
@@ -1226,6 +1240,62 @@ explaining why no clamp is needed at all instead of being restored.
 phone, from keyless sources". The user-supplied API key that would open it
 is listed in "Pick up here" as worth doing only once someone wants it enough
 to type a key into Settings, not before.
+
+### The permission a release build did not have
+
+Found while checking this file's own claims, not by running anything — which
+is the only reason it is written down before a device found it instead.
+
+`android/app/src/main/AndroidManifest.xml` declared NO permissions. The
+Flutter template puts `android.permission.INTERNET` in the `debug` and
+`profile` manifests only, and the comment there says why: the tool needs it
+for hot reload. It is not there for the app. So the release manifest — the
+one that becomes the APK a person installs — had no internet permission at
+all, while `price_providers.dart` calls CoinGecko and Frankfurter through
+`dart:io`'s `HttpClient`, which Android refuses without it.
+
+**What makes it worth a section rather than a line.** It fails silently, in
+the exact shape a correct offline phone fails:
+
+    try {
+      payload = jsonDecode(await get(uri));
+    } on Object {
+      return const {};
+    }
+
+That `on Object` is deliberate and stays — `price_providers.dart`'s contract
+is that a provider gap is an absent key, never a throw. `LivePriceService`
+then falls back to `asset_price_cache`, which on a fresh install is empty, so
+every holding reads `Cost`. No error, no banner, nothing red. The feature
+built in "Price fetching" would have been off in the only configuration that
+ships, and on in every configuration it was developed and tested in.
+
+**Why no test could have caught it.** Every test in that piece drives the
+providers through the `HttpGet` seam, so no socket has ever opened from this
+app — a good decision, and this is its blind spot. The manifest is not a file
+any Dart test reads, and the debug APK the device tests run against carries
+the permission from `src/debug/`. Green everywhere, broken where it counts.
+
+**The fix** is the one line, in `src/main/` where it belongs, with the reason
+above it so it is not tidied away as duplication of the debug manifest. The
+two template manifests are left alone: the merger de-duplicates, and editing
+files the template owns to make a point is how the next `flutter create`
+diff becomes unreadable.
+
+The comment above it was written twice. The first version used ` -- ` as a
+dash, and XML forbids `--` inside a comment: it would have failed the build
+at `aapt2`, in the one file no test parses, to explain a bug in the one file
+no test parses. Caught by running an XML parser over the manifest rather than
+by rereading it, which is worth keeping as the habit: every file this
+project edits by hand has a parser somewhere that will answer for free.
+
+**NOT yet verified by running it,** and this file does not get to claim it is.
+The check needs a device and a release build: `flutter build apk --release`
+once a keystore exists, install, open Assets, and confirm a crypto holding
+reads `Current` rather than `Cost`. Until then this is a fix argued from the
+platform's documented behaviour — which is exactly the kind of claim the
+Frankfurter redirect note above records getting wrong. It is item 1 of open
+work.
 
 ### Paying card debt — `lib/screens/pay_debt_sheet.dart`
 
@@ -1714,7 +1784,34 @@ surfaced only that way:
 
 ## Open work
 
-### 1. Shipping
+### 1. A device pass on what has not had one
+
+Everything named here is proven by test and none of it has been opened on a
+device. The gap is not academic: writing this list is what turned up the
+INTERNET permission above, and every screen defect recorded in this file was
+invisible in the source.
+
+- **The priced holding tiles** (`assets_screen.dart`). No real HTTP call has
+  ever left this app. What only a run can answer: that both providers return
+  the shapes `price_providers.dart` parses, over a real connection; that the
+  freshness label reads sensibly against a real clock; and that the manifest
+  fix actually works, which needs a RELEASE build and therefore the keystore
+  first.
+- **The key recovery sections** (`backup_screen.dart`, pushed from Settings).
+  Fifteen service tests and parity in both directions, but the screen has
+  never run, and the file picker and share sheet it drives are platform
+  surfaces a widget test replaces rather than exercises.
+- **The suite has stood at 12 device tests since the i18n work.** Nothing in
+  it opens either surface above. Two more belong there once the run says what
+  they should assert.
+
+```bash
+flutter test integration_test/key_provider_device_test.dart -d <device>
+flutter test integration_test/app_device_test.dart -d <device>
+flutter run -d <device>       # then: Assets, and Settings > Backup & Restore
+```
+
+### 2. Shipping
 
 The icon, the launch screen and the signing configuration are done — see
 "The icon and the launch screen" and "Release signing". What is left is the
@@ -1728,7 +1825,7 @@ one-line change and a real risk — it needs keep rules for the plugins and a
 run on a device before it can be trusted, which makes it its own session
 rather than a line in this one.
 
-### 2. Not yet considered at all
+### 3. Not yet considered at all
 
 Widening beyond a phone (tablet layouts), accessibility beyond what Material
 gives by default, and anything to do with more than one user or device.
@@ -1750,7 +1847,14 @@ is fully accounted for. What has not been ported is not forgotten:
   desktop once; see "The package around it".
 - **Price machinery** (`price_service`, `price_providers`, `price_guard`,
   `asset_price_worker`, `crypto_top100`, `brand_icon_service`, `logo_service`).
-  Item 1.
+  Answered rather than ported, and the distinction matters: this app has a
+  `price_providers.dart` and a `price_guard.dart` of its own, sharing the
+  names and the "one broken symbol does not sink the batch" rule and nothing
+  else — the desktop's are built on `yfinance` and a spawned subprocess,
+  neither of which exists on Android. See "Prices come from the phone, from
+  keyless sources" and "Price fetching". Genuinely not ported, and not
+  missed: `crypto_top100`, `brand_icon_service`, `logo_service`, none of
+  which price anything.
 - **Backup service.** Ported. `key_recovery_service.py` is the exception —
   see "What the backup work did NOT port".
 - **`background_task_manager`.** Flutter has its own answer; the desktop's
