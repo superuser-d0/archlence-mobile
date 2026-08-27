@@ -83,7 +83,12 @@ void main() {
     final provider = await createPlatformKeyProvider(directory.path);
 
     expect(provider.status.secureStore, isTrue);
-    expect(provider.status.method, 'Android Keystore');
+    // A `KeyProtectionMethod`, not the words 'Android Keystore'. This
+    // asserted the string until i18n moved the wording into
+    // `settings_screen.dart` — see "Services raise error codes, not
+    // sentences" — and it has been failing ever since, unnoticed, because
+    // device tests need `-d` and are not part of `flutter test`.
+    expect(provider.status.method, KeyProtectionMethod.androidKeystore);
     expect(provider.status.warning, isNull);
   });
 }

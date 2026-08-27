@@ -103,62 +103,66 @@ control in the app is inert, and it runs on the emulator.
 
 ## Pick up here
 
-**The road to 1.0, in order.** Each numbered item is its own session, and each
-one closes a `NOT YET` the user can see. The order is deliberate: 1 unlocks a
-service the later ones read, and 6 is last because it is the only one that
-cannot be undone by a rebuild.
+**The engineering road to 1.0 is finished.** Six numbered items, all closed —
+they are listed below with where each is written up, because the reasons
+behind them are worth more than the fact they are done. What remains is one
+thing that was never a coding task.
 
-The size of this list is smaller than it looks, and the reason is worth
-stating: none of 1-5 is a new feature. Every one of them is a PORT of a
-desktop service that this file had not accounted for — see "What is NOT coming
-from the desktop", which was wrong about `services/` being fully triaged.
+### The one thing left
 
-1. ~~**Category settings, and the main/extra split.**~~ DONE — see "Category
-   settings, and the main/extra split" under "Done, and how it was proven".
+**Make the release keystore.** Five minutes and one `keytool` command, written
+out in `android/key.properties.example`. It is not one to delegate — the
+keystore is the app's identity and its password should never be typed into
+this repository. **It is the only thing between this app and a build somebody
+else can install**, and everything else on that path has been run: a
+throwaway-signed, R8-minified APK was installed on the emulator and driven
+through onboarding, the key store, the screen lock against a real PIN, a
+backup, and a restore carried to the end. The real keystore changes the
+signature on that APK and nothing else about it.
 
-2. ~~**Search.**~~ DONE — see "Search, and the Turkish letters that break it"
-   under "Done, and how it was proven". The scope written here was wrong, and
-   the reason it was wrong is in that section.
+### What was done, and where it is written up
 
-3. ~~**The calendar.**~~ DONE — see "The calendar — `lib/screens/calendar_screen.dart`"
-   under "Done, and how it was proven".
+| | Item | Section |
+| --- | --- | --- |
+| 1 | Category settings, and the main/extra split | "Category settings, and the main/extra split" |
+| 2 | Search | "Search, and the Turkish letters that break it" |
+| 3 | The calendar | "The calendar" |
+| 4 | The four calculators | "The four calculators" |
+| 5 | The balance ring's change chip | "The change chip, and the balance at a past day" |
+| 6 | The verification round | "The verification round" |
 
-4. ~~**The four calculators.**~~ DONE — see "The four calculators" under
-   "Done, and how it was proven".
+None of 1-5 was a new feature. Every one was a PORT of a desktop service this
+file had not accounted for — the plan was written after discovering that "What
+is NOT coming from the desktop" was wrong about `services/` being fully
+triaged. Two of the six also found that the PLAN was wrong: item 2's scope
+came from a stale docstring, and item 5 named a dependency this file had
+already excluded.
 
-5. ~~**The balance ring's change chip.**~~ DONE — see "The change chip, and
-   the balance at a past day" under "Done, and how it was proven".
+### What is deliberately NOT in 1.0
 
-6. **The verification round, and the signature.** Two of the three are done —
-   see "The verification round" under "Done, and how it was proven", which is
-   also where the shipped defect it found is written up.
+So that the omissions are decisions rather than drift. Each keeps its
+`NOT YET` chip, which is the honest thing for it to say:
 
-   What is left is the one that was never a coding task:
+* **The Home forecast card** — needs `dashboard`, `insights`, `projection` and
+  `financial_metrics` together. A project, not a session, and the biggest
+  single thing left in the app.
+* **The history "time machine"** — `history_service.py`'s `diff_between` and
+  event attribution. One question out of that module IS ported; see "The
+  change chip, and the balance at a past day".
+* **The What-If sandbox and Reset Data** — the last two dimmed cards in Tools,
+  seven of whose nine are now live.
+* **Tablet layouts and an accessibility pass** — never considered at all.
+* **`--split-per-abi`** — the APK is 65MB because it carries three ABIs. A
+  shipping decision rather than a code one.
 
-   * **Make the release keystore.** Five minutes and one `keytool` command,
-     written out in `android/key.properties.example`. It is not one to
-     delegate — the keystore is the app's identity and its password should
-     never be typed into this repository. **It is the only thing between this
-     app and a build somebody else can install.**
+### Two things worth checking the first time they can be
 
-**Deliberately NOT in 1.0,** so that the omissions are decisions rather than
-drift: the Home forecast card (it needs `dashboard`, `insights`, `projection`
-and `financial_metrics` together, which is a project, not a session), the
-history "time machine" (`history_service.py`, 321 lines, plus
-`balance_events` replay behaviour), the What-If sandbox, Reset Data, tablet
-layouts and the accessibility pass. Each keeps its `NOT YET` chip, which is
-the honest thing for them to say.
-
-One thing worth doing the first time a BIST key is entered: check that the
-share prices actually appear. That path is tested against canned responses
-but has never met the live API — see "Shares, on the user's own key" for
-what to look at if they stay at cost.
-
-What the keystore does NOT still gate: the release build itself has been run.
-A throwaway-signed, R8-minified APK was installed on the emulator and driven
-through onboarding, the key store, a backup and the file picker with nothing
-in logcat — see "R8 — already on, measured, and run". The real keystore
-changes the signature on that APK and nothing else about it.
+* **A BIST key.** The share-price path is tested against canned responses and
+  has never met the live API — see "Shares, on the user's own key" for what to
+  look at if the prices stay at cost.
+* **A phone rather than an emulator.** Everything above ran on
+  `archlence_pixel`. The screen lock in particular now has a real credential
+  behind it, but a fingerprint sensor is not a PIN.
 
 ## Settled decisions
 
@@ -2403,6 +2407,10 @@ The icon, the launch screen and the signing configuration are done — see
 keystore ("Pick up here", above) and a Play Store listing, which is not
 engineering.
 
+A release build has now been installed and driven end to end twice: once for
+R8, once for the verification round. Nothing on the shipping path is untried
+except the signature itself.
+
 R8 was on this list and is now off it, because the entry was wrong: R8 has
 been enabled all along — Flutter's Gradle plugin turns it on and the template
 never mentions it. It has now been measured and the minified APK driven on the
@@ -2417,6 +2425,11 @@ decision rather than a code one.
 
 Widening beyond a phone (tablet layouts), accessibility beyond what Material
 gives by default, and anything to do with more than one user or device.
+
+Of these the accessibility pass is the one that affects every user of the app
+rather than some of them, and it is the one nothing in this repo would notice
+the absence of: every screen is checked by tests that read the widget tree
+directly, which is exactly what a screen reader does NOT do.
 
 ### What is NOT coming from the desktop
 
@@ -2550,6 +2563,21 @@ exact code that was wrong. The button's tests asserted `onPressed` — correctly
 null — and never asked what the user could SEE. The key's absence needed a real
 profile that had written an account and nothing else, which no test built and
 every fresh install does.
+
+**`flutter test` does not run the device tests, and one of them rotted.**
+`integration_test/` needs `-d <device>` and an emulator, so it sits outside
+the command every session runs. `key_provider_device_test.dart` asserted
+`status.method == 'Android Keystore'` — a string — and kept asserting it after
+i18n turned that field into a `KeyProtectionMethod` enum. It failed from that
+day, silently, while this file went on reporting "12 device tests pass" for
+months. Run them:
+
+```bash
+flutter test integration_test/ -d emulator-5554
+```
+
+The same blind spot is what let the screen lock ship broken: the thing no
+routine command exercises is the thing that quietly stops working.
 
 **A finder matching is not a user reaching.** A lazy list builds a cache
 extent beyond the viewport, so a widget can be in the tree and still off
