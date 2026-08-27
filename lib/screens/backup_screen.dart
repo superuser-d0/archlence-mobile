@@ -325,10 +325,10 @@ class _BackupScreenState extends State<BackupScreen> {
       body: AbsorbPointer(
         absorbing: busy != null,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(
-            Spacing.containerMargin,
+          padding: EdgeInsets.fromLTRB(
+            contentInset(context),
             Spacing.stackLg,
-            Spacing.containerMargin,
+            contentInset(context),
             Spacing.stackLg,
           ),
           children: [

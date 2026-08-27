@@ -62,7 +62,10 @@ class _LockedScreenState extends State<LockedScreen> {
       color: ObsidianPalette.surface,
       child: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(Spacing.containerMargin),
+          padding: EdgeInsets.symmetric(
+            horizontal: contentInset(context),
+            vertical: Spacing.containerMargin,
+          ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [

@@ -85,6 +85,31 @@ abstract final class ObsidianPalette {
   );
 }
 
+/// The widest a column of content is allowed to get.
+///
+/// **Derived, not chosen.** Material asks for 40-75 characters on a line of
+/// body text. This app's body size is 16sp, and a character averages about
+/// half its point size, so 600 / 8 puts the top of that range at 600dp. On a
+/// 1280dp tablet the same paragraph ran 1198dp wide — roughly 150 characters,
+/// which is a line a reader loses their place in.
+const double readableContentWidth = 600.0;
+
+/// The side inset a scrolling body should use.
+///
+/// [Spacing.containerMargin] on a phone, and whatever it takes to keep the
+/// content down to [readableContentWidth] on anything wider. The PADDING
+/// grows rather than the scroll view narrowing: the scrollable stays the full
+/// width of the screen, so a thumb reaching for it finds it where it expects.
+///
+/// Nothing about this is a tablet LAYOUT — a second pane, a list beside a
+/// detail — and it does not pretend to be. It is the smallest thing that
+/// stops a wide screen from being worse than a narrow one.
+double contentInset(BuildContext context) {
+  final width = MediaQuery.sizeOf(context).width;
+  final slack = (width - readableContentWidth) / 2;
+  return slack > Spacing.containerMargin ? slack : Spacing.containerMargin;
+}
+
 /// The 8px-based spacing scale from DESIGN.md.
 abstract final class Spacing {
   static const containerMargin = 24.0;

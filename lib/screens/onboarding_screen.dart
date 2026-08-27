@@ -104,7 +104,13 @@ class _Page extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(Spacing.containerMargin),
+      // The horizontal inset is responsive; the vertical is not. On a
+      // tablet this page would otherwise run its sentences the full width of
+      // the screen, which is the first thing a new user reads.
+      padding: EdgeInsets.symmetric(
+        horizontal: contentInset(context),
+        vertical: Spacing.containerMargin,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: children,

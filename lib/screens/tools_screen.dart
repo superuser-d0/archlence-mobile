@@ -81,9 +81,9 @@ class ToolsScreen extends StatelessWidget {
     return ListView(
       key: const PageStorageKey('tools'),
       padding: EdgeInsets.fromLTRB(
-        Spacing.containerMargin,
+        contentInset(context),
         inset.top + Spacing.stackLg,
-        Spacing.containerMargin,
+        contentInset(context),
         inset.bottom + Spacing.stackLg,
       ),
       children: [

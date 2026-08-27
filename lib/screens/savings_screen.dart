@@ -61,10 +61,10 @@ class _SavingsScreenState extends State<SavingsScreen> {
         onRefresh: () async => _reload(),
         child: ListView(
           key: const PageStorageKey('savings'),
-          padding: const EdgeInsets.fromLTRB(
-            Spacing.containerMargin,
+          padding: EdgeInsets.fromLTRB(
+            contentInset(context),
             Spacing.stackMd,
-            Spacing.containerMargin,
+            contentInset(context),
             Spacing.stackLg,
           ),
           children: [

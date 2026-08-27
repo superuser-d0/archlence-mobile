@@ -78,9 +78,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
       body: ListView(
         key: const PageStorageKey('calendar'),
         padding: EdgeInsets.fromLTRB(
-          Spacing.containerMargin,
+          contentInset(context),
           Spacing.stackMd,
-          Spacing.containerMargin,
+          contentInset(context),
           MediaQuery.paddingOf(context).bottom + Spacing.stackLg,
         ),
         children: [

@@ -73,9 +73,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return ListView(
       key: const PageStorageKey('settings'),
       padding: EdgeInsets.fromLTRB(
-        Spacing.containerMargin,
+        contentInset(context),
         inset.top + Spacing.stackLg,
-        Spacing.containerMargin,
+        contentInset(context),
         inset.bottom + Spacing.stackLg,
       ),
       children: [
@@ -610,10 +610,10 @@ class _LanguageSheet extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(
-              Spacing.containerMargin,
+            padding: EdgeInsets.fromLTRB(
+              contentInset(context),
               Spacing.stackLg,
-              Spacing.containerMargin,
+              contentInset(context),
               Spacing.stackSm,
             ),
             child: Text(context.l10n.settingsLanguage, style: text.titleLarge),

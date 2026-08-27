@@ -75,9 +75,9 @@ class _CategorySettingsScreenState extends State<CategorySettingsScreen> {
       body: ListView(
         key: const PageStorageKey('category-settings'),
         padding: EdgeInsets.fromLTRB(
-          Spacing.containerMargin,
+          contentInset(context),
           Spacing.stackMd,
-          Spacing.containerMargin,
+          contentInset(context),
           MediaQuery.paddingOf(context).bottom + Spacing.stackLg,
         ),
         children: [

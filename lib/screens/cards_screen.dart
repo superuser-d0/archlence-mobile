@@ -155,8 +155,8 @@ class _CardsBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final l10n = context.l10n;
-    const horizontal = EdgeInsets.symmetric(
-      horizontal: Spacing.containerMargin,
+    final horizontal = EdgeInsets.symmetric(
+      horizontal: contentInset(context),
     );
 
     return Column(

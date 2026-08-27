@@ -151,8 +151,8 @@ class _AssetsScreenState extends State<AssetsScreen> {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final inset = MediaQuery.paddingOf(context);
-    const horizontal = EdgeInsets.symmetric(
-      horizontal: Spacing.containerMargin,
+    final horizontal = EdgeInsets.symmetric(
+      horizontal: contentInset(context),
     );
 
     return RefreshIndicator(
@@ -217,8 +217,8 @@ class _AssetsBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    const horizontal = EdgeInsets.symmetric(
-      horizontal: Spacing.containerMargin,
+    final horizontal = EdgeInsets.symmetric(
+      horizontal: contentInset(context),
     );
 
     return Column(
@@ -256,7 +256,7 @@ class _AssetsBody extends StatelessWidget {
         ),
         const SizedBox(height: Spacing.stackMd),
 
-        const Padding(padding: horizontal, child: _TrendCard()),
+        Padding(padding: horizontal, child: const _TrendCard()),
         const SizedBox(height: Spacing.stackMd),
 
         Padding(

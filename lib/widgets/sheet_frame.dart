@@ -53,7 +53,12 @@ class SheetFrame extends StatelessWidget {
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(Spacing.containerMargin),
+        // Every write flow in the app is a sheet, so this one line keeps
+        // all of them readable on a wide screen.
+        padding: EdgeInsets.symmetric(
+          horizontal: contentInset(context),
+          vertical: Spacing.containerMargin,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,

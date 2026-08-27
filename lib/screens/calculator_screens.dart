@@ -63,9 +63,9 @@ class _CalculatorScaffold extends StatelessWidget {
       appBar: AppBar(title: Text(title)),
       body: ListView(
         padding: EdgeInsets.fromLTRB(
-          Spacing.containerMargin,
+          contentInset(context),
           Spacing.stackMd,
-          Spacing.containerMargin,
+          contentInset(context),
           MediaQuery.paddingOf(context).bottom + Spacing.stackLg,
         ),
         children: [
@@ -520,9 +520,9 @@ class _BasicCalculatorScreenState extends State<BasicCalculatorScreen> {
       appBar: AppBar(title: Text(l10n.calcBasicTitle)),
       body: Padding(
         padding: EdgeInsets.fromLTRB(
-          Spacing.containerMargin,
+          contentInset(context),
           Spacing.stackMd,
-          Spacing.containerMargin,
+          contentInset(context),
           MediaQuery.paddingOf(context).bottom + Spacing.stackMd,
         ),
         child: Column(

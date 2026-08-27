@@ -62,6 +62,12 @@ language; a phone set to anything else gets Turkish, and Settings can override
 the choice. The one thing NOT translated is the backup layer's diagnostic
 detail — see "What i18n did not cover".
 
+**And it does not fall apart on a wide screen.** Every screen was walked at
+five sizes, from a landscape phone to a 1280dp tablet; nothing overflows, and
+content is held to a readable column width rather than running 150 characters
+to a line. Not a tablet layout — see "Wide screens" for what that distinction
+means.
+
 **And it looks like itself.** The launcher icon is the desktop app's own
 mark, the label under it says Archlence rather than `archlence_mobile`, and a
 cold start opens on the app's own dark instead of a white flash.
@@ -98,7 +104,7 @@ The share provider is the one piece of the price layer whose live response
 has NOT been seen by this codebase — checking it needs a key that belongs to
 whoever signs up for it. See "Shares, on the user's own key".
 
-834 unit tests and 12 device tests pass. `flutter analyze` is clean, no
+892 unit tests and 12 device tests pass. `flutter analyze` is clean, no
 control in the app is inert, and it runs on the emulator.
 
 ## Pick up here
@@ -394,7 +400,7 @@ Long, and grouped roughly by layer rather than by date:
 | Security | The screen lock · The verification round |
 | Language | i18n · What i18n did NOT cover |
 | Shipping | The icon and the launch screen · What running it caught · Release signing · R8 |
-| Screens | The accessibility pass · The screen–service join · The wired tabs · Every control is live or visibly unavailable · Screens (as first built) |
+| Screens | The accessibility pass · Wide screens · The screen–service join · The wired tabs · Every control is live or visibly unavailable · Screens (as first built) |
 | Write flows | The first write flow · Recording a transaction · Buying and selling a holding · Savings goals (sheets) · A budget line · Managing a subscription · Paying card debt · The first run · Backup & Restore |
 
 Each section says what the thing does, which departures from the desktop or
@@ -1971,6 +1977,52 @@ present and useless, or a layout that breaks at 200% font scale. Those need a
 person with TalkBack on, and this file says so rather than implying the box is
 ticked.
 
+### Wide screens — `contentInset`, `test/screens/wide_layout_test.dart`
+
+The last item under "Not yet considered at all" that was engineering rather
+than judgement.
+
+**Nothing was broken, which was the first finding.** Ten screens at five
+sizes — 360x800, a landscape phone, and Material's 600 / 840 / 1280 — and not
+one overflow. The layouts are `ListView`s and `Column`s, so a wide screen
+stretches them rather than breaking them.
+
+**What a wide screen did instead was make the app unreadable.** Measured, not
+guessed: on a 1280dp tablet the Category Settings explainer ran as a single
+line 1198dp wide. Material asks for 40 to 75 characters on a line of body
+text; that is roughly 150.
+
+**So the side inset became responsive, and the cap is derived.**
+`contentInset(context)` is `Spacing.containerMargin` on a phone and whatever
+it takes to hold content to `readableContentWidth` on anything wider. 600dp is
+not a taste: body text here is 16sp, a character averages about half its point
+size, so 600 / 8 lands on 75 — the top of Material's range.
+
+**The padding grows rather than the scroll view narrowing.** A `ConstrainedBox`
+would have made the scrollable itself 600dp wide, leaving a thumb reaching for
+the right-hand edge of a tablet touching nothing. The scroll surface stays the
+full width of the screen; only the content inside it is inset.
+
+**This is not a tablet LAYOUT and does not claim to be.** No second pane, no
+list beside a detail, no `NavigationRail`. It is the smallest thing that stops
+a wide screen from being worse than a narrow one.
+
+**The test holds both halves of the rule.** A cap alone is half of it: the
+other half is that a 360dp phone must NOT gain margins it did not have, and a
+mutation that applies the cap everywhere fails on exactly that. Removing the
+cap fails the tablet half.
+
+**And running it on a tablet found what the test list had missed.** The
+emulator was reshaped to 2400x1600 at density 200, and onboarding — the first
+thing a new user reads — was still stretched edge to edge, because it was not
+in the list of screens the test walks. Nor were the lock screen or the sheets
+every write flow uses. All three are inset now and the first two are in the
+list.
+
+A test that walks a list of screens is only ever as good as the list. That is
+the same failure shape as `dead_controls_test.dart`'s first draft, which
+looped over a finder that matched nothing.
+
 ### Paying card debt — `lib/screens/pay_debt_sheet.dart`
 
 The last write flow. Two things it gets right by refusing rather than
@@ -2486,13 +2538,18 @@ decision rather than a code one.
 
 ### 2. Not yet considered at all
 
-Widening beyond a phone (tablet layouts), accessibility beyond what Material
-gives by default, and anything to do with more than one user or device.
+What is left here is judgement rather than engineering, and one thing that is
+neither.
 
-A FIRST accessibility pass has since been done — see "The accessibility pass"
-— covering labels, tap targets and contrast on every screen against Flutter's
-own guidelines. What it does not cover is named there: reading order, label
-quality, and large font scales. Those need a person with TalkBack on.
+* **Anything to do with more than one user or device.** Untouched, and the
+  app's whole shape argues against it — "no account, no server".
+* **The rest of accessibility.** A first pass is done — see "The accessibility
+  pass". What it cannot see is reading order, label quality and large font
+  scales, and those need a person with TalkBack on rather than another test.
+* **A real tablet layout.** Wide screens no longer stretch — see "Wide
+  screens" — but nothing uses the space: no second pane, no `NavigationRail`.
+  That is a design decision, and it should be made by someone looking at a
+  tablet rather than inferred from a breakpoint table.
 
 ### What is NOT coming from the desktop
 

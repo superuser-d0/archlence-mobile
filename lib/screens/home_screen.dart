@@ -91,9 +91,9 @@ class _HomeScreenState extends State<HomeScreen> {
       child: ListView(
         key: const PageStorageKey('home'),
         padding: EdgeInsets.fromLTRB(
-          Spacing.containerMargin,
+          contentInset(context),
           inset.top + Spacing.stackMd,
-          Spacing.containerMargin,
+          contentInset(context),
           inset.bottom + Spacing.stackLg,
         ),
         children: [
