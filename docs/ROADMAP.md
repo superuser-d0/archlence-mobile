@@ -42,6 +42,12 @@ release key on this machine yet, so no installable release APK exists yet
 either. `android/key.properties.example` carries the one command that makes
 one.
 
+**And they are shrunk, which they always were.** R8 runs on every release
+build and always has — Flutter's Gradle plugin turns it on, so the template's
+silence on the subject is not the same as it being off. Measured, and the
+minified APK has now been installed and driven on the emulator. See "R8 —
+already on, measured, and run".
+
 **And the key can travel on its own.** Settings writes a key recovery
 package — the encryption key wrapped under a passphrase, no data with it — and
 reads one back after proving it opens what is already on the phone. It answers
@@ -78,6 +84,12 @@ One thing worth doing the first time a BIST key is entered: check that the
 share prices actually appear. That path is tested against canned responses
 but has never met the live API — see "Shares, on the user's own key" for
 what to look at if they stay at cost.
+
+What the keystore does NOT still gate: the release build itself has been run.
+A throwaway-signed, R8-minified APK was installed on the emulator and driven
+through onboarding, the key store, a backup and the file picker with nothing
+in logcat — see "R8 — already on, measured, and run". The real keystore
+changes the signature on that APK and nothing else about it.
 
 ## Settled decisions
 
@@ -303,7 +315,7 @@ Long, and grouped roughly by layer rather than by date:
 | Backup | The backup's cryptographic core · The package around it · Restoring · The key on its own |
 | Security | The screen lock |
 | Language | i18n · What i18n did NOT cover |
-| Shipping | The icon and the launch screen · What running it caught · Release signing |
+| Shipping | The icon and the launch screen · What running it caught · Release signing · R8 |
 | Screens | The screen–service join · The wired tabs · Every control is live or visibly unavailable · Screens (as first built) |
 | Write flows | The first write flow · Recording a transaction · Buying and selling a holding · Savings goals (sheets) · A budget line · Managing a subscription · Paying card debt · The first run · Backup & Restore |
 
@@ -1013,6 +1025,91 @@ config that never signs look identical from the outside:
 The throwaway keystore and the release APK it signed were both deleted
 afterwards. Neither was ever in the repository, and nothing signed with a
 disposable key should be left where it could be mistaken for a build to ship.
+
+### R8 — already on, measured, and run
+
+**This file used to say R8 was off.** It was wrong, and the way it was wrong
+is worth keeping: the claim was read out of `android/app/build.gradle.kts`,
+which does not mention `isMinifyEnabled` — exactly as the Flutter template
+does not. But the template's silence is not a default of `false`. Flutter's
+own Gradle plugin sets it:
+
+    if (FlutterPluginUtils.shouldShrinkResources(project)) {
+        releaseBuildType.isMinifyEnabled = true
+        releaseBuildType.isShrinkResources = isBuiltAsApp(project)
+        ...proguard-android-optimize.txt, flutter_proguard_rules.pro,
+           and app/proguard-rules.pro if it exists
+
+and `shouldShrinkResources` returns `true` unless `-Pshrink=false` is passed.
+So every release build this project has ever produced was minified, resource-
+shrunk, and optimized. Reading a build file is not reading a build.
+
+**Measured, both ways,** because "it is on" is the same kind of claim as "it
+is off" and deserves the same evidence. Two builds of the same commit:
+
+| | dex | APK |
+| --- | --- | --- |
+| default | 942,680 B (one `classes.dex`) | 64.9 MB |
+| `-Pshrink=false` | 9,928,972 B (`classes.dex` + `classes2.dex`) | 68.3 MB |
+
+R8 removes 90.5% of the Java/Kotlin and 3.4 MB of the APK, and takes the app
+back under the 64K method limit that forces the second dex file.
+
+**Which also settles what the 63.7 MB was.** Not "unshrunk code" — the dex is
+1.5% of the APK. The rest is three ABIs of `libflutter.so`, `libapp.so` and
+`libsqlite3.so`. R8 cannot touch any of it, and no keep rule will. The lever
+for APK size is `--split-per-abi` (or an App Bundle, which Play does per
+device anyway), not shrinking; that is a shipping decision, not a code one.
+
+**What was actually missing was the run.** A minified build had never been
+installed and used — which is where R8 damage shows up, because it strips and
+renames Java classes that plugins reach by reflection, and the failure is a
+`MissingPluginException` or a `ClassNotFoundException` at the moment a feature
+is used, not at build time. So it was installed from a throwaway-signed APK on
+the `archlence_pixel` emulator and driven, watching logcat for
+`FATAL`/`AndroidRuntime`/`ClassNotFound`/`NoSuchMethod`/`PlatformException`/
+`MissingPlugin` throughout. Nothing appeared. What was exercised, chosen for
+touching native or reflective code:
+
+* **Onboarding through to a working profile** — which generates the encryption
+  key through `flutter_secure_storage` into the Android Keystore, creates the
+  database, and writes the first account. 5.000,00 ₺ came back on the Home tab
+  in Turkish formatting.
+* **Cold start after `am force-stop`** — the key is read back out of the
+  Keystore and the encrypted database reopens. This is the path where a
+  stripped `androidx.security` class would show up, and the one an earlier
+  session found a real defect in.
+* **The BIST key row** — a dummy key saved and read back, the row changing to
+  "A key is set". `flutter_secure_storage`'s write path, in a release build,
+  for the feature committed one commit earlier.
+* **A whole backup, created and handed to the share sheet** — sqlite3's online
+  backup API, the passphrase key-wrap, `archive`, `path_provider`, and
+  `share_plus` through a `FileProvider` URI. The system sheet named the file
+  `archlence-20260827-102910.archlence-backup`. No share target was picked:
+  the point was that the file reached the sheet.
+* **The restore file picker** — `file_selector` opening the SAF document
+  picker, then cancelled. The button is correctly dead until a passphrase is
+  typed.
+* **The screen-lock row** — `local_auth` reporting, correctly, that this
+  emulator has no fingerprint or screen lock, with the switch disabled and the
+  reason written under it.
+* **The Assets tab** — `fl_chart` draws its donut.
+
+**Not exercised, and so not claimed:** a live price fetch (no holding was
+bought, and the price layer is Dart, which R8 does not touch), a completed
+restore, and biometric unlock, which needs a device with a screen lock set up.
+
+**No `proguard-rules.pro` was added.** Nothing needed one: the plugins that
+could have needed keeps ship their own consumer rules, which the merged
+configuration shows arriving from `biometric-1.1.0`, `window-1.2.0`,
+`appcompat-1.2.0` and the plugins' own artifacts, alongside Flutter's
+`-if class * implements io.flutter...FlutterPlugin / -keep`. A keep rule
+written for a problem nobody has is a rule nobody can ever safely delete.
+
+**One thing to know when this next fails.** `android/gradlew` cannot be run
+directly here: `android/local.properties` holds a stale `flutter.sdk` pointing
+at an empty `~/.cache/flutter_sdk`, and Gradle fails resolving the Flutter
+plugin loader. `flutter build` rewrites and uses its own; go through it.
 
 ### The key on its own — `lib/backup/key_recovery_service.dart`
 
@@ -1810,12 +1907,15 @@ The icon, the launch screen and the signing configuration are done — see
 keystore ("Pick up here", above) and a Play Store listing, which is not
 engineering.
 
-Not attempted, and worth naming so it is not mistaken for finished: R8 is not
-enabled for release builds. `isMinifyEnabled` is off, as it is in the Flutter
-template, so the release APK is 63.7MB of unshrunk code. Turning it on is a
-one-line change and a real risk — it needs keep rules for the plugins and a
-run on a device before it can be trusted, which makes it its own session
-rather than a line in this one.
+R8 was on this list and is now off it, because the entry was wrong: R8 has
+been enabled all along — Flutter's Gradle plugin turns it on and the template
+never mentions it. It has now been measured and the minified APK driven on the
+emulator. See "R8 — already on, measured, and run".
+
+What that leaves, for whoever wants a smaller download: the APK is 64.9MB
+because it carries three ABIs of native code, and `--split-per-abi` or an App
+Bundle is the only thing that changes that. Not urgent, and it is a shipping
+decision rather than a code one.
 
 ### 2. Not yet considered at all
 
@@ -1905,7 +2005,11 @@ the repository is a generator that does not exist the next time it is needed.
 Three habits, kept because each has repeatedly caught defects that review did
 not.
 
-**Run it, don't just read it.** Every screen defect in this file was invisible
+**Run it, don't just read it.** And a build file is not a build: this file
+claimed for several sessions that R8 was off because `isMinifyEnabled` did not
+appear in `android/app/build.gradle.kts`, when Flutter's Gradle plugin had
+been setting it to `true` the whole time. An absent line is evidence of
+nothing. Every screen defect in this file was invisible
 in the source: the tab scroll offsets, the clipped card name, the floating
 button covering a switch, `setState` handed a closure returning a `Future`, a
 change chip drawn empty so a green pill with an upward arrow read as a gain,
