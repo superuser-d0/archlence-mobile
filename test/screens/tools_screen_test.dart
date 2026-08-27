@@ -4,6 +4,7 @@ library;
 import 'package:archlence_mobile/app_services.dart';
 import 'package:archlence_mobile/data/database.dart';
 import 'package:archlence_mobile/screens/budget_screen.dart';
+import 'package:archlence_mobile/screens/calculator_screens.dart';
 import 'package:archlence_mobile/screens/calendar_screen.dart';
 import 'package:archlence_mobile/screens/savings_screen.dart';
 import 'package:archlence_mobile/screens/tools_screen.dart';
@@ -67,10 +68,11 @@ void main() {
       // cannot tell from a slow one.
       await pumpScreen(tester, services, const ToolsScreen());
 
-      // Six now, not seven: Calendar stopped being a placeholder. The count
-      // has to move DOWN as cards are wired, or a card could be given a
-      // destination and keep its chip.
-      expect(find.text('NOT YET'), findsNWidgets(6));
+      // Two now, not seven: the calendar and the four calculators stopped
+      // being placeholders. The count has to move DOWN as cards are wired, or
+      // a card could be given a destination and keep its chip. What is left
+      // is the What-If sandbox and Reset Data.
+      expect(find.text('NOT YET'), findsNWidgets(2));
       expect(find.text('Monthly\nBudget'), findsOneWidget);
       expect(find.text('Savings\nGoal'), findsOneWidget);
       expect(find.text('Calendar'), findsOneWidget);
@@ -82,6 +84,36 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(CalendarScreen), findsOneWidget);
+    });
+
+    testWidgets('each calculator card opens its own screen', (tester) async {
+      // Four cards and four screens: wiring one card to the wrong screen is
+      // exactly the mistake a shared destination enum invites.
+      final expected = <String, Type>{
+        'Calculator': BasicCalculatorScreen,
+        'Interest\nReturn': InterestCalculatorScreen,
+        'Compound\nInterest': CompoundCalculatorScreen,
+        'Loan\nCalculator': LoanCalculatorScreen,
+      };
+
+      // Pumped ONCE and navigated back between cards. Re-pumping the same
+      // widget tree keeps the Navigator's state, so the previous screen stays
+      // pushed and the second tap lands on nothing — which is what the first
+      // version of this test did, and it failed by not finding the card.
+      await pumpScreen(tester, services, const ToolsScreen());
+
+      for (final entry in expected.entries) {
+        final card = find.text(entry.key);
+        await tester.ensureVisible(card);
+        await tester.pumpAndSettle();
+        await tester.tap(card);
+        await tester.pumpAndSettle();
+
+        expect(find.byType(entry.value), findsOneWidget, reason: entry.key);
+
+        await tester.pageBack();
+        await tester.pumpAndSettle();
+      }
     });
 
     testWidgets('Monthly Budget opens the budget screen', (tester) async {
@@ -111,10 +143,10 @@ void main() {
         find.ancestor(of: find.text(label), matching: find.byType(AppCard)),
       );
 
-      expect(cardFor('Calculator').onTap, isNull);
+      expect(cardFor('What-If\nSandbox').onTap, isNull);
       expect(cardFor('Monthly\nBudget').onTap, isNotNull);
 
-      await tester.tap(find.text('Calculator'));
+      await tester.tap(find.text('What-If\nSandbox'));
       await tester.pumpAndSettle();
       expect(find.byType(BudgetScreen), findsNothing);
     });

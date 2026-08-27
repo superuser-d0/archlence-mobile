@@ -1012,6 +1012,105 @@ class AppLocalizationsTr extends AppLocalizations {
   String get weekdayShortSun => 'P';
 
   @override
+  String get errCalcNotANumber => 'Her alanı bir sayıyla doldurun.';
+
+  @override
+  String get errCalcNotPositive => 'Tüm değerler sıfırdan büyük olmalı.';
+
+  @override
+  String errCalcTermTooLong(int months) {
+    return 'Vade en fazla $months ay olabilir.';
+  }
+
+  @override
+  String get errCalcInvalidExpression => 'Bu hesaplanabilir bir şey değil.';
+
+  @override
+  String get calcInterestTitle => 'Faiz Getirisi';
+
+  @override
+  String get calcCompoundTitle => 'Bileşik Faiz';
+
+  @override
+  String get calcLoanTitle => 'Kredi Hesaplama';
+
+  @override
+  String get calcBasicTitle => 'Hesap Makinesi';
+
+  @override
+  String get calcCalculate => 'HESAPLA';
+
+  @override
+  String get calcPrincipal => 'Anapara (₺)';
+
+  @override
+  String get calcAnnualRate => 'Yıllık faiz (%)';
+
+  @override
+  String get calcDays => 'Gün';
+
+  @override
+  String get calcYears => 'Yıl';
+
+  @override
+  String get calcMonthlyDeposit => 'Aylık katkı (₺, isteğe bağlı)';
+
+  @override
+  String get calcLoanAmount => 'Kredi tutarı (₺)';
+
+  @override
+  String get calcMonthlyRate => 'Aylık faiz (%)';
+
+  @override
+  String get calcTermMonths => 'Vade (ay)';
+
+  @override
+  String get calcNetReturn => 'Net getiri';
+
+  @override
+  String get calcAtMaturity => 'Vade sonu';
+
+  @override
+  String get calcWithholdingNote => '%5 stopaj düşülmüştür.';
+
+  @override
+  String get calcInvested => 'Yatırılan';
+
+  @override
+  String get calcGain => 'Kazanç';
+
+  @override
+  String get calcTotal => 'Toplam';
+
+  @override
+  String get calcInstalment => 'Aylık taksit';
+
+  @override
+  String get calcTotalRepayment => 'Toplam geri ödeme';
+
+  @override
+  String get calcTaxNote => 'KKDF ve BSMV (faiz üzerinden %15\'er) dahildir.';
+
+  @override
+  String get calcSchedule => 'Ödeme planı';
+
+  @override
+  String get calcScheduleMonth => 'Ay';
+
+  @override
+  String get calcSchedulePrincipal => 'Anapara';
+
+  @override
+  String get calcScheduleInterest => 'Faiz/vergi';
+
+  @override
+  String get calcScheduleRemaining => 'Kalan';
+
+  @override
+  String get calcProjectionNote =>
+      'Bu bir tahmin, kayıt değil. Buradaki hiçbir şey hesaplarınıza yazılmaz.';
+
+  @override
   String get calendarTitle => 'Takvim';
 
   @override

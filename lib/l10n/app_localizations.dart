@@ -1902,6 +1902,198 @@ abstract class AppLocalizations {
   /// **'S'**
   String get weekdayShortSun;
 
+  /// No description provided for @errCalcNotANumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Fill every field with a number.'**
+  String get errCalcNotANumber;
+
+  /// No description provided for @errCalcNotPositive.
+  ///
+  /// In en, this message translates to:
+  /// **'Every value must be greater than zero.'**
+  String get errCalcNotPositive;
+
+  /// No description provided for @errCalcTermTooLong.
+  ///
+  /// In en, this message translates to:
+  /// **'The term can be at most {months} months.'**
+  String errCalcTermTooLong(int months);
+
+  /// No description provided for @errCalcInvalidExpression.
+  ///
+  /// In en, this message translates to:
+  /// **'That is not something this can work out.'**
+  String get errCalcInvalidExpression;
+
+  /// No description provided for @calcInterestTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Interest Return'**
+  String get calcInterestTitle;
+
+  /// No description provided for @calcCompoundTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Compound Interest'**
+  String get calcCompoundTitle;
+
+  /// No description provided for @calcLoanTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Loan Calculator'**
+  String get calcLoanTitle;
+
+  /// No description provided for @calcBasicTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Calculator'**
+  String get calcBasicTitle;
+
+  /// No description provided for @calcCalculate.
+  ///
+  /// In en, this message translates to:
+  /// **'CALCULATE'**
+  String get calcCalculate;
+
+  /// No description provided for @calcPrincipal.
+  ///
+  /// In en, this message translates to:
+  /// **'Principal (₺)'**
+  String get calcPrincipal;
+
+  /// No description provided for @calcAnnualRate.
+  ///
+  /// In en, this message translates to:
+  /// **'Annual rate (%)'**
+  String get calcAnnualRate;
+
+  /// No description provided for @calcDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Days'**
+  String get calcDays;
+
+  /// No description provided for @calcYears.
+  ///
+  /// In en, this message translates to:
+  /// **'Years'**
+  String get calcYears;
+
+  /// No description provided for @calcMonthlyDeposit.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly contribution (₺, optional)'**
+  String get calcMonthlyDeposit;
+
+  /// No description provided for @calcLoanAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Loan amount (₺)'**
+  String get calcLoanAmount;
+
+  /// No description provided for @calcMonthlyRate.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly rate (%)'**
+  String get calcMonthlyRate;
+
+  /// No description provided for @calcTermMonths.
+  ///
+  /// In en, this message translates to:
+  /// **'Term (months)'**
+  String get calcTermMonths;
+
+  /// No description provided for @calcNetReturn.
+  ///
+  /// In en, this message translates to:
+  /// **'Net return'**
+  String get calcNetReturn;
+
+  /// No description provided for @calcAtMaturity.
+  ///
+  /// In en, this message translates to:
+  /// **'At maturity'**
+  String get calcAtMaturity;
+
+  /// No description provided for @calcWithholdingNote.
+  ///
+  /// In en, this message translates to:
+  /// **'5% withholding tax has been deducted.'**
+  String get calcWithholdingNote;
+
+  /// No description provided for @calcInvested.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid in'**
+  String get calcInvested;
+
+  /// No description provided for @calcGain.
+  ///
+  /// In en, this message translates to:
+  /// **'Gain'**
+  String get calcGain;
+
+  /// No description provided for @calcTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Total'**
+  String get calcTotal;
+
+  /// No description provided for @calcInstalment.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly instalment'**
+  String get calcInstalment;
+
+  /// No description provided for @calcTotalRepayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Total repayment'**
+  String get calcTotalRepayment;
+
+  /// No description provided for @calcTaxNote.
+  ///
+  /// In en, this message translates to:
+  /// **'KKDF and BSMV (15% each, on the interest) are included.'**
+  String get calcTaxNote;
+
+  /// No description provided for @calcSchedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment plan'**
+  String get calcSchedule;
+
+  /// No description provided for @calcScheduleMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Mo.'**
+  String get calcScheduleMonth;
+
+  /// No description provided for @calcSchedulePrincipal.
+  ///
+  /// In en, this message translates to:
+  /// **'Principal'**
+  String get calcSchedulePrincipal;
+
+  /// No description provided for @calcScheduleInterest.
+  ///
+  /// In en, this message translates to:
+  /// **'Interest/tax'**
+  String get calcScheduleInterest;
+
+  /// No description provided for @calcScheduleRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'Remaining'**
+  String get calcScheduleRemaining;
+
+  /// On every calculator. The app writes money elsewhere, and a screen full of figures that look like the rest of the app has to say it changes nothing.
+  ///
+  /// In en, this message translates to:
+  /// **'A projection, not a record. Nothing here is written to your accounts.'**
+  String get calcProjectionNote;
+
   /// No description provided for @calendarTitle.
   ///
   /// In en, this message translates to:

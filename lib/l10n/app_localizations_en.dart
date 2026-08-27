@@ -1019,6 +1019,107 @@ class AppLocalizationsEn extends AppLocalizations {
   String get weekdayShortSun => 'S';
 
   @override
+  String get errCalcNotANumber => 'Fill every field with a number.';
+
+  @override
+  String get errCalcNotPositive => 'Every value must be greater than zero.';
+
+  @override
+  String errCalcTermTooLong(int months) {
+    return 'The term can be at most $months months.';
+  }
+
+  @override
+  String get errCalcInvalidExpression =>
+      'That is not something this can work out.';
+
+  @override
+  String get calcInterestTitle => 'Interest Return';
+
+  @override
+  String get calcCompoundTitle => 'Compound Interest';
+
+  @override
+  String get calcLoanTitle => 'Loan Calculator';
+
+  @override
+  String get calcBasicTitle => 'Calculator';
+
+  @override
+  String get calcCalculate => 'CALCULATE';
+
+  @override
+  String get calcPrincipal => 'Principal (₺)';
+
+  @override
+  String get calcAnnualRate => 'Annual rate (%)';
+
+  @override
+  String get calcDays => 'Days';
+
+  @override
+  String get calcYears => 'Years';
+
+  @override
+  String get calcMonthlyDeposit => 'Monthly contribution (₺, optional)';
+
+  @override
+  String get calcLoanAmount => 'Loan amount (₺)';
+
+  @override
+  String get calcMonthlyRate => 'Monthly rate (%)';
+
+  @override
+  String get calcTermMonths => 'Term (months)';
+
+  @override
+  String get calcNetReturn => 'Net return';
+
+  @override
+  String get calcAtMaturity => 'At maturity';
+
+  @override
+  String get calcWithholdingNote => '5% withholding tax has been deducted.';
+
+  @override
+  String get calcInvested => 'Paid in';
+
+  @override
+  String get calcGain => 'Gain';
+
+  @override
+  String get calcTotal => 'Total';
+
+  @override
+  String get calcInstalment => 'Monthly instalment';
+
+  @override
+  String get calcTotalRepayment => 'Total repayment';
+
+  @override
+  String get calcTaxNote =>
+      'KKDF and BSMV (15% each, on the interest) are included.';
+
+  @override
+  String get calcSchedule => 'Payment plan';
+
+  @override
+  String get calcScheduleMonth => 'Mo.';
+
+  @override
+  String get calcSchedulePrincipal => 'Principal';
+
+  @override
+  String get calcScheduleInterest => 'Interest/tax';
+
+  @override
+  String get calcScheduleRemaining => 'Remaining';
+
+  @override
+  String get calcProjectionNote =>
+      'A projection, not a record. Nothing here is written to your accounts.';
+
+  @override
   String get calendarTitle => 'Calendar';
 
   @override

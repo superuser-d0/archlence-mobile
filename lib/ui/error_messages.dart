@@ -21,49 +21,45 @@ import '../l10n/app_localizations.dart';
 import '../services/account_service.dart';
 import '../services/asset_service.dart';
 import '../services/budget_service.dart';
+import '../services/calculators.dart';
 import '../services/recurring_service.dart';
 import '../services/savings_service.dart';
 import '../services/transaction_service.dart';
 
-String accountErrorMessage(AppLocalizations l10n, AccountError error) =>
-    switch (error.code) {
-      AccountErrorCode.emptyName => l10n.errAccountEmptyName,
-      AccountErrorCode.unknownAccountType => l10n.errAccountUnknownType,
-      AccountErrorCode.invalidAmount => l10n.errNotAnAmount,
-      AccountErrorCode.invalidStatementDay =>
-        l10n.errAccountInvalidStatementDay,
-      AccountErrorCode.creditLimitRequired =>
-        l10n.errAccountCreditLimitRequired,
-      AccountErrorCode.negativeOpeningDebt =>
-        l10n.errAccountNegativeOpeningDebt,
-      AccountErrorCode.openingDebtExceedsLimit =>
-        l10n.errAccountOpeningDebtExceedsLimit,
-      AccountErrorCode.accountNotFound => l10n.errAccountNotFound,
-      AccountErrorCode.cardFrozen => l10n.errAccountCardFrozen,
-      AccountErrorCode.insufficientLimit => l10n.errAccountInsufficientLimit,
-      AccountErrorCode.invalidPaymentAmount => l10n.errNotAnAmount,
-      AccountErrorCode.paymentNotPositive => l10n.errAmountNotPositive,
-      AccountErrorCode.notACreditCard => l10n.errAccountNotACreditCard,
-      AccountErrorCode.noDebtToPay => l10n.errAccountNoDebtToPay,
-      AccountErrorCode.paymentExceedsDebt => l10n.errAccountPaymentExceedsDebt,
-      AccountErrorCode.sourceMustBeChecking =>
-        l10n.errAccountSourceMustBeChecking,
-      AccountErrorCode.balanceUpdateFailed =>
-        l10n.errAccountBalanceUpdateFailed,
-      AccountErrorCode.unknownCardPreference =>
-        l10n.errAccountUnknownCardPreference,
-    };
-
-String transactionErrorMessage(
+String accountErrorMessage(
   AppLocalizations l10n,
-  TransactionError error,
+  AccountError error,
 ) => switch (error.code) {
-  TransactionErrorCode.invalidAmount => l10n.errNotAnAmount,
-  TransactionErrorCode.amountNotPositive => l10n.errAmountNotPositive,
-  TransactionErrorCode.installmentCountOutOfRange =>
-    l10n.errTransactionInstallmentRange,
-  TransactionErrorCode.negativeLimit => l10n.errTransactionNegativeLimit,
+  AccountErrorCode.emptyName => l10n.errAccountEmptyName,
+  AccountErrorCode.unknownAccountType => l10n.errAccountUnknownType,
+  AccountErrorCode.invalidAmount => l10n.errNotAnAmount,
+  AccountErrorCode.invalidStatementDay => l10n.errAccountInvalidStatementDay,
+  AccountErrorCode.creditLimitRequired => l10n.errAccountCreditLimitRequired,
+  AccountErrorCode.negativeOpeningDebt => l10n.errAccountNegativeOpeningDebt,
+  AccountErrorCode.openingDebtExceedsLimit =>
+    l10n.errAccountOpeningDebtExceedsLimit,
+  AccountErrorCode.accountNotFound => l10n.errAccountNotFound,
+  AccountErrorCode.cardFrozen => l10n.errAccountCardFrozen,
+  AccountErrorCode.insufficientLimit => l10n.errAccountInsufficientLimit,
+  AccountErrorCode.invalidPaymentAmount => l10n.errNotAnAmount,
+  AccountErrorCode.paymentNotPositive => l10n.errAmountNotPositive,
+  AccountErrorCode.notACreditCard => l10n.errAccountNotACreditCard,
+  AccountErrorCode.noDebtToPay => l10n.errAccountNoDebtToPay,
+  AccountErrorCode.paymentExceedsDebt => l10n.errAccountPaymentExceedsDebt,
+  AccountErrorCode.sourceMustBeChecking => l10n.errAccountSourceMustBeChecking,
+  AccountErrorCode.balanceUpdateFailed => l10n.errAccountBalanceUpdateFailed,
+  AccountErrorCode.unknownCardPreference =>
+    l10n.errAccountUnknownCardPreference,
 };
+
+String transactionErrorMessage(AppLocalizations l10n, TransactionError error) =>
+    switch (error.code) {
+      TransactionErrorCode.invalidAmount => l10n.errNotAnAmount,
+      TransactionErrorCode.amountNotPositive => l10n.errAmountNotPositive,
+      TransactionErrorCode.installmentCountOutOfRange =>
+        l10n.errTransactionInstallmentRange,
+      TransactionErrorCode.negativeLimit => l10n.errTransactionNegativeLimit,
+    };
 
 String assetErrorMessage(AppLocalizations l10n, AssetError error) =>
     switch (error.code) {
@@ -109,4 +105,16 @@ String recurringErrorMessage(AppLocalizations l10n, RecurringError error) =>
         l10n.errRecurringInvalidTransactionType,
       RecurringErrorCode.unreadablePayment =>
         l10n.errRecurringUnreadablePayment,
+    };
+
+String calculatorErrorMessage(AppLocalizations l10n, CalculatorError error) =>
+    switch (error.code) {
+      CalculatorErrorCode.notANumber => l10n.errCalcNotANumber,
+      CalculatorErrorCode.notPositive => l10n.errCalcNotPositive,
+      // The only one that names a figure, because "too long" without the cap
+      // leaves the user guessing at what the app will accept.
+      CalculatorErrorCode.termTooLong => l10n.errCalcTermTooLong(
+        loanMaxTermMonths,
+      ),
+      CalculatorErrorCode.invalidExpression => l10n.errCalcInvalidExpression,
     };

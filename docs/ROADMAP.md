@@ -25,6 +25,11 @@ desktop app wrote — replacing the database and the encryption key under a
 journal that survives the process being killed. Proven in both directions
 against `services/backup_service.py` itself.
 
+**And it can work a figure out.** Four calculators — a plain one with its own
+keypad, deposit interest, compound growth, and a Turkish consumer loan with
+KKDF, BSMV and a full payment plan. Seven of the nine Tools cards are live;
+only the What-If sandbox and Reset Data still carry a chip.
+
 **And it has a calendar.** A month grid marks the days that had activity and
 opens only the day tapped — the grid needs no encryption key at all, because
 which days had rows is the one thing the plain `transaction_date` can answer.
@@ -82,7 +87,7 @@ The share provider is the one piece of the price layer whose live response
 has NOT been seen by this codebase — checking it needs a key that belongs to
 whoever signs up for it. See "Shares, on the user's own key".
 
-748 unit tests and 12 device tests pass. `flutter analyze` is clean, no
+785 unit tests and 12 device tests pass. `flutter analyze` is clean, no
 control in the app is inert, and it runs on the emulator.
 
 ## Pick up here
@@ -107,12 +112,8 @@ from the desktop", which was wrong about `services/` being fully triaged.
 3. ~~**The calendar.**~~ DONE — see "The calendar — `lib/screens/calendar_screen.dart`"
    under "Done, and how it was proven".
 
-4. **The four calculators.** `calculate_interest`, `calculate_compound` and
-   `calculate_loan` out of `mixins/calculator_mixin.py`, plus the basic one.
-   Four Tools cards open at once, nothing here touches a service, and the
-   arithmetic is exactly the kind that earns generated parity vectors rather
-   than hand-derived expectations. `export_plan_to_pdf` does NOT come: it is a
-   desktop affordance.
+4. ~~**The four calculators.**~~ DONE — see "The four calculators" under
+   "Done, and how it was proven".
 
 5. **The balance ring's change chip.** Port `dashboard_period_service.py` (94
    lines). The chip is currently omitted rather than wrong — an empty one drew
@@ -373,7 +374,7 @@ Long, and grouped roughly by layer rather than by date:
 | Layer | Sections |
 | --- | --- |
 | Foundations | Money · Encryption · Database · The REAL column's drift |
-| Services | Accounts · Transactions · Holdings · Recurring payments · The monthly budget · Savings goals · Price fetching · Shares on the user's own key · Category settings and the main/extra split · Search · The calendar |
+| Services | Accounts · Transactions · Holdings · Recurring payments · The monthly budget · Savings goals · Price fetching · Shares on the user's own key · Category settings and the main/extra split · Search · The calendar · The four calculators |
 | Backup | The backup's cryptographic core · The package around it · Restoring · The key on its own |
 | Security | The screen lock |
 | Language | i18n · What i18n did NOT cover |
@@ -1698,6 +1699,80 @@ There is no text on a dot, and after the split bar drew itself at zero height
 with every text assertion passing, "is it in the tree" is not a question this
 suite accepts as an answer to "is it drawn".
 
+### The four calculators
+
+Item 4 of the road to 1.0. Four Tools cards opened at once, which takes the
+grid from two live cards out of nine to seven.
+
+**Reaching the desktop's arithmetic was the interesting part.** The three
+financial calculators live on a Kivy mixin: the methods read
+`self.<field>.text` and write `self.<label>.text`, and `kivymd` is not
+installed in `aeadvenv`. Transcribing the formulas into a generator would have
+tested the transcription. So `tool/emit_calculator_vectors.py` injects fake
+`kivy`/`kivymd` modules into `sys.modules`, imports the REAL
+`CalculatorMixin`, and drives it against a duck-typed object whose fields are
+plain strings — every figure in the fixture came out of the desktop's own
+method, formatted by the desktop's own code. If a future version of those
+methods reaches into a real widget, the script fails at import rather than
+quietly emitting hand-derived numbers.
+
+**The figures are compared AS TEXT,** through this app's `formatLira`, so a
+vector proves the arithmetic and the Turkish formatting in one assertion.
+
+**These compute in `double`, in an app whose money layer refuses binary
+floats.** That rule is about RECORDED money — a balance, a transaction, a
+total that has to agree with the desktop to the kurus. Nothing here is
+recorded: these are projections of a deposit that does not exist and an
+instalment on a loan nobody has taken, the desktop computes them in `float`,
+and matching its answer is worth more than a precision the inputs never had.
+Every result is quantized to fiat before it leaves the service, and each
+screen says on itself that it writes nothing.
+
+**What the vectors pinned down, that a reading of the formulas would have
+guessed at:** interest uses a 365-day year (`/36500`) with 5% withholding;
+KKDF and BSMV are 15% each OF THE INTEREST, folded into the rate before the
+annuity — so an advertised 3.29% monthly is charged at 4.277%, and a port that
+applied them to the payment would be out by a factor and still look plausible;
+and compound growth compounds the PRINCIPAL annually while compounding
+contributions at `r/12` monthly, which is two frequencies in one answer and is
+the desktop's, not a slip here.
+
+**The plain calculator needed a parser.** The desktop walks Python's own
+`ast`, so it gets Python's precedence for free; Dart has nothing to borrow.
+Three traps, each with its own vector: `**` binds tighter than a unary minus
+on its left (`-2**2` is -4), its right operand may be unary (`2**-2`), and it
+associates rightwards (`2**3**2` is 512). And `%` takes the sign of the
+DIVISOR in Python — Dart's `%` is always non-negative and its `remainder`
+takes the sign of the dividend, so neither operator is a drop-in and `10 % -3`
+is the line that says so.
+
+**One irreducible divergence, measured rather than hidden.** Dart has no
+`log10`. `log(x) / ln10` is a different function in the last bit:
+`math.log10(2)` is 0.3010299956639812 and the substitute gives
+0.30102999566398114. Exact powers of ten are snapped back — a calculator that
+answers 2,9999999999999996 to log(1000) is one nobody trusts again — and
+everything else is asserted to be within ONE ULP PER `log` CALL, which is a
+bound rather than a number chosen to make a test pass. Every other expression
+is compared bit for bit.
+
+**What did NOT come:** the loan's advanced mode. On the desktop that is
+arbitrary user-entered charges, a file fee, insurance, longer terms for car
+and mortgage loans, and a PDF export. The basic mode is here, 36-month cap
+included; the rest is a screen of its own and the PDF is a desktop
+affordance.
+
+**Six mutations fail the suite:** the loan without its taxes, interest without
+withholding, a 360-day year, contributions compounded annually, `**` made
+left-associative, and Dart's own `%`.
+
+**And what running it caught, again.** The keypad was built by filling a 5x5
+grid in order, which produced a row reading `4 5 6 1 2`. Every test passed —
+they pressed keys by name and the answers were right — and it was wrong the
+second the screen was opened. The assertion that now holds it measures
+POSITION: each digit's centre against the one that should sit above and beside
+it, so 7-8-9 over 4-5-6 over 1-2-3 is a fact the suite checks rather than a
+layout someone eyeballed.
+
 ### Paying card debt — `lib/screens/pay_debt_sheet.dart`
 
 The last write flow. Two things it gets right by refusing rather than
@@ -2296,6 +2371,7 @@ each reads that project's own modules:
 | `tool/emit_default_categories.py` | `lib/data/default_categories.dart` |
 | `tool/emit_summary_vectors.py` | `test/summary_vectors.txt` |
 | `tool/emit_search_folding.py` | `lib/services/search_folding.dart` + `test/search_folding_vectors.txt` |
+| `tool/emit_calculator_vectors.py` | `test/calculator_vectors.txt` |
 | `tool/emit_aead_vectors.dart` | the Dart-written AEAD envelopes the desktop reads back |
 | `tool/emit_mobile_backup.dart` | a package for the desktop to read back |
 

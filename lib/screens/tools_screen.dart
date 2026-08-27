@@ -5,6 +5,7 @@ import '../theme/obsidian_prime.dart';
 import '../ui/app_locale.dart';
 import '../widgets/not_yet.dart';
 import '../widgets/surfaces.dart';
+import 'calculator_screens.dart';
 import 'calendar_screen.dart';
 import 'budget_screen.dart';
 import 'savings_screen.dart';
@@ -37,17 +38,25 @@ class ToolsScreen extends StatelessWidget {
       l10n.toolCalculator,
       Icons.calculate_outlined,
       ObsidianPalette.primary,
+      destination: _Destination.basicCalculator,
     ),
-    _Tool(l10n.toolInterestReturn, Icons.percent, ObsidianPalette.secondary),
+    _Tool(
+      l10n.toolInterestReturn,
+      Icons.percent,
+      ObsidianPalette.secondary,
+      destination: _Destination.interest,
+    ),
     _Tool(
       l10n.toolCompoundInterest,
       Icons.trending_up,
       ObsidianPalette.tertiary,
+      destination: _Destination.compound,
     ),
     _Tool(
       l10n.toolLoanCalculator,
       Icons.account_balance_outlined,
       ObsidianPalette.error,
+      destination: _Destination.loan,
     ),
     _Tool(
       l10n.toolSavingsGoal,
@@ -106,7 +115,15 @@ class ToolsScreen extends StatelessWidget {
 }
 
 /// Which screen a tool opens. Absent means it has no port yet.
-enum _Destination { budget, savings, calendar }
+enum _Destination {
+  budget,
+  savings,
+  calendar,
+  basicCalculator,
+  interest,
+  compound,
+  loan,
+}
 
 class _Tool {
   const _Tool(
@@ -136,6 +153,16 @@ class _ToolCard extends StatelessWidget {
       _Destination.budget => (BuildContext _) => const BudgetScreen(),
       _Destination.savings => (BuildContext _) => const SavingsScreen(),
       _Destination.calendar => (BuildContext _) => const CalendarScreen(),
+      _Destination.basicCalculator => (
+        BuildContext _,
+      ) => const BasicCalculatorScreen(),
+      _Destination.interest => (
+        BuildContext _,
+      ) => const InterestCalculatorScreen(),
+      _Destination.compound => (
+        BuildContext _,
+      ) => const CompoundCalculatorScreen(),
+      _Destination.loan => (BuildContext _) => const LoanCalculatorScreen(),
       null => null,
     };
     if (builder == null) return;
