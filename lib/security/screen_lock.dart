@@ -15,6 +15,8 @@
 /// already a dependency for the key provider, so this costs nothing new.
 library;
 
+import 'dart:developer' as developer;
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
@@ -76,6 +78,19 @@ class ScreenLock {
   /// the labels from, and a caller that forgot would leave an English line on
   /// a Turkish phone at the one moment the user is reading closely. A missing
   /// argument is a compile error instead.
+  /// A platform failure is still a refusal, but it is no longer SILENT.
+  ///
+  /// It was, and that cost a shipped defect: under the Flutter template's
+  /// `FlutterActivity` the plugin throws `no_fragment_activity`, this caught
+  /// it, returned false, and the switch simply did not move. Nothing in the
+  /// log, nothing on screen, and `isDeviceSupported()` — which needs no
+  /// fragment — went on reporting that the phone could authenticate. See
+  /// `MainActivity.kt`.
+  ///
+  /// False is still the answer, because a user who declined and a platform
+  /// that could not ask are the same thing from the switch's point of view:
+  /// the lock does not go on. What changed is that the second one now leaves
+  /// a trace for whoever goes looking.
   Future<bool> authenticate({required String reason}) async {
     try {
       return await _auth.authenticate(
@@ -86,7 +101,12 @@ class ScreenLock {
         // refusal and the user is asked again for no reason.
         persistAcrossBackgrounding: true,
       );
-    } on Exception {
+    } on Exception catch (error) {
+      developer.log(
+        'The platform refused to ask for a credential.',
+        name: 'archlence.screen_lock',
+        error: error,
+      );
       return false;
     }
   }

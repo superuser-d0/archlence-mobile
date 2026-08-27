@@ -25,6 +25,12 @@ desktop app wrote — replacing the database and the encryption key under a
 journal that survives the process being killed. Proven in both directions
 against `services/backup_service.py` itself.
 
+**And the screen lock works, which it never did.** `local_auth` needs a
+`FragmentActivity` to attach its prompt to, and `MainActivity` extended the
+Flutter template's `FlutterActivity` — so the switch had been silently inert
+on every build ever made. Found by putting a PIN on the emulator and pressing
+it. See "The verification round".
+
 **And the ring says which way it went.** The balance ring's change chip is
 back: what the net worth moved over the last 30 days, in lira and per cent,
 against a baseline read out of the balance ledger. When the ledger cannot
@@ -92,7 +98,7 @@ The share provider is the one piece of the price layer whose live response
 has NOT been seen by this codebase — checking it needs a key that belongs to
 whoever signs up for it. See "Shares, on the user's own key".
 
-803 unit tests and 12 device tests pass. `flutter analyze` is clean, no
+804 unit tests and 12 device tests pass. `flutter analyze` is clean, no
 control in the app is inert, and it runs on the emulator.
 
 ## Pick up here
@@ -123,18 +129,17 @@ from the desktop", which was wrong about `services/` being fully triaged.
 5. ~~**The balance ring's change chip.**~~ DONE — see "The change chip, and
    the balance at a past day" under "Done, and how it was proven".
 
-6. **The verification round, and the signature.** Three things, then a build
-   somebody else can install:
+6. **The verification round, and the signature.** Two of the three are done —
+   see "The verification round" under "Done, and how it was proven", which is
+   also where the shipped defect it found is written up.
 
-   * Configure a PIN on the `archlence_pixel` AVD and exercise the screen
-     lock. `local_auth` has never run against a device that HAS a lock; the
-     emulator has been reporting, correctly, that it has none.
-   * A restore carried through to the end on a release build. Everything up to
-     the file picker was driven in the R8 round; the restore itself was not.
+   What is left is the one that was never a coding task:
+
    * **Make the release keystore.** Five minutes and one `keytool` command,
-     written out in `android/key.properties.example`. It is not a coding task,
-     and it is not one to delegate — the keystore is the app's identity and
-     its password should never be typed into this repository.
+     written out in `android/key.properties.example`. It is not one to
+     delegate — the keystore is the app's identity and its password should
+     never be typed into this repository. **It is the only thing between this
+     app and a build somebody else can install.**
 
 **Deliberately NOT in 1.0,** so that the omissions are decisions rather than
 drift: the Home forecast card (it needs `dashboard`, `insights`, `projection`
@@ -377,7 +382,7 @@ Long, and grouped roughly by layer rather than by date:
 | Foundations | Money · Encryption · Database · The REAL column's drift |
 | Services | Accounts · Transactions · Holdings · Recurring payments · The monthly budget · Savings goals · Price fetching · Shares on the user's own key · Category settings and the main/extra split · Search · The calendar · The four calculators · The change chip |
 | Backup | The backup's cryptographic core · The package around it · Restoring · The key on its own |
-| Security | The screen lock |
+| Security | The screen lock · The verification round |
 | Language | i18n · What i18n did NOT cover |
 | Shipping | The icon and the launch screen · What running it caught · Release signing · R8 |
 | Screens | The screen–service join · The wired tabs · Every control is live or visibly unavailable · Screens (as first built) |
@@ -838,6 +843,12 @@ Three decisions worth not re-deriving:
   with no fingerprint enrolled is locked out of an app they set up themselves.
 - **Turning it ON asks first.** A lock switched on by someone who cannot then
   pass it is a lock on the owner's own data.
+
+**And for a long time none of it ran.** Every decision above was right and the
+prompt never appeared: `local_auth` needs a `FragmentActivity` and
+`MainActivity` was a plain `FlutterActivity`, so `authenticate()` threw and
+the switch did not move. It took putting a PIN on the emulator to find —
+see "The verification round".
 
 The preference lives in the platform secure store, not `finance.db`: that
 file's schema is a contract with the desktop and a UI preference is not
@@ -1835,6 +1846,63 @@ lira figure and a percentage, and `+250,00 ₺ · +%25` overflowed the 256px rin
 by 53 pixels. `TrendChip` now shrinks its label to fit, exactly as the balance
 above it already did — an overflow here is not a debug stripe, it is a chip
 clipped mid-number, which reads as a different amount.
+
+### The verification round
+
+Item 6 of the road to 1.0, minus the keystore, which is not a coding task.
+Both halves ran on a RELEASE build — R8-minified, signed with a throwaway key
+that was deleted afterwards — because a verification round on a debug build
+proves the debug build.
+
+**It found a defect that had shipped in every build ever made: the screen lock
+never worked.**
+
+`local_auth` shows Android's BiometricPrompt, which is a fragment and needs a
+`FragmentActivity`. `MainActivity` extended `FlutterActivity`, the Flutter
+template's default, so `authenticate()` threw `no_fragment_activity` every
+time. Three things conspired to hide it:
+
+* `isDeviceSupported()` does NOT need the fragment, so the Settings row went
+  on correctly reporting that the phone could authenticate.
+* `ScreenLock.authenticate` caught the exception and returned false, which is
+  the right answer for a user who declines and is indistinguishable from a
+  platform that could not ask.
+* No test could see it. The widget tests drive a fake authenticator — which is
+  correct, since the real one needs a device — and the emulator had no screen
+  lock configured, so the row was always in its "this device cannot" branch.
+
+The switch simply did not move when tapped. Nothing in the log, nothing on
+screen.
+
+**The fix is one word in Kotlin**, and it is held by
+`test/main_activity_test.dart`, which reads `MainActivity.kt` as source. That
+is the only place the rule is expressible — the same shape as
+`dead_controls_test.dart`, which asserts a rule the widget tree cannot state.
+`authenticate` also logs now: false is still the answer, but a platform
+failure leaves a trace where it left none.
+
+**Then the lock was driven end to end.** `adb shell locksettings set-pin`,
+then: the row changed to "Asks for your fingerprint or PIN"; the switch raised
+BiometricPrompt (visible in logcat as `showAuthenticationDialog` — the prompt
+is a secure window and does not appear in a screenshot, which is itself
+correct); the PIN turned the switch on; the app was backgrounded for seventy
+seconds, and coming back raised the prompt again before showing anything;
+entering the PIN gave the screen back.
+
+**And a restore was carried through to the end.** The R8 round stopped at the
+file picker. This one pushed `test/desktop_backup.archlence-backup` — the
+package generated by the DESKTOP's own `backup_service` — into Downloads and
+restored it. The app asked "Replace everything in this app?" first, then took
+it: the balance became the fixture's 1.500,00 ₺, and searching `haftalik`
+found `haftalık alışveriş`.
+
+That last detail is the one that matters. The description is a field the
+desktop encrypted with the key inside that package; finding it proves the KEY
+was swapped along with the database, not merely the file copied. And it came
+back through the Turkish folding, which had never met a desktop-written row.
+
+**Cleaned up afterwards:** the throwaway keystore, the APK it signed, the
+device PIN, the pushed backup, and the app itself.
 
 ### Paying card debt — `lib/screens/pay_debt_sheet.dart`
 
