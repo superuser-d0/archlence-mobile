@@ -69,6 +69,19 @@
   "settingsBackupRestore": "Yedekle ve Geri Yükle",
   "settingsBackupUnavailable": "Bu derlemede kullanılamıyor.",
   "settingsBackupSubtitle": "Saklayabileceğin bir yedek oluştur ya da bir yedeği geri yükle — masaüstü uygulamasının yazdığı yedekler dahil.",
+  "backupAgeNever": "Bu telefonda hiç yedek alınmadı.",
+  "backupAgeToday": "Bugün yedeklendi.",
+  "backupAgeDays": "Son yedek {days} gün önce.",
+  "@backupAgeDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "backupStaleTitle": "Kimsede bir kopya yok",
+  "backupStaleBody": "Bu uygulamanın arkasında hesap da sunucu da yok; kaybolan telefon kaybolan geçmiş demek. Yedek almak bir dakika sürer.",
+  "backupStaleAction": "Şimdi yedekle",
   "settingsSectionAppearance": "Görünüm ve Gizlilik",
   "settingsPremiumTheme": "Premium Mavi Tema",
   "settingsPremiumThemeSubtitle": "Kapalıyken standart tema kullanılır",
@@ -371,6 +384,8 @@
   "backupCreateExplanation": "Bir yedek, veritabanının tamamını ve onu açan anahtarı, senin seçtiğin bir parolayla sarmalanmış hâlde tutar. En az on iki karakter.\n\nPAROLA HİÇBİR YERDE SAKLANMAZ. Parola olmadan yedek açılamaz — bu uygulama tarafından da, başka kimse tarafından da.",
   "backupPassphrase": "Parola",
   "backupPassphraseAgain": "Parola tekrar",
+  "passphraseReveal": "Parolayı göster",
+  "passphraseHide": "Parolayı gizle",
   "backupCreateAction": "Yedek oluştur ve paylaş",
   "backupCreateBusy": "Anahtar sarmalanıyor. Bu birkaç saniye sürer — parolayı denemek bilerek yavaştır.",
   "backupShareSubject": "Archlence yedeği",

@@ -195,13 +195,22 @@ void main() {
       const SettingsScreen(),
     );
 
-    // Twelve rows. Five do something real — the encryption key and the lock
-    // report state without going anywhere, Language and BIST share prices
-    // each open a sheet, and Category Settings opens a screen — and Backup &
-    // Restore is unavailable here because this graph has no profile on disk
-    // behind it. One chip fewer than before Category Settings was wired: it
-    // was not added, it stopped being a placeholder.
-    expect(find.byType(NotYetChip), findsNWidgets(8));
+    // ONE chip, and which one it is carries the whole distinction the chip
+    // now makes. Seven rows used to wear it because the feature behind them
+    // had never been built; those rows are not drawn at all any more — see
+    // `showUnbuiltFeatures`. What is left is Backup & Restore, which is a
+    // real screen, unavailable here only because this graph has no profile
+    // on disk behind it. That is a control in a state the user can change,
+    // and marking it is the honest thing. A row for a feature that does not
+    // exist is not in that category and never was.
+    expect(find.byType(NotYetChip), findsOneWidget);
+    expect(
+      find.ancestor(
+        of: find.text('Backup & Restore'),
+        matching: find.byType(Row),
+      ),
+      findsWidgets,
+    );
     // Exactly one switch: the screen lock, which does something. The two that
     // used to be here moved local state and nothing else, so a user could
     // turn Dark Mode off and watch nothing happen.
@@ -228,9 +237,10 @@ void main() {
     // Four chevrons now: Category Settings, Language, BIST share prices and
     // Backup & Restore, the four rows that go somewhere.
     expect(find.byIcon(Icons.chevron_right), findsNWidgets(4));
-    // One fewer chip than in the test above, for the same reason there is one
-    // more chevron: Backup & Restore has a profile behind it here.
-    expect(find.byType(NotYetChip), findsNWidgets(7));
+    // And no chip at all, for the same reason there is one more chevron:
+    // Backup & Restore is the only row that could still carry one, and it
+    // has a profile behind it here.
+    expect(find.byType(NotYetChip), findsNothing);
 
     await tester.tap(find.text('Backup & Restore'));
     await tester.pumpAndSettle();

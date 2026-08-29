@@ -512,6 +512,42 @@ abstract class AppLocalizations {
   /// **'Write a backup you can keep, or restore one — including a backup made by the desktop app.'**
   String get settingsBackupSubtitle;
 
+  /// No description provided for @backupAgeNever.
+  ///
+  /// In en, this message translates to:
+  /// **'No backup has ever been made on this phone.'**
+  String get backupAgeNever;
+
+  /// No description provided for @backupAgeToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Backed up today.'**
+  String get backupAgeToday;
+
+  /// No description provided for @backupAgeDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Last backup {days} days ago.'**
+  String backupAgeDays(int days);
+
+  /// No description provided for @backupStaleTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Nobody else has a copy'**
+  String get backupStaleTitle;
+
+  /// No description provided for @backupStaleBody.
+  ///
+  /// In en, this message translates to:
+  /// **'There is no account and no server behind this app, so a lost phone is a lost history. A backup takes a minute.'**
+  String get backupStaleBody;
+
+  /// No description provided for @backupStaleAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Back up now'**
+  String get backupStaleAction;
+
   /// No description provided for @settingsSectionAppearance.
   ///
   /// In en, this message translates to:
@@ -2273,6 +2309,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Passphrase again'**
   String get backupPassphraseAgain;
+
+  /// No description provided for @passphraseReveal.
+  ///
+  /// In en, this message translates to:
+  /// **'Show the passphrase'**
+  String get passphraseReveal;
+
+  /// No description provided for @passphraseHide.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide the passphrase'**
+  String get passphraseHide;
 
   /// No description provided for @backupCreateAction.
   ///

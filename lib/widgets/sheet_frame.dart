@@ -112,12 +112,13 @@ class SheetFrame extends StatelessWidget {
   }
 }
 
-class SheetField extends StatelessWidget {
+class SheetField extends StatefulWidget {
   const SheetField({
     required this.controller,
     required this.label,
     this.hint,
     this.numeric = false,
+    this.secret = false,
     this.onChanged,
     super.key,
   });
@@ -126,20 +127,63 @@ class SheetField extends StatelessWidget {
   final String label;
   final String? hint;
   final bool numeric;
+
+  /// Obscures the text and offers a deliberate reveal.
+  ///
+  /// For the backup and key-recovery passphrases, which were typed in the
+  /// clear until a run on a device showed them being. This app's own rule,
+  /// written down for the shares key: "a displayed credential is one a
+  /// shoulder can read".
+  ///
+  /// Obscured rather than obscured-with-no-way-back, because a passphrase
+  /// here CANNOT BE RECOVERED — nothing stores it, and a package written
+  /// under a typo is a package that never opens again. The confirm field
+  /// catches a typo repeated differently; the eye catches one repeated the
+  /// same way.
+  final bool secret;
+
   final ValueChanged<String>? onChanged;
 
   @override
+  State<SheetField> createState() => _SheetFieldState();
+}
+
+class _SheetFieldState extends State<SheetField> {
+  bool _revealed = false;
+
+  @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final hidden = widget.secret && !_revealed;
+
     return TextField(
-      controller: controller,
-      onChanged: onChanged,
-      keyboardType: numeric
+      controller: widget.controller,
+      onChanged: widget.onChanged,
+      obscureText: hidden,
+      // Off for a secret, and not as tidiness: an autocorrect dictionary and
+      // a suggestion strip both LEARN what is typed into them, which would
+      // put the passphrase somewhere this app does not control and cannot
+      // clear.
+      autocorrect: !widget.secret,
+      enableSuggestions: !widget.secret,
+      keyboardType: widget.numeric
           ? const TextInputType.numberWithOptions(decimal: true)
           : TextInputType.text,
-      inputFormatters: numeric
+      inputFormatters: widget.numeric
           ? [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,\s]'))]
           : null,
-      decoration: sheetDecoration(label).copyWith(hintText: hint),
+      decoration: sheetDecoration(widget.label).copyWith(
+        hintText: widget.hint,
+        suffixIcon: widget.secret
+            ? IconButton(
+                icon: Icon(
+                  hidden ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                ),
+                tooltip: hidden ? l10n.passphraseReveal : l10n.passphraseHide,
+                onPressed: () => setState(() => _revealed = !_revealed),
+              )
+            : null,
+      ),
     );
   }
 }

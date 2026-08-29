@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../app_services.dart';
+import '../app_version.dart';
 import '../crypto/key_provider.dart';
 import '../l10n/app_localizations.dart';
+import '../services/backup_reminder.dart';
 import '../services/shares_api_key.dart';
 import '../theme/obsidian_prime.dart';
 import '../ui/app_locale.dart';
@@ -34,11 +36,25 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   Future<(bool available, bool enabled)>? _lockState;
 
+  final _reminder = BackupReminder();
+
+  /// Days since the last backup, null when there has never been one.
+  Future<int?>? _backupAge;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _lockState ??= _readLock();
+    _backupAge ??= _reminder.daysSinceBackup();
   }
+
+  /// How long ago, in a sentence. Null days means it has never happened,
+  /// which is the case worth saying plainly rather than as "0 days ago".
+  String _backupAgeLine(AppLocalizations l10n, int? days) => switch (days) {
+    null => l10n.backupAgeNever,
+    0 => l10n.backupAgeToday,
+    _ => l10n.backupAgeDays(days),
+  };
 
   Future<(bool, bool)> _readLock() async {
     final lock = ServicesScope.of(context).screenLock;
@@ -114,7 +130,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         const SizedBox(height: Spacing.stackMd),
         Center(
           child: Text(
-            'Archlence v0.1.0',
+            'Archlence v$appVersion',
             style: text.labelMedium?.copyWith(
               letterSpacing: 0,
               color: ObsidianPalette.onSurfaceVariant.withValues(alpha: 0.6),
@@ -144,82 +160,112 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
         SectionLabel(l10n.settingsSectionYourData),
         const SizedBox(height: Spacing.stackSm),
-        _SettingsGroup(
-          children: [
-            _SettingsTile(
-              icon: Icons.backup_outlined,
-              title: l10n.settingsBackupRestore,
-              subtitle: ServicesScope.of(context).backup == null
-                  ? l10n.settingsBackupUnavailable
-                  : l10n.settingsBackupSubtitle,
-              subtitleMaxLines: 3,
-              available: ServicesScope.of(context).backup != null,
-              onTap: ServicesScope.of(context).backup == null
-                  ? null
-                  : () => Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => const BackupScreen(),
-                      ),
-                    ),
-            ),
-          ],
+        FutureBuilder<int?>(
+          future: _backupAge,
+          builder: (context, snapshot) {
+            final backup = ServicesScope.of(context).backup;
+            // While the age is still being read the row says only what it
+            // always said. A row that flashes "no backup yet" and then
+            // corrects itself would frighten a user who backs up every week.
+            final age = snapshot.connectionState == ConnectionState.done
+                ? '${_backupAgeLine(l10n, snapshot.data)} '
+                : '';
+            return _SettingsGroup(
+              children: [
+                _SettingsTile(
+                  icon: Icons.backup_outlined,
+                  title: l10n.settingsBackupRestore,
+                  // The age goes FIRST, ahead of the explanation, because it
+                  // is the only line here that changes and the only one that
+                  // asks the user for anything. See `BackupReminder`.
+                  subtitle: backup == null
+                      ? l10n.settingsBackupUnavailable
+                      : '$age${l10n.settingsBackupSubtitle}',
+                  subtitleMaxLines: 3,
+                  available: backup != null,
+                  onTap: backup == null
+                      ? null
+                      : () async {
+                          await Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => const BackupScreen(),
+                            ),
+                          );
+                          if (!context.mounted) return;
+                          // Re-read on the way back: the user may have just
+                          // written one, and a row still saying "never" would
+                          // be the app forgetting what it had just done.
+                          setState(() {
+                            _backupAge = _reminder.daysSinceBackup();
+                          });
+                        },
+                ),
+              ],
+            );
+          },
         ),
         const SizedBox(height: Spacing.sectionGap),
 
-        SectionLabel(l10n.settingsSectionAppearance),
-        const SizedBox(height: Spacing.stackSm),
-        _SettingsGroup(
-          children: [
-            _SettingsTile(
-              icon: Icons.palette_outlined,
-              title: l10n.settingsPremiumTheme,
-              subtitle: l10n.settingsPremiumThemeSubtitle,
-            ),
-            _SettingsTile(
-              icon: Icons.shield_outlined,
-              title: l10n.settingsDataPrivacy,
-            ),
-          ],
-        ),
-        const SizedBox(height: Spacing.sectionGap),
+        // Three sections that are mockup and nothing else — see
+        // `showUnbuiltFeatures`. `Sign Out` in particular: there is no
+        // account to sign out of, and saying so in a row is worse than not
+        // having the row.
+        if (showUnbuiltFeatures) ...[
+          SectionLabel(l10n.settingsSectionAppearance),
+          const SizedBox(height: Spacing.stackSm),
+          _SettingsGroup(
+            children: [
+              _SettingsTile(
+                icon: Icons.palette_outlined,
+                title: l10n.settingsPremiumTheme,
+                subtitle: l10n.settingsPremiumThemeSubtitle,
+              ),
+              _SettingsTile(
+                icon: Icons.shield_outlined,
+                title: l10n.settingsDataPrivacy,
+              ),
+            ],
+          ),
+          const SizedBox(height: Spacing.sectionGap),
 
-        SectionLabel(l10n.settingsSectionSecurityHistory),
-        const SizedBox(height: Spacing.stackSm),
-        _SettingsGroup(
-          children: [
-            _SettingsTile(
-              icon: Icons.lock_outline,
-              title: l10n.settingsChangePassword,
-              subtitle: l10n.settingsChangePasswordSubtitle,
-            ),
-            _SettingsTile(
-              icon: Icons.history,
-              title: l10n.settingsBalanceHistory,
-            ),
-          ],
-        ),
-        const SizedBox(height: Spacing.sectionGap),
+          SectionLabel(l10n.settingsSectionSecurityHistory),
+          const SizedBox(height: Spacing.stackSm),
+          _SettingsGroup(
+            children: [
+              _SettingsTile(
+                icon: Icons.lock_outline,
+                title: l10n.settingsChangePassword,
+                subtitle: l10n.settingsChangePasswordSubtitle,
+              ),
+              _SettingsTile(
+                icon: Icons.history,
+                title: l10n.settingsBalanceHistory,
+              ),
+            ],
+          ),
+          const SizedBox(height: Spacing.sectionGap),
 
-        SectionLabel(l10n.settingsSectionSystem),
-        const SizedBox(height: Spacing.stackSm),
-        _SettingsGroup(
-          children: [
-            _SettingsTile(
-              icon: Icons.dark_mode_outlined,
-              title: l10n.settingsDarkMode,
-              subtitle: l10n.settingsDarkModeSubtitle,
-            ),
-            _SettingsTile(
-              icon: Icons.mail_outline,
-              title: l10n.settingsContactUs,
-            ),
-            _SettingsTile(
-              icon: Icons.logout,
-              title: l10n.settingsSignOut,
-              danger: true,
-            ),
-          ],
-        ),
+          SectionLabel(l10n.settingsSectionSystem),
+          const SizedBox(height: Spacing.stackSm),
+          _SettingsGroup(
+            children: [
+              _SettingsTile(
+                icon: Icons.dark_mode_outlined,
+                title: l10n.settingsDarkMode,
+                subtitle: l10n.settingsDarkModeSubtitle,
+              ),
+              _SettingsTile(
+                icon: Icons.mail_outline,
+                title: l10n.settingsContactUs,
+              ),
+              _SettingsTile(
+                icon: Icons.logout,
+                title: l10n.settingsSignOut,
+                danger: true,
+              ),
+            ],
+          ),
+        ],
       ],
     );
   }

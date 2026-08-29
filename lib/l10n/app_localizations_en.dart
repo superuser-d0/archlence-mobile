@@ -235,6 +235,27 @@ class AppLocalizationsEn extends AppLocalizations {
       'Write a backup you can keep, or restore one — including a backup made by the desktop app.';
 
   @override
+  String get backupAgeNever => 'No backup has ever been made on this phone.';
+
+  @override
+  String get backupAgeToday => 'Backed up today.';
+
+  @override
+  String backupAgeDays(int days) {
+    return 'Last backup $days days ago.';
+  }
+
+  @override
+  String get backupStaleTitle => 'Nobody else has a copy';
+
+  @override
+  String get backupStaleBody =>
+      'There is no account and no server behind this app, so a lost phone is a lost history. A backup takes a minute.';
+
+  @override
+  String get backupStaleAction => 'Back up now';
+
+  @override
   String get settingsSectionAppearance => 'Appearance & Privacy';
 
   @override
@@ -1219,6 +1240,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get backupPassphraseAgain => 'Passphrase again';
+
+  @override
+  String get passphraseReveal => 'Show the passphrase';
+
+  @override
+  String get passphraseHide => 'Hide the passphrase';
 
   @override
   String get backupCreateAction => 'Create and share a backup';

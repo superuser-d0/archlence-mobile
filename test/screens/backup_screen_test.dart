@@ -261,4 +261,38 @@ void main() {
       isTrue,
     );
   });
+  testWidgets('every passphrase is obscured, and can be revealed', (
+    tester,
+  ) async {
+    // Found by running it: all six were typed in the clear. This screen has
+    // no input on it that is NOT a passphrase, so "every TextField" is the
+    // whole rule rather than a sample of it.
+    await open(tester);
+
+    final fields = tester.widgetList<TextField>(find.byType(TextField));
+    expect(fields, hasLength(6));
+    expect(
+      fields.every((field) => field.obscureText),
+      isTrue,
+      reason: 'A displayed credential is one a shoulder can read — the rule '
+          'this project already holds for the shares API key.',
+    );
+
+    // Not decoration either: an autocorrect dictionary and a suggestion strip
+    // both LEARN what is typed into them, which would put the passphrase
+    // somewhere this app neither controls nor can clear.
+    expect(fields.every((field) => field.autocorrect == false), isTrue);
+    expect(fields.every((field) => field.enableSuggestions == false), isTrue);
+
+    // And the way back, which this screen needs more than most: the
+    // passphrase is stored nowhere, so a typo the user cannot see is a
+    // package that never opens again.
+    expect(find.byIcon(Icons.visibility_outlined), findsNWidgets(6));
+    await tester.tap(find.byIcon(Icons.visibility_outlined).first);
+    await tester.pumpAndSettle();
+    expect(
+      tester.widgetList<TextField>(find.byType(TextField)).first.obscureText,
+      isFalse,
+    );
+  });
 }

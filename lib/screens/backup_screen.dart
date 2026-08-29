@@ -28,6 +28,7 @@ import '../backup/backup_service.dart';
 import '../backup/key_recovery_service.dart';
 import '../backup/recovery_material.dart';
 import '../crypto/key_provider.dart';
+import '../services/backup_reminder.dart';
 import '../theme/obsidian_prime.dart';
 import '../ui/app_locale.dart';
 import '../widgets/sheet_frame.dart';
@@ -47,6 +48,9 @@ class _BackupScreenState extends State<BackupScreen> {
   final _exportKeyPassphrase = TextEditingController();
   final _confirmKeyPassphrase = TextEditingController();
   final _importKeyPassphrase = TextEditingController();
+
+  /// Remembers that a backup happened, so Settings can say how long ago.
+  final _reminder = BackupReminder();
 
   /// What the app is doing, or null when it is doing nothing.
   ///
@@ -150,6 +154,13 @@ class _BackupScreenState extends State<BackupScreen> {
 
     _createPassphrase.clear();
     _confirmPassphrase.clear();
+
+    // Recorded HERE, after `createBackup` returned and before the share
+    // sheet, because this is the last point that knows a verified package
+    // exists. Whether the user then sends it anywhere is not something this
+    // app can observe — the share sheet reports nothing back — so the honest
+    // claim is "a backup was written", which is what the reminder counts.
+    await _reminder.recordBackup();
 
     // Shared, not saved to a folder. Since Android 11 an app cannot write
     // anywhere another app can read, so a backup left in this app's own
@@ -382,12 +393,14 @@ class _BackupScreenState extends State<BackupScreen> {
                   SheetField(
                     controller: _createPassphrase,
                     label: l10n.backupPassphrase,
+                    secret: true,
                     onChanged: (_) => setState(() {}),
                   ),
                   const SizedBox(height: Spacing.stackSm),
                   SheetField(
                     controller: _confirmPassphrase,
                     label: l10n.backupPassphraseAgain,
+                    secret: true,
                     onChanged: (_) => setState(() {}),
                   ),
                   const SizedBox(height: Spacing.stackMd),
@@ -418,6 +431,7 @@ class _BackupScreenState extends State<BackupScreen> {
                   SheetField(
                     controller: _restorePassphrase,
                     label: l10n.backupRestorePassphrase,
+                    secret: true,
                     onChanged: (_) => setState(() {}),
                   ),
                   const SizedBox(height: Spacing.stackMd),
@@ -451,12 +465,14 @@ class _BackupScreenState extends State<BackupScreen> {
                   SheetField(
                     controller: _exportKeyPassphrase,
                     label: l10n.backupPassphrase,
+                    secret: true,
                     onChanged: (_) => setState(() {}),
                   ),
                   const SizedBox(height: Spacing.stackSm),
                   SheetField(
                     controller: _confirmKeyPassphrase,
                     label: l10n.backupPassphraseAgain,
+                    secret: true,
                     onChanged: (_) => setState(() {}),
                   ),
                   const SizedBox(height: Spacing.stackMd),
@@ -487,6 +503,7 @@ class _BackupScreenState extends State<BackupScreen> {
                   SheetField(
                     controller: _importKeyPassphrase,
                     label: l10n.recoveryImportPassphrase,
+                    secret: true,
                     onChanged: (_) => setState(() {}),
                   ),
                   const SizedBox(height: Spacing.stackMd),

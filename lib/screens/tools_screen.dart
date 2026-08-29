@@ -76,7 +76,14 @@ class ToolsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final inset = MediaQuery.paddingOf(context);
-    final tools = _tools(context.l10n);
+    // The dimmed ones stay out of 1.0 with the rest — see
+    // `showUnbuiltFeatures`. The comment further down argues that dimming
+    // them keeps the grid honest about what the desktop's tool set IS, and
+    // that argument holds for a developer reading the grid; it does not hold
+    // for someone deciding in a shop whether the app is finished.
+    final tools = _tools(
+      context.l10n,
+    ).where((tool) => showUnbuiltFeatures || tool.isAvailable).toList();
 
     return ListView(
       key: const PageStorageKey('tools'),

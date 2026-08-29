@@ -11,6 +11,7 @@ import 'package:archlence_mobile/screens/tools_screen.dart';
 import 'package:archlence_mobile/services/account_service.dart';
 import 'package:archlence_mobile/services/recurring_service.dart';
 import 'package:drift/drift.dart' show Variable;
+import 'package:archlence_mobile/widgets/not_yet.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:archlence_mobile/widgets/surfaces.dart';
@@ -61,22 +62,25 @@ void main() {
   }
 
   group('the launcher', () {
-    testWidgets('a tool with nothing behind it is marked, not left tappable', (
+    testWidgets('a tool with nothing behind it is not in the grid', (
       tester,
     ) async {
-      // A card that looks live and does nothing on tap is a defect the user
-      // cannot tell from a slow one.
+      // The grid used to draw all seven and dim the two that lead nowhere, on
+      // the argument that the tool set is the desktop's and hiding any of it
+      // would misrepresent what the app is for. That argument is for someone
+      // reading the grid against the desktop. Someone deciding in a shop
+      // whether the app is finished reads two dead cards. See
+      // `showUnbuiltFeatures`.
       await pumpScreen(tester, services, const ToolsScreen());
 
-      // Two now, not seven: the calendar and the four calculators stopped
-      // being placeholders. The count has to move DOWN as cards are wired, or
-      // a card could be given a destination and keep its chip. What is left
-      // is the What-If sandbox and Reset Data.
-      expect(find.text('NOT YET'), findsNWidgets(2));
+      expect(find.text('NOT YET'), findsNothing);
+
+      // And every wired one is still there: the filter has to take the cards
+      // with no destination and nothing else.
       expect(find.text('Monthly\nBudget'), findsOneWidget);
       expect(find.text('Savings\nGoal'), findsOneWidget);
       expect(find.text('Calendar'), findsOneWidget);
-    });
+    }, skip: showUnbuiltFeatures);
 
     testWidgets('Calendar opens the calendar screen', (tester) async {
       await pumpScreen(tester, services, const ToolsScreen());
@@ -132,24 +136,22 @@ void main() {
       expect(find.byType(SavingsScreen), findsOneWidget);
     });
 
-    testWidgets('an unavailable tool is not even tappable', (tester) async {
-      // Not merely "tapping does nothing": the card must not OFFER the tap.
-      // A guard inside the handler leaves the ripple and the pointer
-      // affordance in place, which is the defect — the user cannot tell it
-      // from a screen that is slow to open.
+    testWidgets('every tool in the grid offers the tap it looks like', (
+      tester,
+    ) async {
+      // Not merely "tapping does nothing": a card must not OFFER a tap it
+      // will not honour. A guard inside the handler leaves the ripple and the
+      // pointer affordance in place, which is the defect — the user cannot
+      // tell it from a screen that is slow to open.
+      //
+      // Nothing in the grid leads nowhere any more, so the rule is stated the
+      // only way it still can be: no card present is inert.
       await pumpScreen(tester, services, const ToolsScreen());
 
-      AppCard cardFor(String label) => tester.widget<AppCard>(
-        find.ancestor(of: find.text(label), matching: find.byType(AppCard)),
-      );
-
-      expect(cardFor('What-If\nSandbox').onTap, isNull);
-      expect(cardFor('Monthly\nBudget').onTap, isNotNull);
-
-      await tester.tap(find.text('What-If\nSandbox'));
-      await tester.pumpAndSettle();
-      expect(find.byType(BudgetScreen), findsNothing);
-    });
+      final cards = tester.widgetList<AppCard>(find.byType(AppCard));
+      expect(cards, isNotEmpty);
+      expect(cards.every((card) => card.onTap != null), isTrue);
+    }, skip: showUnbuiltFeatures);
   });
 
   group('the budget screen', () {

@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../app_services.dart';
 import '../app_shell.dart';
 import '../services/account_service.dart';
+import '../services/backup_reminder.dart';
 import '../services/dashboard_period.dart';
 import '../services/recurring_service.dart';
 import '../services/search_service.dart';
@@ -16,6 +17,7 @@ import '../ui/async_data.dart';
 import '../ui/money_format.dart';
 import '../widgets/balance_ring.dart';
 import '../widgets/not_yet.dart';
+import 'backup_screen.dart';
 import 'category_settings_screen.dart';
 import 'subscription_sheet.dart';
 import '../widgets/surfaces.dart';
@@ -45,10 +47,18 @@ const DashboardPeriod _changePeriod = DashboardPeriod.month;
 class _HomeScreenState extends State<HomeScreen> {
   Future<_HomeData>? _data;
 
+  final _reminder = BackupReminder();
+
+  /// Whether it is time to say something about backing up. Read once per
+  /// build of the screen rather than per rebuild, because it touches the
+  /// platform store.
+  Future<bool>? _backupStale;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _data ??= _load();
+    _backupStale ??= _reminder.isStale();
   }
 
   void _reload() {
@@ -109,11 +119,46 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: Spacing.sectionGap),
 
-          const _ForecastCard(),
-          const SizedBox(height: Spacing.sectionGap),
+          // Two conditions, and the card is drawn only when both hold: there
+          // is something to lose, and it has not been copied anywhere for a
+          // month. Nothing is reserved for it in the layout — an empty gap
+          // where a warning might go is worse than the warning.
+          FutureBuilder<bool>(
+            future: _backupStale,
+            builder: (context, stale) => FutureBuilder<_HomeData>(
+              future: _data,
+              builder: (context, home) {
+                final worth = home.data?.netWorth;
+                final hasSomethingToLose =
+                    worth != null &&
+                    (worth.net != Decimal.zero ||
+                        worth.cardDebt != Decimal.zero ||
+                        (home.data?.subscriptions.isNotEmpty ?? false));
+                if (stale.data != true || !hasSomethingToLose) {
+                  return const SizedBox.shrink();
+                }
+                return const Column(
+                  children: [
+                    _BackupNudge(),
+                    SizedBox(height: Spacing.sectionGap),
+                  ],
+                );
+              },
+            ),
+          ),
 
-          const _HealthScoreCard(),
-          const SizedBox(height: Spacing.sectionGap),
+          // Both need the dashboard, insight, projection and metrics services
+          // together, which is a project rather than a session. Until then
+          // they are not drawn — a card whose entire content is "this does
+          // not exist yet", directly under the balance ring, is the first
+          // thing a new user sees. See `showUnbuiltFeatures`.
+          if (showUnbuiltFeatures) ...[
+            const _ForecastCard(),
+            const SizedBox(height: Spacing.sectionGap),
+
+            const _HealthScoreCard(),
+            const SizedBox(height: Spacing.sectionGap),
+          ],
 
           Row(
             spacing: Spacing.stackSm,
@@ -123,7 +168,20 @@ class _HomeScreenState extends State<HomeScreen> {
                 size: 20,
                 color: ObsidianPalette.tertiary,
               ),
-              Text(context.l10n.homeActiveSubscriptions, style: text.titleLarge),
+              // Expanded, because this heading is the longest string on the
+              // screen in both languages and `titleLarge` is 22sp: unwrapped
+              // it overflows a 360dp phone by 176 pixels. It had done all
+              // along and nothing saw it — `ListView` lays out only what is
+              // near the viewport, and the two cards that used to sit above
+              // this row pushed it past the cache extent, so the layout test
+              // walked the screen without this row ever being laid out.
+              // Removing those cards is what made it appear.
+              Expanded(
+                child: Text(
+                  context.l10n.homeActiveSubscriptions,
+                  style: text.titleLarge,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: Spacing.stackMd),
@@ -805,6 +863,62 @@ class _SubscriptionCard extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The one nudge this app gives, and the reason it needs one.
+///
+/// There is no account and no server, by decision, so nobody else holds a
+/// copy. Onboarding says so in its third card — at the one moment the user
+/// has nothing to lose yet — and until this existed nothing said it again.
+///
+/// Shown only when there is a backup worth making AND none has been made for
+/// a month. Both halves matter: a reminder on an empty install is a nag about
+/// nothing, and one that appears every week is one a user learns not to read.
+/// See `BackupReminder`.
+class _BackupNudge extends StatelessWidget {
+  const _BackupNudge();
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    final l10n = context.l10n;
+    return AppCard(
+      padding: const EdgeInsets.all(20),
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute<void>(builder: (_) => const BackupScreen()),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            spacing: 12,
+            children: [
+              const Icon(
+                Icons.cloud_off_outlined,
+                size: 20,
+                color: ObsidianPalette.tertiary,
+              ),
+              Expanded(
+                child: Text(l10n.backupStaleTitle, style: text.titleMedium),
+              ),
+            ],
+          ),
+          const SizedBox(height: Spacing.stackSm),
+          Text(
+            l10n.backupStaleBody,
+            style: text.bodySmall?.copyWith(
+              color: ObsidianPalette.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: Spacing.stackSm),
+          Text(
+            l10n.backupStaleAction,
+            style: text.labelLarge?.copyWith(color: ObsidianPalette.tertiary),
           ),
         ],
       ),

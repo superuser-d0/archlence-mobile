@@ -2,7 +2,7 @@ name: archlence_mobile
 description: "Archlence - local-first personal finance, Android client."
 publish_to: 'none'
 
-version: 0.1.0+1
+version: 1.0.0+1
 
 environment:
   sdk: ^3.13.1

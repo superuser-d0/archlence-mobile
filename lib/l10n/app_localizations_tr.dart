@@ -234,6 +234,27 @@ class AppLocalizationsTr extends AppLocalizations {
       'Saklayabileceğin bir yedek oluştur ya da bir yedeği geri yükle — masaüstü uygulamasının yazdığı yedekler dahil.';
 
   @override
+  String get backupAgeNever => 'Bu telefonda hiç yedek alınmadı.';
+
+  @override
+  String get backupAgeToday => 'Bugün yedeklendi.';
+
+  @override
+  String backupAgeDays(int days) {
+    return 'Son yedek $days gün önce.';
+  }
+
+  @override
+  String get backupStaleTitle => 'Kimsede bir kopya yok';
+
+  @override
+  String get backupStaleBody =>
+      'Bu uygulamanın arkasında hesap da sunucu da yok; kaybolan telefon kaybolan geçmiş demek. Yedek almak bir dakika sürer.';
+
+  @override
+  String get backupStaleAction => 'Şimdi yedekle';
+
+  @override
   String get settingsSectionAppearance => 'Görünüm ve Gizlilik';
 
   @override
@@ -1210,6 +1231,12 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get backupPassphraseAgain => 'Parola tekrar';
+
+  @override
+  String get passphraseReveal => 'Parolayı göster';
+
+  @override
+  String get passphraseHide => 'Parolayı gizle';
 
   @override
   String get backupCreateAction => 'Yedek oluştur ve paylaş';

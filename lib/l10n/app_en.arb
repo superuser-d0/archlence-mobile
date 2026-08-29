@@ -161,6 +161,19 @@
   "settingsBackupRestore": "Backup & Restore",
   "settingsBackupUnavailable": "Not available in this build.",
   "settingsBackupSubtitle": "Write a backup you can keep, or restore one — including a backup made by the desktop app.",
+  "backupAgeNever": "No backup has ever been made on this phone.",
+  "backupAgeToday": "Backed up today.",
+  "backupAgeDays": "Last backup {days} days ago.",
+  "@backupAgeDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "backupStaleTitle": "Nobody else has a copy",
+  "backupStaleBody": "There is no account and no server behind this app, so a lost phone is a lost history. A backup takes a minute.",
+  "backupStaleAction": "Back up now",
   "settingsSectionAppearance": "Appearance & Privacy",
   "settingsPremiumTheme": "Premium Blue Theme",
   "settingsPremiumThemeSubtitle": "Uses the standard theme when disabled",
@@ -650,6 +663,8 @@
   "backupCreateExplanation": "A backup holds your whole database and the key that opens it, wrapped under a passphrase you choose. Twelve characters at least.\n\nTHE PASSPHRASE IS NOT STORED ANYWHERE. Without it the backup cannot be opened — not by this app, not by anyone.",
   "backupPassphrase": "Passphrase",
   "backupPassphraseAgain": "Passphrase again",
+  "passphraseReveal": "Show the passphrase",
+  "passphraseHide": "Hide the passphrase",
   "backupCreateAction": "Create and share a backup",
   "backupCreateBusy": "Wrapping the key. This takes a few seconds — the passphrase is deliberately slow to try.",
   "backupShareSubject": "Archlence backup",

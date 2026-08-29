@@ -10,6 +10,7 @@ import 'package:archlence_mobile/services/recurring_service.dart';
 import 'package:archlence_mobile/widgets/surfaces.dart';
 import 'package:drift/drift.dart' show Variable;
 import 'package:flutter/material.dart';
+import 'package:archlence_mobile/widgets/not_yet.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/fixed_key_provider.dart';
@@ -346,17 +347,24 @@ void main() {
     });
   });
 
-  testWidgets('the insight cards draw no figure they cannot compute', (
-    tester,
-  ) async {
+  testWidgets('the insight cards are not drawn at all', (tester) async {
     // The mockup fills both with numbers. Those services are not ported, and
     // a health score with nothing behind it would be the most confidently
     // wrong thing on the screen.
+    //
+    // They used to be drawn empty with a NOT YET chip, which was the honest
+    // answer to "is this computed?" and the wrong answer to "is this app
+    // finished?" — the forecast card sat directly under the balance ring, so
+    // the first thing a new user saw was a card saying it did not exist. See
+    // `showUnbuiltFeatures`, and note that the constant is what this test is
+    // really pinned to: flip it and this file expects them back.
     await pump(tester);
 
-    expect(find.text('Algorithmic Forecast'), findsOneWidget);
-    expect(find.text('Financial Health Score'), findsOneWidget);
-    expect(find.text('NOT YET'), findsNWidgets(2));
+    expect(find.text('Algorithmic Forecast'), findsNothing);
+    expect(find.text('Financial Health Score'), findsNothing);
+    expect(find.text('NOT YET'), findsNothing);
+    // The point of the original test, and it outlives the cards: no figure is
+    // invented for either of them anywhere on this screen.
     expect(find.text('72'), findsNothing);
-  });
+  }, skip: showUnbuiltFeatures);
 }
