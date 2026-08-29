@@ -181,7 +181,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   subtitle: backup == null
                       ? l10n.settingsBackupUnavailable
                       : '$age${l10n.settingsBackupSubtitle}',
-                  subtitleMaxLines: 3,
+                  // Four, not three: the age line is prepended to an
+                  // explanation that already filled three, and the pair was
+                  // being cut mid-sentence. Found by looking at the row on a
+                  // phone rather than at the string in the file.
+                  subtitleMaxLines: 4,
                   available: backup != null,
                   onTap: backup == null
                       ? null

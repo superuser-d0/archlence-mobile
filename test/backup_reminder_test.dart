@@ -11,10 +11,11 @@ import 'package:flutter_test/flutter_test.dart';
 
 /// An in-memory stand-in, and one that can be told to fail.
 class _FakeStore implements FlutterSecureStorage {
-  _FakeStore({this.throws = false});
-
   final Map<String, String> values = {};
-  bool throws;
+
+  /// Set on the instance rather than passed in, so a test can let a write
+  /// succeed and then break the store before the read.
+  bool throws = false;
 
   @override
   Future<String?> read({
