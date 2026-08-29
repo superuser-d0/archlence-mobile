@@ -136,6 +136,22 @@ through onboarding, the key store, the screen lock against a real PIN, a
 backup, and a restore carried to the end. The real keystore changes the
 signature on that APK and nothing else about it.
 
+**And it now buys one more thing: the only check of the internet permission
+that counts.** `src/main/AndroidManifest.xml` declared no permissions at all,
+so live pricing was off in the only configuration that ships and on in every
+one it was developed in — see "The permission a release build did not have".
+The fix is one line and it is in, and the merged RELEASE manifest has been
+made and read: it carries the permission. What that cannot show is the
+behaviour — a release APK on a device, Assets open, a crypto holding reading
+`Current` rather than `Cost`. That is what the keystore buys beyond a
+signature.
+
+**That fix arrived by merge, which is why this section did not know about
+it.** It was written on a branch cut before the last eleven commits and sat
+unmerged while this file went on saying the engineering road was finished.
+The lesson is the one two sections below, in a new place: a branch nobody
+merged is indistinguishable from work nobody did.
+
 ### What was done, and where it is written up
 
 | | Item | Section |
@@ -1368,7 +1384,7 @@ alone: it sums purchase price across a portfolio that can hold a share at
 cost beside a crypto holding at a live price in the same list, and blending
 those into one number would present a figure that is part market value and
 part cost basis with no way to tell which parts are which from the total
-alone. The roadmap's own item 5 asked for this PER HOLDING, not as a new
+alone. The price-fetching item asked for this PER HOLDING, not as a new
 aggregate, and the tiles are where it landed.
 
 **Every widget test needed a seam it didn't have before.** The moment
@@ -2102,6 +2118,74 @@ same thing this file has said twice already about absences: R8's missing
 Here the absence was a test case, and the rule looked covered because an input
 with the right shape was in the list.
 
+### The permission a release build did not have
+
+Found while checking this file's own claims, not by running anything — which
+is the only reason it is written down before a device found it instead.
+
+`android/app/src/main/AndroidManifest.xml` declared NO permissions. The
+Flutter template puts `android.permission.INTERNET` in the `debug` and
+`profile` manifests only, and the comment there says why: the tool needs it
+for hot reload. It is not there for the app. So the release manifest — the
+one that becomes the APK a person installs — had no internet permission at
+all, while `price_providers.dart` calls CoinGecko and Frankfurter through
+`dart:io`'s `HttpClient`, which Android refuses without it.
+
+**What makes it worth a section rather than a line.** It fails silently, in
+the exact shape a correct offline phone fails:
+
+    try {
+      payload = jsonDecode(await get(uri));
+    } on Object {
+      return const {};
+    }
+
+That `on Object` is deliberate and stays — `price_providers.dart`'s contract
+is that a provider gap is an absent key, never a throw. `LivePriceService`
+then falls back to `asset_price_cache`, which on a fresh install is empty, so
+every holding reads `Cost`. No error, no banner, nothing red. The feature
+built in "Price fetching" would have been off in the only configuration that
+ships, and on in every configuration it was developed and tested in.
+
+**Why no test could have caught it.** Every test in that piece drives the
+providers through the `HttpGet` seam, so no socket has ever opened from this
+app — a good decision, and this is its blind spot. The manifest is not a file
+any Dart test reads, and the debug APK the device tests run against carries
+the permission from `src/debug/`. Green everywhere, broken where it counts.
+
+**The fix** is the one line, in `src/main/` where it belongs, with the reason
+above it so it is not tidied away as duplication of the debug manifest. The
+two template manifests are left alone: the merger de-duplicates, and editing
+files the template owns to make a point is how the next `flutter create`
+diff becomes unreadable.
+
+The comment above it was written twice. The first version used ` -- ` as a
+dash, and XML forbids `--` inside a comment: it would have failed the build
+at `aapt2`, in the one file no test parses, to explain a bug in the one file
+no test parses. Caught by running an XML parser over the manifest rather than
+by rereading it, which is worth keeping as the habit: every file this
+project edits by hand has a parser somewhere that will answer for free.
+
+**Half of it is verified now, and the half that is was verified without a
+keystore.** This section was written on a branch and said the whole check
+needed a release build, which needed the keystore, which does not exist. That
+was one step too pessimistic: the manifest MERGER is a Gradle task of its own,
+and `./gradlew :app:processReleaseMainManifest` runs it for the release
+variant without going anywhere near packaging or signing. Its output at
+`build/app/intermediates/merged_manifest/release/` now lists
+`android.permission.INTERNET` beside the two biometric ones. The release
+manifest gets the permission — that is no longer an argument from the
+platform's documentation, it is Gradle's own answer.
+
+**What is still NOT verified is the behaviour,** and this file does not get to
+claim it: a release APK on a device, Assets open, a crypto holding reading
+`Current` rather than `Cost`. That needs the keystore, and it is the extra
+thing making the keystore buys — see "The one thing left".
+
+The correction is the same shape as R8's: the branch reasoned that because the
+END of the check needed a keystore, all of it did. A build pipeline is a
+series of tasks and most of them can be asked on their own.
+
 ### Paying card debt — `lib/screens/pay_debt_sheet.dart`
 
 The last write flow. Two things it gets right by refusing rather than
@@ -2594,7 +2678,41 @@ surfaced only that way:
 
 ## Open work
 
-### 1. Shipping
+### 1. What a device has still not answered
+
+This list arrived by merge and was written before the verification round,
+which has since opened a release build and driven onboarding, the key store,
+the screen lock against a real PIN, a backup and a restore carried to the end.
+What it did not reach is below. The gap is not academic: writing this list is
+what turned up the INTERNET permission above, and every screen defect recorded
+in this file was invisible in the source.
+
+- **The priced holding tiles** (`assets_screen.dart`). **No real HTTP call has
+  ever left this app** — every test drives the providers through the `HttpGet`
+  seam, which is the right seam and is also this blind spot. What only a run
+  can answer: that both providers return the shapes `price_providers.dart`
+  parses over a real connection; that the freshness label reads sensibly
+  against a real clock; and that pricing actually arrives in the build that
+  ships. The merged release manifest carries the permission now — see "The
+  permission a release build did not have" — and the step from there to
+  prices on a screen needs the keystore.
+- **The key recovery sections** (`backup_screen.dart`, pushed from Settings).
+  Fifteen service tests and parity in both directions, but the screen itself
+  has never run. The verification round exercised backup and RESTORE, which is
+  the neighbouring flow rather than this one, and the file picker and share
+  sheet both drive are platform surfaces a widget test replaces rather than
+  exercises.
+- **The suite has stood at 12 device tests since the i18n work.** Nothing in
+  it opens either surface above. Two more belong there once the run says what
+  they should assert.
+
+```bash
+flutter test integration_test/key_provider_device_test.dart -d <device>
+flutter test integration_test/app_device_test.dart -d <device>
+flutter run -d <device>       # then: Assets, and Settings > Backup & Restore
+```
+
+### 2. Shipping
 
 The icon, the launch screen and the signing configuration are done — see
 "The icon and the launch screen" and "Release signing". What is left is the
@@ -2602,8 +2720,10 @@ keystore ("Pick up here", above) and a Play Store listing, which is not
 engineering.
 
 A release build has now been installed and driven end to end twice: once for
-R8, once for the verification round. Nothing on the shipping path is untried
-except the signature itself.
+R8, once for the verification round. Two things on that path are still untried:
+the signature itself, and — since the merge that brought the INTERNET
+permission in — whether live pricing arrives in a release build. Both need the
+keystore and nothing else.
 
 R8 was on this list and is now off it, because the entry was wrong: R8 has
 been enabled all along — Flutter's Gradle plugin turns it on and the template
@@ -2615,7 +2735,7 @@ because it carries three ABIs of native code, and `--split-per-abi` or an App
 Bundle is the only thing that changes that. Not urgent, and it is a shipping
 decision rather than a code one.
 
-### 2. Not yet considered at all
+### 3. Not yet considered at all
 
 What is left here is judgement rather than engineering, and one thing that is
 neither.
@@ -2659,11 +2779,17 @@ What has not been ported is not forgotten:
   this app does not know is refused with a message saying to open it on the
   desktop once; see "The package around it".
 - **Price machinery** (`price_service`, `price_providers`, `price_guard`,
-  `asset_price_worker`, `crypto_top100`). Ported — see "Price fetching" and
-  "Shares, on the user's own key". `brand_icon_service` and `logo_service` are
-  the exceptions and are not coming: both fetch a logo per holding from the
-  network, which is a request per symbol to somebody else's server for
-  decoration.
+  `asset_price_worker`, `crypto_top100`, `brand_icon_service`, `logo_service`).
+  Answered rather than ported, and the distinction matters: this app has a
+  `price_providers.dart` and a `price_guard.dart` of its own, sharing the
+  names and the "one broken symbol does not sink the batch" rule and nothing
+  else — the desktop's are built on `yfinance` and a spawned subprocess,
+  neither of which exists on Android. See "Prices come from the phone, from
+  keyless sources", "Price fetching" and "Shares, on the user's own key".
+  `crypto_top100` is genuinely not ported and not missed. Nor are
+  `brand_icon_service` and `logo_service` — and those two are a decision
+  rather than an oversight: both fetch a logo per holding from the network,
+  which is a request per symbol to somebody else's server for decoration.
 - **Backup service.** Ported. `key_recovery_service.py` is the exception —
   see "What the backup work did NOT port".
 - **`history_service`.** The "time machine": the balance at any past date,
