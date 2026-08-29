@@ -2859,6 +2859,26 @@ Windows".
   or excluding it from sync, is the fix; it is a decision about this machine
   rather than about the code.
 
+**An Android session does not end when the command does.** Two kinds of
+process outlive it, both by design and neither obvious from Task Manager,
+where they are named after their runtime rather than their job:
+
+* **The emulator** — `qemu-system-x86_64`, and it holds a few GB. Closing its
+  window is enough; `adb -s emulator-5554 emu kill` does the same from a
+  shell and is the one to use when the window is not where you are.
+* **Gradle's daemons** — `java.exe`, listed as *OpenJDK Platform binary*.
+  After the three Android builds a device-test round makes, that was one
+  Gradle daemon at 3.4GB and two Kotlin compile daemons at about 600MB each:
+  4.5GB, all of it idle. They persist deliberately, so the next build does
+  not rebuild a JVM and a configuration, and they respawn on their own. Stop
+  them with `./gradlew --stop` from `android/` — the Kotlin daemons go with
+  the Gradle one and do not need stopping separately.
+
+Neither is a leak and neither needs stopping to be correct. It is worth
+knowing which is which before concluding the emulator is still up: the
+emulator had already exited in the session that wrote this, and what was
+still holding the memory was Gradle.
+
 Verified on this machine, in this order: `flutter analyze` clean, 892 unit
 tests pass, and both device test files pass on `emulator-5554` — four in
 `key_provider_device_test.dart` against the real Keystore, eight in
