@@ -512,6 +512,24 @@ abstract class AppLocalizations {
   /// **'Write a backup you can keep, or restore one — including a backup made by the desktop app.'**
   String get settingsBackupSubtitle;
 
+  /// No description provided for @settingsSectionAbout.
+  ///
+  /// In en, this message translates to:
+  /// **'About'**
+  String get settingsSectionAbout;
+
+  /// No description provided for @settingsOpenSourceLicenses.
+  ///
+  /// In en, this message translates to:
+  /// **'Open source licences'**
+  String get settingsOpenSourceLicenses;
+
+  /// No description provided for @settingsOpenSourceLicensesSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Archlence and every package it is built on'**
+  String get settingsOpenSourceLicensesSubtitle;
+
   /// No description provided for @backupAgeNever.
   ///
   /// In en, this message translates to:

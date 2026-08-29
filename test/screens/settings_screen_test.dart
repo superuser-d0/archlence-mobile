@@ -216,10 +216,10 @@ void main() {
     // turn Dark Mode off and watch nothing happen.
     expect(find.byType(Switch), findsOneWidget);
     expect(find.text('Lock when I come back'), findsOneWidget);
-    // Three chevrons: Category Settings, Language and BIST share prices. A
-    // chevron promises a destination, and with no backup service behind it
-    // that row has none.
-    expect(find.byIcon(Icons.chevron_right), findsNWidgets(3));
+    // Four chevrons: Category Settings, Language, BIST share prices and Open
+    // source licences. A chevron promises a destination, and with no backup
+    // service behind it that row has none.
+    expect(find.byIcon(Icons.chevron_right), findsNWidgets(4));
   });
 
   testWidgets('Backup & Restore opens when there is a profile behind it', (
@@ -234,9 +234,9 @@ void main() {
       const SettingsScreen(),
     );
 
-    // Four chevrons now: Category Settings, Language, BIST share prices and
-    // Backup & Restore, the four rows that go somewhere.
-    expect(find.byIcon(Icons.chevron_right), findsNWidgets(4));
+    // Five chevrons now: Category Settings, Language, BIST share prices, Open
+    // source licences, and Backup & Restore — the rows that go somewhere.
+    expect(find.byIcon(Icons.chevron_right), findsNWidgets(5));
     // And no chip at all, for the same reason there is one more chevron:
     // Backup & Restore is the only row that could still carry one, and it
     // has a profile behind it here.

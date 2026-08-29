@@ -235,6 +235,16 @@ class AppLocalizationsEn extends AppLocalizations {
       'Write a backup you can keep, or restore one — including a backup made by the desktop app.';
 
   @override
+  String get settingsSectionAbout => 'About';
+
+  @override
+  String get settingsOpenSourceLicenses => 'Open source licences';
+
+  @override
+  String get settingsOpenSourceLicensesSubtitle =>
+      'Archlence and every package it is built on';
+
+  @override
   String get backupAgeNever => 'No backup has ever been made on this phone.';
 
   @override

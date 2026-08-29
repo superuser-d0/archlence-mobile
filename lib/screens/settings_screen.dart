@@ -210,6 +210,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         const SizedBox(height: Spacing.sectionGap),
 
+        SectionLabel(l10n.settingsSectionAbout),
+        const SizedBox(height: Spacing.stackSm),
+        _SettingsGroup(
+          children: [
+            _SettingsTile(
+              icon: Icons.description_outlined,
+              title: l10n.settingsOpenSourceLicenses,
+              subtitle: l10n.settingsOpenSourceLicensesSubtitle,
+              available: true,
+              // Flutter's own page. It collects the licence of every package
+              // in the build INCLUDING this one — the root package's own
+              // LICENSE file is picked up without being asked, which was
+              // worth finding out by opening the page rather than assuming:
+              // registering it by hand as well put the app in its own list
+              // twice, under two names.
+              onTap: () => showLicensePage(
+                context: context,
+                applicationName: 'Archlence',
+                applicationVersion: appVersion,
+                applicationLegalese: '© 2026 superuser-d0',
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: Spacing.sectionGap),
+
         // Three sections that are mockup and nothing else — see
         // `showUnbuiltFeatures`. `Sign Out` in particular: there is no
         // account to sign out of, and saying so in a row is worse than not

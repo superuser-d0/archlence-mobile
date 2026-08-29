@@ -1,0 +1,14 @@
+Archlence Mobile
+Copyright 2026 superuser-d0
+
+This product is the Android client for Archlence
+(https://github.com/superuser-d0/archlence) and contains work ported from it:
+the database schema, the decimal rounding rules, the AEAD envelope format and
+the backup package format. That work is by the same copyright holder.
+
+Portions of Archlence, including every release up to and including v1.0.1,
+were published under the MIT License. Those releases remain available under
+those terms; this notice does not withdraw them.
+
+Third-party dependencies are covered by their own licenses. The app lists them
+under Settings, and they are not modified by this NOTICE.

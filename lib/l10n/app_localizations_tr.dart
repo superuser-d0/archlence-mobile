@@ -234,6 +234,16 @@ class AppLocalizationsTr extends AppLocalizations {
       'Saklayabileceğin bir yedek oluştur ya da bir yedeği geri yükle — masaüstü uygulamasının yazdığı yedekler dahil.';
 
   @override
+  String get settingsSectionAbout => 'Hakkında';
+
+  @override
+  String get settingsOpenSourceLicenses => 'Açık kaynak lisansları';
+
+  @override
+  String get settingsOpenSourceLicensesSubtitle =>
+      'Archlence ve üzerine kurulduğu her paket';
+
+  @override
   String get backupAgeNever => 'Bu telefonda hiç yedek alınmadı.';
 
   @override

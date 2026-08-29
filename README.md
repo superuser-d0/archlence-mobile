@@ -174,3 +174,20 @@ records what was done and how each claim was proven, which decisions are settled
 so they are not reopened by accident, what is deliberately out of scope, and the
 defects found along the way including the ones that were this project's own
 fault. It opens with a "Pick up here" section.
+
+## License
+
+[Apache License 2.0](LICENSE). The same licence as the desktop app, which this
+one is the client for and ports work from — the schema, the rounding rules,
+the encryption envelope, the backup format.
+
+Apache rather than MIT for two clauses that matter to an app people install:
+§3 grants a patent licence explicitly, where MIT is silent, and §6 says plainly
+that the licence does not hand over the name. Neither stops anyone forking
+this — both licences allow that, deliberately.
+
+Releases of the desktop app up to v1.0.1 were published under the MIT License
+and remain available under those terms. See [NOTICE](NOTICE).
+
+Third-party packages keep their own licences; the app lists them under
+Settings.
