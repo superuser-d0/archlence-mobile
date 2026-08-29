@@ -114,89 +114,84 @@ unnoticed through all the others — and one test's premise asked
 `package:path` a question whose answer depends on the developer's machine. See
 "The move to Windows".
 
-892 unit tests and 12 device tests pass. `flutter analyze` is clean, no
-control in the app is inert, and it runs on the emulator.
+**And it is public, under Apache-2.0.** There had been no licence file at all,
+which means all rights reserved — nobody could legally use, fork or contribute
+to a repository that was about to be linked from a store listing. The desktop
+app moved to the same licence rather than the two halves carrying different
+ones. See "The licence, and the page that shows it".
+
+903 unit tests and 14 device tests pass. `flutter analyze` is clean, no
+control in the app is inert, and every screen in it has now been opened on a
+device — which is where the last four defects came from.
 
 ## Pick up here
 
-**The engineering road to 1.0 is finished.** Six numbered items, all closed —
-they are listed below with where each is written up, because the reasons
-behind them are worth more than the fact they are done. What remains is one
-thing that was never a coding task.
+**The app is finished; the release is not.** Everything a device can be asked
+without a signing key has now been asked — including the two surfaces that had
+never been opened on one, which cost four defects between them. See "The
+device pass". What is left is the path into the Play Store, and one step of it
+belongs to a person rather than to code.
 
-### The one thing left
+### The one thing that is not a coding task
 
 **Make the release keystore.** Five minutes and one `keytool` command, written
 out in `android/key.properties.example`. It is not one to delegate — the
 keystore is the app's identity and its password should never be typed into
-this repository. **It is the only thing between this app and a build somebody
-else can install**, and everything else on that path has been run: a
-throwaway-signed, R8-minified APK was installed on the emulator and driven
-through onboarding, the key store, the screen lock against a real PIN, a
-backup, and a restore carried to the end. The real keystore changes the
-signature on that APK and nothing else about it.
+this repository.
 
-**And it now buys one more thing: the only check of the internet permission
-that counts.** `src/main/AndroidManifest.xml` declared no permissions at all,
-so live pricing was off in the only configuration that ships and on in every
-one it was developed in — see "The permission a release build did not have".
-The fix is one line and it is in, and the merged RELEASE manifest has been
-made and read: it carries the permission. What that cannot show is the
-behaviour — a release APK on a device, Assets open, a crypto holding reading
-`Current` rather than `Cost`. That is what the keystore buys beyond a
-signature.
+Three things are waiting behind it, and they are waiting in this order:
 
-**That fix arrived by merge, which is why this section did not know about
-it.** It was written on a branch cut before the last eleven commits and sat
-unmerged while this file went on saying the engineering road was finished.
-The lesson is the one two sections below, in a new place: a branch nobody
-merged is indistinguishable from work nobody did.
+1. **`flutter build appbundle --release`, before anything else.** Play has
+   required an App Bundle for new apps since 2021, so the release APK this
+   project has been building all along is a file the store will not accept.
+   It has never been run here. If it is going to fail, it should fail now
+   rather than on listing day — and it also settles the 65MB question, since
+   Play serves per-device splits.
+2. **Install the signed bundle and open Assets.** A crypto holding must read
+   `Current` rather than `Cost`. The merged release manifest carries the
+   INTERNET permission — that half is proven, by running the manifest merger
+   on its own — and what is unproven is prices actually arriving in the build
+   that ships. See "The permission a release build did not have".
+3. **An hour with TalkBack on.** The accessibility pass covers labels, tap
+   targets and contrast; reading order and label quality need a person.
 
-### What was done, and where it is written up
+### What this session closed
 
 | | Item | Section |
 | --- | --- | --- |
-| 1 | Category settings, and the main/extra split | "Category settings, and the main/extra split" |
-| 2 | Search | "Search, and the Turkish letters that break it" |
-| 3 | The calendar | "The calendar" |
-| 4 | The four calculators | "The four calculators" |
-| 5 | The balance ring's change chip | "The change chip, and the balance at a past day" |
-| 6 | The verification round | "The verification round" |
+| 1 | The two surfaces no device had opened, and the four defects they cost | "The device pass" |
+| 2 | Unbuilt features are no longer drawn — a reversal, with reasons | "Not drawn rather than marked" |
+| 3 | A backup reminder, closing the app's largest structural gap | "The backup reminder" |
+| 4 | Apache-2.0 on both repositories, and a licence page in the app | "The licence, and the page that shows it" |
 
-None of 1-5 was a new feature. Every one was a PORT of a desktop service this
-file had not accounted for — the plan was written after discovering that "What
-is NOT coming from the desktop" was wrong about `services/` being fully
-triaged. Two of the six also found that the PLAN was wrong: item 2's scope
-came from a stale docstring, and item 5 named a dependency this file had
-already excluded.
+The repository is public now, and the README was rewritten for the audience
+that brings — it opens with the app's privacy claim and, under it, how to
+check the claim rather than believe it.
 
 ### What is deliberately NOT in 1.0
 
-So that the omissions are decisions rather than drift. Each keeps its
-`NOT YET` chip, which is the honest thing for it to say:
+So that the omissions are decisions rather than drift. **None of these is
+drawn in the app any more** — see "Not drawn rather than marked" — which is a
+change from how this list used to read.
 
-* **The Home forecast card** — needs `dashboard`, `insights`, `projection` and
-  `financial_metrics` together. A project, not a session, and the biggest
-  single thing left in the app.
+* **The Home forecast card and the health score** — need `dashboard`,
+  `insights`, `projection` and `financial_metrics` together. A project, not a
+  session, and the biggest single thing left in the app.
 * **The history "time machine"** — `history_service.py`'s `diff_between` and
   event attribution. One question out of that module IS ported; see "The
   change chip, and the balance at a past day".
-* **The What-If sandbox and Reset Data** — the last two dimmed cards in Tools,
-  seven of whose nine are now live.
-* **Tablet layouts** — never considered at all.
-* **The rest of accessibility.** A first pass is done — labels, tap targets
-  and contrast on every screen, against Flutter's own guidelines; see "The
-  accessibility pass". What it cannot see is reading order, label quality and
-  large font scales, and those need a person with TalkBack on rather than
-  another test.
-* **`--split-per-abi`** — the APK is 65MB because it carries three ABIs. A
-  shipping decision rather than a code one.
+* **The What-If sandbox and Reset Data** — the last two Tools cards without a
+  destination.
+* **Tablet layouts** — wide screens no longer stretch, but nothing uses the
+  space. A design decision for someone holding a tablet.
+* **The rest of accessibility** — see item 3 above.
 
 ### Two things worth checking the first time they can be
 
 * **A BIST key.** The share-price path is tested against canned responses and
   has never met the live API — see "Shares, on the user's own key" for what to
-  look at if the prices stay at cost.
+  look at if the prices stay at cost. The two KEYLESS providers have now met
+  theirs; see "The device pass".
 * **A phone rather than an emulator.** Everything above ran on
   `archlence_pixel`. The screen lock in particular now has a real credential
   behind it, but a fingerprint sensor is not a PIN.
@@ -413,6 +408,23 @@ Note also that `DESIGN.md`'s prose and its token block disagree — the prose
 names `#0A0A0A` / `#10B981` / `#F43F5E`, the tokens say `#131313` / `#4edea3` /
 `#ffb4ab`. **The token block is the source of truth**; the generated reference
 screens follow it. Reading a colour off the prose introduces a second green.
+
+### Apache-2.0, on both repositories
+
+Not MIT, which the desktop carried and this one had nothing at all. The two
+clauses that decided it are §3's explicit patent grant and §6's statement that
+the licence does not hand over the name; the cost is incompatibility with
+GPLv2-only projects. Reasoning in full under "The licence, and the page that
+shows it", including why the desktop moved with it rather than the two halves
+diverging.
+
+### A feature that does not exist is not drawn
+
+**This replaced the opposite decision**, which was that an unbuilt control
+should be marked rather than hidden. The chip's rule still holds for a control
+that EXISTS and is unavailable in some state; it never fitted a row for
+something never built. Reasoning under "Not drawn rather than marked", and the
+switch is one constant — `showUnbuiltFeatures` in `lib/widgets/not_yet.dart`.
 
 ## Done, and how it was proven
 
@@ -1175,7 +1187,13 @@ back under the 64K method limit that forces the second dex file.
 1.5% of the APK. The rest is three ABIs of `libflutter.so`, `libapp.so` and
 `libsqlite3.so`. R8 cannot touch any of it, and no keep rule will. The lever
 for APK size is `--split-per-abi` (or an App Bundle, which Play does per
-device anyway), not shrinking; that is a shipping decision, not a code one.
+device anyway), not shrinking.
+
+**"That is a shipping decision, not a code one" is what this paragraph used to
+end with, and it was wrong.** Play requires an App Bundle for new apps, so the
+bundle is not a lever anyone gets to choose — it is the only artefact the
+store accepts, and it happens to solve the size question on the way. See
+"Getting it into the Play Store".
 
 **What was actually missing was the run.** A minified build had never been
 installed and used — which is where R8 damage shows up, because it strips and
@@ -2186,6 +2204,150 @@ The correction is the same shape as R8's: the branch reasoned that because the
 END of the check needed a keystore, all of it did. A build pipeline is a
 series of tasks and most of them can be asked on their own.
 
+### The device pass, and the four things only a device could see
+
+Open work item 1 was "what a device has still not answered". It has been
+answered, and the answer cost four defects — none of which was visible in the
+source, which is now the fifth time this file has had to write that sentence.
+
+**Live pricing has a socket behind it at last.** Until
+`integration_test/live_price_device_test.dart` existed, NO HTTP REQUEST HAD
+EVER LEFT THIS APP. Every test drives the providers through the `HttpGet`
+seam, which is the right seam and was also the blind spot that hid the missing
+INTERNET permission for as long as it hid. Both providers answer, both parsers
+read what came back, and a holding on the emulator read `37.608,30 ₺` against
+a figure of `37.624` worked out by hand from the two rates. The Frankfurter
+test asserts the DIRECTION as well as the value: one dollar has to read as
+MORE than one lira, because "positive" passes just as happily on the
+un-inverted rate. Both halves proven by mutation.
+
+**The version string was hard-coded.** `pubspec.yaml` had been moved to
+`1.0.0` and Settings went on drawing `Archlence v0.1.0` from a literal in the
+widget — so the store listing and the app itself would have disagreed about
+what was installed. No test could have caught it: one written the obvious way
+asserts the same stale literal back. It reads `lib/app_version.dart` now, and
+`test/app_version_test.dart` reads `pubspec.yaml`.
+
+That test's second half was decoration on its first draft, and worth recording
+because the mistake is subtle. It scanned `lib/` for a hard-coded version with
+a pattern that put the quote immediately before the digits. The string it
+existed to catch is `'Archlence v1.0.0'`, where the quote is nowhere near
+them. It passed the exact mutation it was written for. The pattern is two now,
+and both were checked against `lib/` before being trusted.
+
+**No passphrase field was obscured.** All six on the backup screen typed in
+the clear. This project's own rule, written down for the shares API key, is
+that a displayed credential is one a shoulder can read — and `obscureText`
+appeared nowhere in the app. They are obscured now with a deliberate reveal,
+because a passphrase here CANNOT BE RECOVERED and a typo nobody can see is a
+package that never opens again. `autocorrect` and `enableSuggestions` go off
+with them, and not as tidiness: a keyboard dictionary LEARNS what is typed
+into it, which would put the passphrase somewhere this app neither controls
+nor can clear.
+
+**And a 176-pixel overflow on a 360dp phone, which this session revealed
+rather than caused.** The subscriptions heading on Home had never been wrapped
+and had been overflowing since it was written. `wide_layout_test` walks that
+screen at 360x800 and passed every time, because a `ListView` lays out only
+what is near the viewport and the two cards removed below (see the next
+section) had been pushing that row past the cache extent. Nothing had ever
+laid it out. Anyone who scrolled saw it.
+
+That is the same lesson as "a finder matching is not a user reaching", from
+the other side: there, a test tapped something that was in the tree and off
+screen. Here, a test walked a screen and never reached the defect on it. **A
+layout test only sees what gets laid out**, and what gets laid out depends on
+what is above it.
+
+### Not drawn rather than marked — `showUnbuiltFeatures`
+
+**This reverses a decision made deliberately, so the reasoning replaces it
+rather than sitting beside it.** Every unbuilt control used to be drawn with a
+`NOT YET` chip, on the argument that saying so is more honest than hiding it.
+
+Running the app on a device is what changed the argument. Settings showed FOUR
+of them in a single screenful, Home drew a forecast card whose entire content
+was a chip saying it did not exist — directly under the balance ring, the
+first thing a new user sees — and Tools dimmed two of its seven cards. Seven
+Settings rows in total, across three section headings that existed for nothing
+else.
+
+**The distinction the chip's rule actually rests on:** it is about a control
+that EXISTS and is inert in some state. A Pay Debt button on a card that owes
+nothing; an export that needs a passphrase first. Marking those is honest,
+because the user can reach them by changing something. A row for a feature
+that has never been built is not that. It is an advertisement for an absence,
+and "Change Password — NOT YET" tells a reader nothing they can act on.
+
+Two of them said something worse than nothing. **`Sign Out`, in an app whose
+whole premise is that there is no account**, and `Dark Mode`, in an app with
+no other theme to leave. Both were mockup carried forward.
+
+The code stays, behind one constant. Exactly one chip is left in Settings —
+Backup & Restore with no profile behind it — which is the case the rule was
+written for. Flip `showUnbuiltFeatures` to see the rest again; the screen
+tests are pinned to the constant rather than to the count, so they follow it.
+
+### The backup reminder — `lib/services/backup_reminder.dart`
+
+The largest structural gap in the app, and it was never a defect in anything:
+no account and no server means nobody else holds a copy, so a lost phone is a
+lost financial history. Onboarding says exactly that in its third card — at
+the one moment the user has nothing to lose yet — and nothing said it again.
+Every competitor's cloud sync is a safety net this app deliberately does not
+have, which makes "your data is yours" a principle only if the app helps
+someone act on it, and a trap otherwise.
+
+Settings now says how long ago; Home says something once there is something to
+lose AND a month has passed. Both conditions, because a reminder on an empty
+install is a nag about nothing and one that appears weekly is one a user
+learns not to read.
+
+Kept in the platform secure store beside the screen-lock and language
+preferences rather than in `finance.db`, for the reason `screen_lock.dart`
+gives at length — the schema is a contract shared with the desktop. It also
+means a RESTORED backup does not bring a stale timestamp with it, which is
+right: the reminder is about this phone.
+
+Eight tests, and the interesting ones are the wrong answers: a clock that
+moved backwards reads as today rather than as a negative age; a value that
+will not parse reads as never; a store that throws reads as never rather than
+taking a screen down; and a store that throws during `recordBackup` does not
+fail the backup that already succeeded.
+
+### The licence, and the page that shows it
+
+There was no `LICENSE` file at all, which means all rights reserved — nobody
+could legally use, fork or contribute, and the repository was about to be
+linked from a store listing.
+
+**Apache-2.0**, and the desktop app moved with it rather than the two halves
+carrying different licences. Both are permissive and OSI-approved, so this is
+not a change in how free the project is; Apache gives downstream MORE than MIT
+does. Two clauses are the reason: §3 grants a patent licence explicitly where
+MIT is silent, and §6 states that the licence does not hand over the name.
+Neither stops anyone forking this — both allow that deliberately, and the only
+lever against a store clone is trademark rather than a code licence.
+
+**The one real cost, named rather than glossed:** Apache-2.0 cannot be
+combined into a GPLv2-only project, where MIT can. It is compatible with
+GPLv3. For a Flutter Android app that set is empty in practice, but it is the
+honest answer to "does this narrow anything".
+
+Desktop releases up to v1.0.1 stay MIT. Relicensing is not retroactive and
+withdraws no right anyone already holds, which is recorded in `NOTICE` —
+because `NOTICE` is the file Apache requires downstream to carry, so it says
+it where it cannot be lost.
+
+**And it is visible in the app**, under Settings → About, through Flutter's
+own licence page. Written twice: the first version also registered this app's
+own licence by hand, on the assumption that the page only knows about
+packages. Opening it showed the app listed TWICE under two names — Flutter
+picks the root package's `LICENSE` up without being asked. The hand-written
+half is gone and the comment says why, so nobody adds it back. One more entry
+in the long list of things this file records because running it was the only
+way to find out.
+
 ### Paying card debt — `lib/screens/pay_debt_sheet.dart`
 
 The last write flow. Two things it gets right by refusing rather than
@@ -2678,77 +2840,55 @@ surfaced only that way:
 
 ## Open work
 
-### 1. What a device has still not answered
+### 1. Getting it into the Play Store
 
-This list arrived by merge and was written before the verification round,
-which has since opened a release build and driven onboarding, the key store,
-the screen lock against a real PIN, a backup and a restore carried to the end.
-What it did not reach is below. The gap is not academic: writing this list is
-what turned up the INTERNET permission above, and every screen defect recorded
-in this file was invisible in the source.
+**This list used to say "the keystore and a Play Store listing, which is not
+engineering". Two of the three items below are engineering, and one of them is
+a hard requirement nobody had checked.**
 
-- **The priced holding tiles** (`assets_screen.dart`). **No real HTTP call has
-  ever left this app** — every test drives the providers through the `HttpGet`
-  seam, which is the right seam and is also this blind spot. What only a run
-  can answer: that both providers return the shapes `price_providers.dart`
-  parses over a real connection; that the freshness label reads sensibly
-  against a real clock; and that pricing actually arrives in the build that
-  ships. The merged release manifest carries the permission now — see "The
-  permission a release build did not have" — and the step from there to
-  prices on a screen needs the keystore.
-- **The key recovery sections** (`backup_screen.dart`, pushed from Settings).
-  Fifteen service tests and parity in both directions, but the screen itself
-  has never run. The verification round exercised backup and RESTORE, which is
-  the neighbouring flow rather than this one, and the file picker and share
-  sheet both drive are platform surfaces a widget test replaces rather than
-  exercises.
-- **The suite has stood at 12 device tests since the i18n work.** Nothing in
-  it opens either surface above. Two more belong there once the run says what
-  they should assert.
+- **An App Bundle, not an APK.** Play has required `.aab` for new apps since
+  2021, so `flutter build apk --release` produces something that cannot be
+  uploaded at all. This file had `--split-per-abi` filed under "not urgent, a
+  shipping decision rather than a code one"; it is neither optional nor a
+  decision. `flutter build appbundle --release` is the command, it has NEVER
+  been run in this project, and it also answers the 65MB question on its own —
+  Play serves per-device splits, which is roughly a third of that.
 
-```bash
-flutter test integration_test/key_provider_device_test.dart -d <device>
-flutter test integration_test/app_device_test.dart -d <device>
-flutter run -d <device>       # then: Assets, and Settings > Backup & Restore
-```
+  It needs the keystore, so it is the first thing to run once that exists,
+  before anything else on this list. A build that cannot be uploaded is worth
+  discovering now rather than on listing day.
+- **The keystore itself.** Five minutes and one `keytool` command; see "Pick
+  up here". Not one to delegate.
+- **Then the release-only check that is still open:** install the signed
+  bundle, open Assets, and confirm a crypto holding reads `Current` rather
+  than `Cost`. The merged release manifest carries the INTERNET permission —
+  proven by running `:app:processReleaseMainManifest` and reading its output —
+  and what is unproven is the behaviour behind it. See "The permission a
+  release build did not have".
 
-### 2. Shipping
+Not engineering, and none of it started: a privacy policy URL and the Data
+Safety form, both of which Play requires. The app has an unusually strong
+story to tell there and no page telling it. Worth checking early: a new
+personal developer account may face a closed-testing period before production
+access, which moves a launch date by weeks rather than days.
 
-The icon, the launch screen and the signing configuration are done — see
-"The icon and the launch screen" and "Release signing". What is left is the
-keystore ("Pick up here", above) and a Play Store listing, which is not
-engineering.
-
-A release build has now been installed and driven end to end twice: once for
-R8, once for the verification round. Two things on that path are still untried:
-the signature itself, and — since the merge that brought the INTERNET
-permission in — whether live pricing arrives in a release build. Both need the
-keystore and nothing else.
-
-R8 was on this list and is now off it, because the entry was wrong: R8 has
-been enabled all along — Flutter's Gradle plugin turns it on and the template
-never mentions it. It has now been measured and the minified APK driven on the
-emulator. See "R8 — already on, measured, and run".
-
-What that leaves, for whoever wants a smaller download: the APK is 64.9MB
-because it carries three ABIs of native code, and `--split-per-abi` or an App
-Bundle is the only thing that changes that. Not urgent, and it is a shipping
-decision rather than a code one.
-
-### 3. Not yet considered at all
-
-What is left here is judgement rather than engineering, and one thing that is
-neither.
+### 2. Judgement rather than engineering
 
 * **Anything to do with more than one user or device.** Untouched, and the
   app's whole shape argues against it — "no account, no server".
 * **The rest of accessibility.** A first pass is done — see "The accessibility
   pass". What it cannot see is reading order, label quality and large font
   scales, and those need a person with TalkBack on rather than another test.
+  An hour before launch.
 * **A real tablet layout.** Wide screens no longer stretch — see "Wide
   screens" — but nothing uses the space: no second pane, no `NavigationRail`.
   That is a design decision, and it should be made by someone looking at a
   tablet rather than inferred from a breakpoint table.
+* **Crash visibility.** There is no telemetry, by decision, and that means no
+  way to learn about a data-corrupting bug except a one-star review. Play
+  Console's Android vitals reports crashes and ANRs with no SDK and no code —
+  the app never phones anywhere, the platform reports — so it costs nothing
+  against the "no server of ours" promise. Turn it on and read it.
 
 ### What is NOT coming from the desktop
 
@@ -2858,6 +2998,13 @@ Windows".
   them are `backup_service_test.dart` alone. Moving the checkout off OneDrive,
   or excluding it from sync, is the fix; it is a decision about this machine
   rather than about the code.
+- **Do not run the emulator and `flutter test` at the same time.** Not a
+  preference: with the emulator up, `backup_service_test.dart`'s slowest test
+  crosses its timeout and the whole file reports as "did not complete", which
+  reads exactly like a hang in the code. It cost a diagnosis before the cause
+  was found — the same suite passed on the same commit once the emulator was
+  killed. Anything that looks like a hang in that file, check what else is
+  running first.
 
 **An Android session does not end when the command does.** Two kinds of
 process outlive it, both by design and neither obvious from Task Manager,
@@ -2879,10 +3026,11 @@ knowing which is which before concluding the emulator is still up: the
 emulator had already exited in the session that wrote this, and what was
 still holding the memory was Gradle.
 
-Verified on this machine, in this order: `flutter analyze` clean, 892 unit
-tests pass, and both device test files pass on `emulator-5554` — four in
+Verified on this machine, in this order: `flutter analyze` clean, 903 unit
+tests pass, and all three device test files pass on `emulator-5554` — four in
 `key_provider_device_test.dart` against the real Keystore, eight in
-`app_device_test.dart` driving the real screens.
+`app_device_test.dart` driving the real screens, and two in
+`live_price_device_test.dart` against the real network.
 
 Regenerating parity vectors needs `pycryptodome` and `platformdirs`, neither
 installed system-wide. Python itself is not either — `python` on a fresh
