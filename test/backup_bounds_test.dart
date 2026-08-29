@@ -349,14 +349,29 @@ void main() {
       expect(() => requirePlainMemberName('/etc/passwd'), throwsBackupFormatError());
     });
 
-    test('a Windows traversal, on a platform with no backslash separator', () {
+    test('a Windows traversal, which the phone reads as a plain name', () {
       // `..\finance.db` is a plain file name to every POSIX path API, so a
       // check that asked the path library would take it for one and write a
       // file with a backslash in its name — which is a traversal on the phone
       // the package is later moved to.
-      expect(p.basename(r'..\finance.db'), r'..\finance.db');
+      //
+      // `p.posix` rather than the bare context, which follows whatever the
+      // DEVELOPER'S machine is: on Windows `p.basename` answers `finance.db`
+      // and the premise reads as false, when the premise was never about that
+      // machine. The app runs on Android. `requirePlainMemberName` itself
+      // asks no path library anything — it looks for both separators and the
+      // drive-letter form by hand — so only this line ever depended on the
+      // host, and it is the line stating what the check is defending against.
+      expect(p.posix.basename(r'..\finance.db'), r'..\finance.db');
       expect(() => requirePlainMemberName(r'..\finance.db'), throwsBackupFormatError());
       expect(() => requirePlainMemberName(r'C:\finance.db'), throwsBackupFormatError());
+      // The only one of these three that reaches the drive-letter rule.
+      // `C:\finance.db` never did: it carries a separator, so the separator
+      // check answers first and the rule underneath it could have been
+      // deleted without a test noticing — which is what a rule with no
+      // failing case is. `C:finance.db` is the drive-RELATIVE form, no
+      // separator anywhere in it, and still not a plain member name.
+      expect(() => requirePlainMemberName(r'C:finance.db'), throwsBackupFormatError());
     });
 
     test('the names a backup really has are accepted', () {

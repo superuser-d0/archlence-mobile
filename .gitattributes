@@ -1,0 +1,20 @@
+# Line endings are part of this repository's contents, not a local preference.
+#
+# Git for Windows installs with `core.autocrlf=true`, so a clone on Windows
+# rewrites every text file to CRLF on checkout. For source that is cosmetic.
+# For `test/` it is not: those fixtures are the DESKTOP app's own output —
+# a schema dump, parity vectors, a key recovery package — and the tests
+# compare against them as bytes. A checkout that rewrites them is no longer
+# testing the port, which is the one thing those files exist to do.
+#
+# It had already broken one: `desktop_schema.sql` arrived with `;\r\n` line
+# endings, `schema_parity_test.dart` splits the dump on `;\n`, and the split
+# stopped happening — the whole dump collapsed into a single statement and
+# the schema comparison with it. LF everywhere, on every platform.
+* text=auto eol=lf
+
+# Bytes are the content here; never normalise them.
+*.png binary
+*.ico binary
+*.ttf binary
+*.archlence-backup binary

@@ -104,6 +104,16 @@ The share provider is the one piece of the price layer whose live response
 has NOT been seen by this codebase — checking it needs a key that belongs to
 whoever signs up for it. See "Shares, on the user's own key".
 
+**And it is built on Windows now.** The development machine was formatted and
+came back as Windows 11; the whole toolchain was rebuilt and the "Environment"
+section rewritten around it. The app did not change. The repository did, twice,
+and both were things that had been leaning on the old operating system without
+saying so: every fixture in `test/` arrived rewritten to CRLF by Git for
+Windows' default, which broke the schema parity test outright and went
+unnoticed through all the others — and one test's premise asked
+`package:path` a question whose answer depends on the developer's machine. See
+"The move to Windows".
+
 892 unit tests and 12 device tests pass. `flutter analyze` is clean, no
 control in the app is inert, and it runs on the emulator.
 
@@ -2023,6 +2033,75 @@ A test that walks a list of screens is only ever as good as the list. That is
 the same failure shape as `dead_controls_test.dart`'s first draft, which
 looped over a finder that matched nothing.
 
+### The move to Windows — `.gitattributes`, and a premise about the machine
+
+The development machine was formatted mid-project and came back as Windows 11,
+so the toolchain was rebuilt from nothing: JDK 17, Flutter 3.47.2, the Android
+SDK, the `archlence_pixel` AVD. See "Environment", which this replaced rather
+than extended. **Nothing in the app changed.** Two things in the REPOSITORY
+did, and both were the same shape — something that had quietly depended on the
+operating system the developer happened to be using.
+
+**Git for Windows installs with `core.autocrlf=true`, so the clone rewrote
+every text file to CRLF.** For source that is cosmetic. For `test/` it is not:
+those fixtures are the desktop app's own output, and the tests compare against
+them rather than against a reading of them. `desktop_schema.sql` arrived with
+`;\r\n` line endings, `schema_parity_test.dart` splits the dump on `;\n`, and
+the split simply stopped happening — the whole schema collapsed into one
+statement, `desktopObjects()` came back holding a single entry called
+`accounts` with the entire dump inside it, and two of that file's six tests
+failed.
+
+**That it failed loudly was luck.** The same rewrite went straight through
+every other fixture without a word, because they are read with
+`readAsLinesSync` and Dart's `LineSplitter` accepts CRLF as happily as LF. A
+parity fixture that is quietly no longer the bytes the desktop wrote is worse
+than one that breaks the test reading it: the whole point of these files is
+that nothing about them was transcribed. The backup package escaped because
+git detected it as binary and left it alone — checked rather than assumed, by
+comparing its digest against the blob in `HEAD`.
+
+**So the line endings belong to the repository now, not to the platform.**
+`.gitattributes` sets `* text=auto eol=lf` and names the binary kinds
+explicitly, and the working tree was re-checked-out through it. Proven by
+putting the CRLF back by hand: the two schema tests fail, and with LF all six
+pass.
+
+**The second was a test premise about the developer's machine.**
+`backup_bounds_test.dart` asserted `p.basename(r'..\finance.db')` is
+`..\finance.db` — the line that says WHY the name check exists, because a name
+the path library takes for a plain file is a name that gets written. But
+`package:path`'s bare context follows the HOST, so on Windows `p.basename`
+answers `finance.db` and the premise reads as false. It is `p.posix.basename`
+now, which is what it always meant: the app runs on Android.
+`requirePlainMemberName` itself asks no path library anything — it looks for
+both separators and the drive-letter form by hand — so the production code was
+right on every host, and only the test moved.
+
+**Checking that test's teeth found a rule that had none.** Delete the
+drive-letter rule from `requirePlainMemberName` and every one of the file's 22
+tests still passes. The only `C:` input the test carried was `C:\finance.db`,
+which has a separator in it, so the check on the line above answers first and
+the rule underneath is never reached. The case it was written for is the
+drive-RELATIVE form — `C:finance.db`, no separator anywhere in it — and that
+is in the test now.
+
+Four mutations, run one at a time against the file:
+
+| Mutation | Result |
+| --- | --- |
+| Drop `name.contains('\')` from the separator check | fails, as it should |
+| Delete the drive-letter rule, with the new input | fails, as it should |
+| Delete the drive-letter rule, with the test as it was | **passes** — the rule had no teeth |
+| Put the premise back on the host's path context | fails, as it should |
+
+The third line is the finding. A rule whose only input is answered by the rule
+above it is a rule that could be deleted without a test noticing, which is the
+same thing this file has said twice already about absences: R8's missing
+`isMinifyEnabled` line, and the six desktop services that were never mentioned.
+Here the absence was a test case, and the rule looked covered because an input
+with the right shape was in the list.
+
 ### Paying card debt — `lib/screens/pay_debt_sheet.dart`
 
 The last write flow. Two things it gets right by refusing rather than
@@ -2603,33 +2682,83 @@ What has not been ported is not forgotten:
 
 ## Environment
 
-Set up on this machine and verified working:
+Set up on this machine and verified working. **The machine was formatted
+mid-project and came back as Windows 11**, so this replaces the Arch Linux
+setup this section used to describe rather than sitting beside it. Nothing in
+the app depends on either; what the move cost is written up in "The move to
+Windows".
 
-- JDK 17 (`jdk17-openjdk`). **Not** a newer JDK: Gradle/AGP support for the
-  latest releases lags, and 17 is what Flutter's Android build is most widely
-  tested against.
-- Flutter 3.47.1 stable, Android SDK at `~/Android/Sdk` (platform 35 and 36,
-  build-tools, NDK), `ANDROID_HOME` exported from `~/.config/fish/config.fish`.
-- Emulator AVD `archlence_pixel` (Pixel 7, Android 15).
+- JDK 17 — Microsoft Build of OpenJDK, `winget install Microsoft.OpenJDK.17`.
+  **Not** a newer JDK: Gradle/AGP support for the latest releases lags, and 17
+  is what Flutter's Android build is most widely tested against.
+- Flutter 3.47.2 stable at `C:\dev\flutter`, unpacked from the official zip
+  with its SHA-256 checked against the release index. It is **not** in
+  `winget` — the only `Flutter` there is an unrelated Git GUI.
+- Android SDK at `C:\dev\android-sdk`, installed with `cmdline-tools`' own
+  `sdkmanager`: platforms 35 and 36, build-tools 36, platform-tools, emulator,
+  and `system-images;android-35;google_apis;x86_64`. Licences are accepted
+  with `sdkmanager --licenses`, which needs its `y`s on stdin — a PowerShell
+  pipeline of them is not enough, `yes |` from a POSIX shell is.
+- **The NDK is not in that list on purpose.** Nothing installed it; the first
+  Android build downloaded `android-ndk-r28c` itself, which is a slow few
+  minutes exactly once and then never again.
+- `JAVA_HOME`, `ANDROID_HOME`, `ANDROID_SDK_ROOT` and four `PATH` entries are
+  set at USER scope. A shell started AFTER that has the toolchain and one
+  started before does not — which is worth knowing before concluding a tool
+  failed to install.
+- Emulator AVD `archlence_pixel` (Pixel 7, Android 15, `google_apis/x86_64`).
   Start:
-  `$ANDROID_HOME/emulator/emulator -avd archlence_pixel -no-snapshot -gpu swiftshader_indirect`
 
-  The full path is not decoration: `config.fish` adds `cmdline-tools`,
-  `platform-tools` and `build-tools` to the PATH but NOT `emulator`, so the
-  bare command fails with "no such file". Either use the path above or add
-  `fish_add_path $ANDROID_HOME/emulator` to the config.
-- `flutter doctor` reports an Android licence warning. It is **cosmetic**: the
-  AUR `android` CLI does not emit the output format `flutter doctor` parses.
-  The licences are accepted and builds work — the real check is that
-  `flutter build apk` succeeds.
+  ```
+  C:\dev\android-sdk\emulator\emulator.exe -avd archlence_pixel -no-snapshot -no-boot-anim
+  ```
+
+  No `-gpu` override: `emulator -accel-check` reports WHPX installed and
+  usable, so the `swiftshader_indirect` the Linux setup carried was working
+  around that machine's driver rather than around the emulator.
+- `flutter doctor` reports Chrome and Visual Studio missing. Both are
+  **irrelevant** — they are the web and Windows-desktop toolchains and this is
+  an Android client. The Android toolchain and its licences come back clean,
+  which the Linux setup never managed.
+- **`flutter pub get` warns that building with plugins needs symlink support
+  and asks for Developer Mode. It is not a blocker here** — checked rather
+  than assumed: `AllowDevelopmentWithoutDevLicense` is absent from the
+  registry, so Developer Mode is OFF, and `assembleDebug` still built and
+  installed a debug APK for both device test runs.
+- **The suite is much slower here, and it is the checkout's location rather
+  than the machine.** The repository sits under `OneDrive\Documents`, so every
+  temporary database the backup tests write goes through file sync and the
+  virus scanner. `flutter test` takes about ten minutes, and roughly eight of
+  them are `backup_service_test.dart` alone. Moving the checkout off OneDrive,
+  or excluding it from sync, is the fix; it is a decision about this machine
+  rather than about the code.
+
+Verified on this machine, in this order: `flutter analyze` clean, 892 unit
+tests pass, and both device test files pass on `emulator-5554` — four in
+`key_provider_device_test.dart` against the real Keystore, eight in
+`app_device_test.dart` driving the real screens.
 
 Regenerating parity vectors needs `pycryptodome` and `platformdirs`, neither
-installed system-wide. A venv in the DESKTOP checkout is used:
+installed system-wide. Python itself is not either — `python` on a fresh
+Windows is the Microsoft Store stub, which is not one. So:
+`winget install Python.Python.3.12`, then a venv in the DESKTOP checkout,
+which is at `OneDrive\Documents\archlence\archlence`:
 
-```bash
-python3 -m venv aeadvenv
-./aeadvenv/bin/pip install pycryptodome platformdirs
 ```
+python -m venv aeadvenv
+aeadvenv\Scripts\pip install pycryptodome platformdirs
+```
+
+`Scripts\` rather than `bin/`, which is the only thing about the generators
+that changed with the platform. **One thing about their OUTPUT did:** Python
+opens files in text mode, so a generator run on Windows writes CRLF where the
+same script on Linux wrote LF. It does not reach the repository —
+`.gitattributes` normalises it back on the way in — but the regenerated file
+will look modified in the working tree when its content is identical.
+Checked, not reasoned about: `emit_summary_vectors.py` run here through the
+desktop's own `financial_summary_service.py` reproduces
+`test/summary_vectors.txt` digest for digest once those CR bytes are removed,
+and `git diff` on the CRLF copy is empty.
 
 The generators live in `tool/` and are run from the desktop checkout, because
 each reads that project's own modules:
@@ -2649,13 +2778,16 @@ each reads that project's own modules:
 The last two run the other way — this app writes, the desktop reads — and are
 run by hand, because the assertion lives in the desktop checkout. Each file's
 doc comment carries the exact command and the fixed key to check the answer
-against. `emit_mobile_backup.dart` goes through `flutter test`, which is the
-only runner that has this package's Flutter dependencies.
+against — written as `./aeadvenv/bin/python`, which is the interpreter's path
+on Linux and `aeadvenv\Scripts\python` here. Everything after it is the same.
+`emit_mobile_backup.dart` goes through `flutter test`, which is the only
+runner that has this package's Flutter dependencies.
 
 `keyring` is deliberately absent from `aeadvenv`: without it the desktop's
 `create_platform_key_provider` falls back to its file provider, so the key a
-generator writes is the key its encryption uses. With a Secret Service
-available it would pick up whatever the developer's session keyring holds.
+generator writes is the key its encryption uses. With a real credential store
+reachable — a Secret Service on Linux, Credential Manager here — it would
+instead pick up whatever that store happens to hold for the developer.
 
 Nothing that claims parity is transcribed by hand. A generator kept outside
 the repository is a generator that does not exist the next time it is needed.
