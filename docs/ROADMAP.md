@@ -144,8 +144,8 @@ app, found three more: every sweep renders a screen in the state it OPENS in,
 the per-screen tests drive real states on an 800dp surface, and nothing
 covered a real state at a real width. Sixteen defects in all.
 
-1110 unit tests and 14 device tests pass, and `flutter analyze` is clean. No
-control in the app is inert. The count grew by 207 because what it did not
+1116 unit tests and 14 device tests pass, and `flutter analyze` is clean. No
+control in the app is inert. The count grew by 213 because what it did not
 cover is now covered rather than assumed.
 
 ## Pick up here
@@ -173,7 +173,7 @@ defects**, in states no sweep can reach because every sweep renders the state
 a screen OPENS in. Sixteen in all, all fixed.
 
 Three sweeps, two source rules and a driven-state file hold the line now, and
-the suite went from 903 tests to 1110. **No screen is left that nothing lays
+the suite went from 903 tests to 1116. **No screen is left that nothing lays
 out at a phone width, and no state that broke one is left unguarded.**
 
 **One of the fixes was worse than the defect**, which is the part worth
@@ -217,6 +217,7 @@ The last open release-only question is answered; see "The first App Bundle".
 | 9 | The third layer swept and clean, and what that comparison says | "The third layer, which was clean" |
 | 10 | Three more found by measuring the test surface instead of arguing about it | "What the 800dp surface was hiding" |
 | 11 | A privacy policy Play would accept, generated from one source in two languages | "The privacy policy, generated rather than written twice" |
+| 12 | The Data safety answers, decided by recording what the app actually sends | "The Data safety declaration, decided by listening to the wire" |
 
 The machine moved from Windows 11 to CachyOS and the whole toolchain was
 rebuilt under `~/dev` without root; nothing in the repository had to change
@@ -2233,10 +2234,10 @@ still takes four and a half minutes. So it was measured properly:
 
 | Run | Tests | Time |
 | --- | --- | --- |
-| `flutter test` | 1110 | 4m43s |
+| `flutter test` | 1116 | 4m40s |
 | `test/backup_service_test.dart` alone | 23 | 4m35s |
 | the same file, from a `/dev/shm` copy | 23 | 4m40s |
-| everything else | 1087 | ~25s |
+| everything else | 1093 | ~25s |
 
 **The tmpfs run is the one that settles it.** A `git archive` of `HEAD`
 unpacked into `/dev/shm` — RAM, no disk under it at all — runs the same file
@@ -2792,6 +2793,90 @@ it is the file that would notice a row appearing by accident.
 
 The new screen went into `route_sweep_test.dart` with the rest, and passes at
 320dp and 2.0x like everything else.
+
+### The Data safety declaration, decided by listening to the wire
+
+Play's Data safety form has to be re-confirmed at every release and a false
+answer is a policy violation rather than a correction, so it was worth getting
+right rather than getting done.
+
+**The first attempt at it was wrong, and the argument that corrected it came
+from the publisher.** Play defines collection as transmitting data off the
+device — explicitly *"irrespective of whether data is transmitted to you or a
+third-party server"* — so the price requests looked declarable, and the
+recommendation was to declare Financial info as collected and shared. The
+objection was that the app collects nothing: the user enters their own data,
+none of it is gathered for product development or marketing, and a symbol list
+is not what Play's "Other financial info" describes, which its own definition
+exemplifies as *"user salary or debts"* — amounts attached to a person.
+
+That objection is correct, and over-declaring would have put
+**"Financial info · shared"** on the store listing of an app whose entire
+argument is that it sends nothing about you. Misleading in the direction
+nobody checks.
+
+**So the question was settled by measurement rather than by reading.** A
+recording `HttpGet` behind the real screens, driven with real portfolios:
+
+| Profile | Requests |
+| --- | --- |
+| No holdings at all | **0** |
+| Crypto, gold and two currencies | 2 |
+| Two share holdings, no API key | **0** |
+| The same, with a key | 1 |
+
+```
+api.coingecko.com   ?ids=bitcoin,pax-gold&vs_currencies=usd   headers={}
+api.frankfurter.dev ?from=TRY&to=EUR,USD                      headers={}
+www.nosyapi.com     ?code=GARAN,THYAO                         headers={X-NSYP: the user's own key}
+```
+
+**The finding that decides it: two different profiles holding bitcoin send
+byte-identical requests.** Different account, different amounts, different
+name on the holding — the same bytes. The two keyless calls carry no headers
+at all. There is nothing in a request that could distinguish one person from
+another, which is Play's own description of data *fully de-associated from
+individual users*.
+
+Three structural facts came out of the same audit and are worth having
+written down: `price_providers.dart` is the only file in `lib/` that touches
+`HttpClient` and `assets_screen.dart:140` is its only caller; the app's
+manifest declares **zero** `service`, `receiver` and `provider` elements, so
+it cannot run when it is not open; and none of the 14 direct dependencies —
+nor anything in the resolved graph — is analytics, crash reporting or
+advertising.
+
+**The answer is "no data collected, no data shared".**
+
+**One near-miss, recorded because it is the kind that gets published.** The
+first audit run gave a gold holding the code `GC=F` and CoinGecko was asked
+only for `bitcoin` — which read as a defect in gold pricing. It was the test's
+fault: `GC=F` is a Yahoo ticker and the app's internal gold codes are `GRAM`,
+`ALTIN`, `XAU` and the four coin forms. With `GRAM` the request is
+`ids=bitcoin,pax-gold` as designed. A wrong fixture that produces a
+plausible-looking defect is worse than one that crashes.
+
+**What keeps the declaration true.** `test/wire_shape_test.dart` pins every
+string above, and fails if a header is added, a query parameter is added, a
+fourth host appears, a request fires with no holdings, or two profiles stop
+sending the same bytes. Checked by mutation:
+
+| Mutation | Result |
+| --- | --- |
+| Add a `User-Agent` to the keyless calls | fails, naming the host |
+| Add `client=archlence-9f2a` to the CoinGecko query | fails, printing both strings |
+
+It found one thing about itself on the way, which is why the file says so in
+place: pumping a second profile's screen after the first reused the element
+tree, `initState` did not run again, and the second profile made no request at
+all — a green comparison between one set of requests and nothing. The tree is
+torn down between them now.
+
+`docs/data-safety.md` holds the answers, the evidence and a three-step check
+to run at each release: run those two test files, and if they pass, re-confirm
+the form unchanged. The judgement in it belongs to whoever signs the
+declaration; what the tests guarantee is that the facts it was made from are
+still the facts.
 
 ### The permission a release build did not have
 
@@ -3526,10 +3611,12 @@ Not engineering. **The privacy policy is done**, in both languages, generated
 from the app's own copy of the text and reachable from inside the app as Play
 requires — see "The privacy policy, generated rather than written twice".
 
-**Play's Data Safety form is not started**, and it is the one thing left that
-needs a person's judgement rather than a person's time: the answers are all in
-the policy, but the declaration is binding and the wording on Play's own form
-moves.
+**Play's Data safety form is answered** — "no data collected, no data shared",
+decided by recording what the app actually puts on the wire rather than by
+reading the definitions. `docs/data-safety.md` holds the answers, the evidence
+and the check to run at each release; `test/wire_shape_test.dart` fails if any
+of the evidence stops being true. The judgement belongs to whoever signs it;
+see "The Data safety declaration, decided by listening to the wire".
 
 Worth doing first rather than last: open the developer account. A new personal
 account may face a closed-testing period before production access, which moves
@@ -3713,19 +3800,19 @@ move back to Linux". Here, on an NVMe disk with no sync and no scanner:
 
 | Run | Tests | Time |
 | --- | --- | --- |
-| `flutter test` | 1110 | 4m43s |
+| `flutter test` | 1116 | 4m40s |
 | `test/backup_service_test.dart` alone | 23 | 4m35s |
 | the same file from a `/dev/shm` copy | 23 | 4m40s |
-| everything else (`test/*.dart` + `test/screens/`) | 1087 | ~25s |
+| everything else (`test/*.dart` + `test/screens/`) | 1093 | ~25s |
 
-1087 of the 1110 tests finish in under half a minute. The remaining 23 make 182
+1093 of the 1116 tests finish in under half a minute. The remaining 23 make 182
 PBKDF2 derivations at 600 000 rounds each, one derivation costs 1.50s on this
 CPU, and 182 × 1.50s is 4m33s against a measured 4m35s. The suite is a key
 derivation benchmark with a test suite attached to it, and no disk anywhere
 can help.
 
-4m43s for everything against 4m35s for that one file: the other 1087 tests
-add eight seconds to the critical path, because `flutter test` runs files in
+4m40s for everything against 4m35s for that one file: the other 1093 tests
+add five seconds to the critical path, because `flutter test` runs files in
 parallel and they finish long before it does. **The suite's wall clock is one
 file's key derivation and almost nothing else.**
 
@@ -3770,7 +3857,7 @@ The downloads themselves are 1.57GB for Flutter, 192MB for the JDK and 158MB
 for the command-line tools.
 
 Verified on this machine, in this order: `flutter analyze` clean in under
-10s, 1099 unit tests pass in 4m43s, and all 14 device tests pass on
+10s, 1099 unit tests pass in 4m40s, and all 14 device tests pass on
 `emulator-5554` —
 four in `key_provider_device_test.dart` against the real Keystore, eight in
 `app_device_test.dart` driving the real screens, and two in

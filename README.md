@@ -78,9 +78,18 @@ renders it under Settings, [`docs/privacy.html`](docs/privacy.html) and
 fails if the published pages drift from the source or if the app ever gains a
 fourth host the policy does not name.
 
+Play's Data safety declaration is answered the same way — from what the app
+actually puts on the wire, recorded rather than reasoned about, and written
+up with its evidence in
+[`docs/data-safety.md`](docs/data-safety.md). The short version: a profile
+with no holdings makes **no request at all**, the two keyless price calls
+carry **no headers whatsoever**, and two different people holding bitcoin send
+**byte-identical requests**. `test/wire_shape_test.dart` fails if any of that
+stops being true.
+
 | | |
 | --- | --- |
-| Unit tests | 1110 |
+| Unit tests | 1116 |
 | Device tests | 14, on a real emulator or handset |
 | `flutter analyze` | clean |
 | Languages | Turkish and English, both complete |
