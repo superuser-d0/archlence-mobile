@@ -38,57 +38,70 @@ class BalanceRing extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    return SizedBox(
-      width: diameter,
-      height: diameter,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Positioned.fill(
-            child: CustomPaint(painter: _RingPainter(progress: progress)),
-          ),
-          Padding(
-            // Keep the label block clear of the stroke on both sides.
-            padding: EdgeInsets.symmetric(horizontal: diameter * 0.14),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  context.l10n.totalBalance,
-                  style: text.bodySmall?.copyWith(
-                    color: ObsidianPalette.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(amount, maxLines: 1, style: text.displayLarge),
-                ),
-                // An empty label means there is no change to report — the
-                // period figures come from services this port has not
-                // reached. The chip is dropped entirely rather than drawn
-                // empty: on the emulator a bare green pill with an upward
-                // arrow and no number reads as a gain, which is worse than
-                // saying nothing.
-                if (changeLabel.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  TrendChip(label: changeLabel, positive: changeIsPositive),
-                ],
-                const SizedBox(height: 6),
-                Text(
-                  periodLabel,
-                  style: text.labelMedium?.copyWith(
-                    fontSize: 10,
-                    letterSpacing: 0,
-                    color: ObsidianPalette.onSurfaceVariant.withValues(
-                      alpha: 0.7,
+    // One announcement, in an order that survives being read aloud.
+    //
+    // Left alone this came out as "Total Balance, 19.769,25 lira, Net Worth,
+    // Cash, 23.250,00 lira" — the caption for the big figure sits BELOW it on
+    // screen, so it landed after the number and immediately before an
+    // unrelated one, and a listener heard "Net Worth, Cash" as a pair. The
+    // layout is right; only the reading of it was wrong. Found with TalkBack
+    // running, which is the only thing that finds this class of defect.
+    return Semantics(
+      container: true,
+      label: context.l10n.a11yNetWorthIs(amount),
+      excludeSemantics: true,
+      child: SizedBox(
+        width: diameter,
+        height: diameter,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Positioned.fill(
+              child: CustomPaint(painter: _RingPainter(progress: progress)),
+            ),
+            Padding(
+              // Keep the label block clear of the stroke on both sides.
+              padding: EdgeInsets.symmetric(horizontal: diameter * 0.14),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    context.l10n.totalBalance,
+                    style: text.bodySmall?.copyWith(
+                      color: ObsidianPalette.onSurfaceVariant,
                     ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 4),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(amount, maxLines: 1, style: text.displayLarge),
+                  ),
+                  // An empty label means there is no change to report — the
+                  // period figures come from services this port has not
+                  // reached. The chip is dropped entirely rather than drawn
+                  // empty: on the emulator a bare green pill with an upward
+                  // arrow and no number reads as a gain, which is worse than
+                  // saying nothing.
+                  if (changeLabel.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    TrendChip(label: changeLabel, positive: changeIsPositive),
+                  ],
+                  const SizedBox(height: 6),
+                  Text(
+                    periodLabel,
+                    style: text.labelMedium?.copyWith(
+                      fontSize: 10,
+                      letterSpacing: 0,
+                      color: ObsidianPalette.onSurfaceVariant.withValues(
+                        alpha: 0.7,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

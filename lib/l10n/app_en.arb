@@ -767,7 +767,7 @@
   "assetsNoTrend": "No income or spending in the last year, so there is no trend to draw yet.",
   "assetsHoldingsAtCost": "Holdings at Cost",
   "assetsNothingBought": "Nothing bought yet",
-  "assetsHoldingCount": "{count} holdings",
+  "assetsHoldingCount": "{count, plural, =1{1 holding} other{{count} holdings}}",
   "@assetsHoldingCount": {
     "placeholders": {
       "count": {
@@ -904,5 +904,8 @@
   "sharesKeySaved": "Saved. Pull to refresh the Assets tab to price your shares.",
   "sharesKeyRemoved": "Removed. Shares go back to being shown at cost.",
   "settingsPrivacyPolicy": "Privacy policy",
-  "settingsPrivacyPolicySubtitle": "What leaves this phone, and what does not"
+  "settingsPrivacyPolicySubtitle": "What leaves this phone, and what does not",
+  "a11yCardEnding": "Card ending {digits}",
+  "@a11yCardEnding": {"placeholders": {"digits": {"type": "String"}}},
+  "a11yNetWorthIs": "Net worth {amount}"
 }

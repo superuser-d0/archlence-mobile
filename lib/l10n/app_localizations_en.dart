@@ -1465,7 +1465,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String assetsHoldingCount(int count) {
-    return '$count holdings';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count holdings',
+      one: '1 holding',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -1617,4 +1623,14 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get settingsPrivacyPolicySubtitle =>
       'What leaves this phone, and what does not';
+
+  @override
+  String a11yCardEnding(String digits) {
+    return 'Card ending $digits';
+  }
+
+  @override
+  String a11yNetWorthIs(Object amount) {
+    return 'Net worth $amount';
+  }
 }

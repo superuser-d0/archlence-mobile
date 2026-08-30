@@ -311,11 +311,17 @@ class _CardFace extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: Text(
-                  'Archlence',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: text.titleLarge,
+                // Decoration: the brand printed on the plastic. The header
+                // already says the app's name, and a screen reader hearing
+                // "Archlence" twice on one screen learns nothing the second
+                // time.
+                child: ExcludeSemantics(
+                  child: Text(
+                    'Archlence',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: text.titleLarge,
+                  ),
                 ),
               ),
               const Icon(Icons.contactless_outlined, size: 22),
@@ -330,6 +336,13 @@ class _CardFace extends StatelessWidget {
               // whose digits were never entered.
               card.maskedNumber.replaceAll('*', '•'),
               maxLines: 1,
+              // Read aloud, a row of bullets is either sixteen repetitions of
+              // the word or nothing at all. The last four digits are the part
+              // that identifies the card to its owner, so that is what is
+              // said.
+              semanticsLabel: context.l10n.a11yCardEnding(
+                card.maskedNumber.replaceAll(RegExp(r'[^0-9]'), ''),
+              ),
               style: text.bodyLarge?.copyWith(letterSpacing: 2),
             ),
           ),

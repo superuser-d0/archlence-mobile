@@ -33,18 +33,29 @@ class AppCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final borderRadius = BorderRadius.circular(radius);
-    return Material(
-      color: color ?? ObsidianPalette.surfaceContainer,
-      borderRadius: borderRadius,
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Ink(
-          decoration: BoxDecoration(
-            borderRadius: borderRadius,
-            border: Border.all(color: ObsidianPalette.cardStroke),
+    // `container: true` makes every card its own announcement.
+    //
+    // Without it a screen reader read whole TABS as a single utterance: the
+    // Assets screen came out as one ~60-word sentence carrying twelve figures
+    // and a three-sentence explainer, with no way to step inside it or hear
+    // one part again. A card is the unit a sighted reader takes in at a
+    // glance, so it is the right unit to say out loud. Found by running
+    // TalkBack; no guideline reads the shape of an announcement.
+    return Semantics(
+      container: true,
+      child: Material(
+        color: color ?? ObsidianPalette.surfaceContainer,
+        borderRadius: borderRadius,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Ink(
+            decoration: BoxDecoration(
+              borderRadius: borderRadius,
+              border: Border.all(color: ObsidianPalette.cardStroke),
+            ),
+            child: Padding(padding: padding, child: child),
           ),
-          child: Padding(padding: padding, child: child),
         ),
       ),
     );

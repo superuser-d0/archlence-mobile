@@ -284,9 +284,18 @@ class _AssetsBody extends StatelessWidget {
                   ),
                   const SizedBox(width: Spacing.stackSm),
                   Expanded(
-                    child: Text(
-                      context.l10n.assetsMyActiveAssets,
-                      style: text.titleLarge,
+                    // Its own announcement. Text loose in a scroll body —
+                    // outside any `AppCard` — merges upward into the body's
+                    // own semantics node, which then gets announced BEFORE
+                    // everything it contains. Making the heading a container
+                    // takes it out of that node; measured on a device, which
+                    // is where the residue showed after the cards were split.
+                    child: Semantics(
+                      container: true,
+                      child: Text(
+                        context.l10n.assetsMyActiveAssets,
+                        style: text.titleLarge,
+                      ),
                     ),
                   ),
                   // AssetPurchaseService.createPurchase is ready and has no
@@ -314,11 +323,19 @@ class _AssetsBody extends StatelessWidget {
               // which and why. Each TILE says whether it is live or at
               // cost, so this line only needs to set the expectation once
               // rather than repeat a state that can differ row to row.
-              Text(
-                context.l10n.assetsLivePricingNote,
-                style: text.labelMedium?.copyWith(
-                  letterSpacing: 0,
-                  color: ObsidianPalette.onSurfaceVariant,
+              // A container for the same reason as the heading above it: loose
+              // text in a scroll body merges into the body's own node, and
+              // that node is then announced first, before everything it
+              // contains. Three sentences of explanation arriving before the
+              // figures they explain is the worst possible order for it.
+              Semantics(
+                container: true,
+                child: Text(
+                  context.l10n.assetsLivePricingNote,
+                  style: text.labelMedium?.copyWith(
+                    letterSpacing: 0,
+                    color: ObsidianPalette.onSurfaceVariant,
+                  ),
                 ),
               ),
               const SizedBox(height: Spacing.stackMd),

@@ -2715,7 +2715,7 @@ abstract class AppLocalizations {
   /// No description provided for @assetsHoldingCount.
   ///
   /// In en, this message translates to:
-  /// **'{count} holdings'**
+  /// **'{count, plural, =1{1 holding} other{{count} holdings}}'**
   String assetsHoldingCount(int count);
 
   /// No description provided for @assetsNoGoals.
@@ -2957,6 +2957,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'What leaves this phone, and what does not'**
   String get settingsPrivacyPolicySubtitle;
+
+  /// No description provided for @a11yCardEnding.
+  ///
+  /// In en, this message translates to:
+  /// **'Card ending {digits}'**
+  String a11yCardEnding(String digits);
+
+  /// No description provided for @a11yNetWorthIs.
+  ///
+  /// In en, this message translates to:
+  /// **'Net worth {amount}'**
+  String a11yNetWorthIs(Object amount);
 }
 
 class _AppLocalizationsDelegate

@@ -491,5 +491,7 @@
   "sharesKeySaved": "Kaydedildi. Hisselerini fiyatlamak için Varlıklar sekmesini aşağı çekip yenile.",
   "sharesKeyRemoved": "Kaldırıldı. Hisseler yeniden maliyetiyle gösterilecek.",
   "settingsPrivacyPolicy": "Gizlilik politikası",
-  "settingsPrivacyPolicySubtitle": "Bu telefondan ne çıkıyor, ne çıkmıyor"
+  "settingsPrivacyPolicySubtitle": "Bu telefondan ne çıkıyor, ne çıkmıyor",
+  "a11yCardEnding": "{digits} ile biten kart",
+  "a11yNetWorthIs": "Net servet {amount}"
 }

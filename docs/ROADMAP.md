@@ -219,6 +219,7 @@ The last open release-only question is answered; see "The first App Bundle".
 | 11 | A privacy policy Play would accept, generated from one source in two languages | "The privacy policy, generated rather than written twice" |
 | 12 | The Data safety answers, decided by recording what the app actually sends | "The Data safety declaration, decided by listening to the wire" |
 | 13 | The TalkBack hour: two defects, two false alarms, and three instruments that disagreed | "The TalkBack hour, and what the tooling gets wrong" |
+| 14 | Label quality: a whole tab that was one sentence, and four smaller things | "Label quality, which is the half a guideline cannot reach" |
 
 The machine moved from Windows 11 to CachyOS and the whole toolchain was
 rebuilt under `~/dev` without root; nothing in the repository had to change
@@ -2970,6 +2971,73 @@ figure sitting between two others. Nothing here can tell you that; it needs
 ears, and a Turkish speaker's ears for the Turkish half. That part of the hour
 is still open and still belongs to a person.
 
+### Label quality, which is the half a guideline cannot reach
+
+The TalkBack entry above ended by saying what was still open: whether the
+labels are any GOOD to listen to. Every announcement in the app was dumped in
+order, in both languages, and read as speech rather than as text. Five things
+came out of it.
+
+**The biggest was not a label at all — it was the size of one.** The Assets
+tab was a SINGLE announcement: about sixty words carrying twelve figures and
+a three-sentence explainer, in one breath, with no way to step inside it or
+hear one part again. Cards was the same. A sighted reader takes a card in at
+a glance; a listener had to take the whole screen.
+
+`AppCard` is a `Semantics(container: true)` now — one change, because every
+card in the app is that widget. Assets went from one utterance to nine.
+
+**Then the residue, which only a device showed.** Splitting the cards left a
+node spanning the whole scroll body, labelled with the text that was NOT in
+any card — the section heading and the pricing explainer — and **announced
+before everything it contained**. Three sentences of explanation arriving
+ahead of the figures they explain is the worst order available. Loose text in
+a scroll body merges upward; making the heading and the explainer containers
+took them out of that node, and with no label left the node disappeared from
+the traversal entirely.
+
+Measured on the device, because a widget test cannot see it: `SemanticsNode.rect`
+is local, so every node reports `y=0` and the order cannot be checked against
+the screen. The device dump carries real coordinates, and after the fix the
+Assets tab reads in strictly increasing vertical order — 173, 325, 441, 630,
+861, 1212, 1449, 1685, 2073, then the action and the tabs.
+
+**The balance ring said its caption after its figure.** On screen "Net Worth"
+sits under the number, which is right; read aloud it landed after the amount
+and immediately before an unrelated one, so a listener heard "Net Worth, Cash"
+as a pair. It is one composed label now — `Net worth 19.769,25 ₺` — with the
+three separate texts inside excluded. Home reads as three clean sentences:
+the ring, then Cash, then Card Debt.
+
+**Three smaller ones.**
+
+| | Was | Is |
+| --- | --- | --- |
+| `assetsHoldingCount` | "1 holdings" | an ICU plural; Turkish was already right |
+| The masked card number | sixteen bullets, read as sixteen words or as nothing | `semanticsLabel`: "Card ending 0000" |
+| The card face's "Archlence" | the app's name announced twice on one screen | `ExcludeSemantics` — it is the brand printed on the plastic |
+
+**Two things were left alone, deliberately.**
+
+`%95,15` in the English build reads aloud as "percent ninety five comma
+fifteen". The decision that numbers do not move with the language is recorded
+above and its reasoning holds — switching separators with labels would make
+one balance read as two amounts — but it was made without the speech case in
+front of it. Recorded here so that if it is ever revisited, it is revisited
+knowingly.
+
+And `Tab 1 of 5` / `Sekme 1 / 5` is Flutter's own `MaterialLocalizations`,
+not this app's string. The Turkish slash may well read as "bölü". It is not
+ours to fix and it is worth knowing before someone goes looking for it in the
+ARB files.
+
+**What is still open, and now genuinely needs ears.** Everything above was
+found by reading announcements as text. Whether the Turkish ones are
+pronounced correctly — a lira sign, a date, a decimal comma, an all-caps
+heading — depends on the TTS engine on the phone, and no dump can answer it.
+That is the last piece of the accessibility work and it needs a person
+listening, in Turkish.
+
 ### The permission a release build did not have
 
 Found while checking this file's own claims, not by running anything — which
@@ -3701,6 +3769,13 @@ there is no code work standing between this app and a submission.
   that hour is label QUALITY — whether the announcements are good to listen
   to — which needs ears, and Turkish ears for the Turkish half. See "The
   TalkBack hour, and what the tooling gets wrong".
+- ~~**Label quality.**~~ Done too. The Assets tab was a single sixty-word
+  announcement; it is nine now, in visual order. The balance ring said its
+  caption after its figure. "1 holdings", a card number read as sixteen
+  bullets, and the app's name announced twice on one screen are all fixed.
+  See "Label quality, which is the half a guideline cannot reach". What is
+  left of it needs ears rather than eyes: whether the Turkish is PRONOUNCED
+  correctly by the phone's TTS, which no dump can answer.
 
 Not engineering. **The privacy policy is done**, in both languages, generated
 from the app's own copy of the text and reachable from inside the app as Play

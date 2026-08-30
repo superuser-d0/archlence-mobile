@@ -1610,4 +1610,14 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get settingsPrivacyPolicySubtitle =>
       'Bu telefondan ne çıkıyor, ne çıkmıyor';
+
+  @override
+  String a11yCardEnding(String digits) {
+    return '$digits ile biten kart';
+  }
+
+  @override
+  String a11yNetWorthIs(Object amount) {
+    return 'Net servet $amount';
+  }
 }
