@@ -128,16 +128,18 @@ to `flutter_secure_storage` 11 on the way, which cost two build failures and
 turned up a default that had flipped from reporting an error to erasing the
 data. See "The key store, moved to version 11" and "The first App Bundle".
 
-**And it is not ready to list.** A pre-release sweep opened the four tabs no
-test had ever built and found six defects, one of which overflows on an
-ordinary 360dp phone at the default font size. They are small, none is a
-regression, and every one of them survived 903 tests for the same reason: the
-suite only ever laid out the tab the app opens on. See "The pre-release
-sweep", and Open work item 2 for the order to fix them in.
+**And thirteen defects were found and fixed on the way to a listing.** Two
+sweeps did it, both asking the same question the suite had never been asked:
+lay out something other than the screen the app opens on. Six came off the
+four tabs no test had ever built; seven more came off the sheets, and those
+seven were a single missing line repeated across seven dropdowns — one of them
+152 pixels wrong at the default font scale, on a sheet with its own end-to-end
+test file. None was a regression. All are fixed. See "The six, fixed" and
+"The layer under the tabs".
 
-903 unit tests and 14 device tests pass, and `flutter analyze` is clean. No
-control in the app is inert. What that count does not cover is now written
-down rather than assumed.
+1025 unit tests and 14 device tests pass, and `flutter analyze` is clean. No
+control in the app is inert. The count grew by 122 because what it did not
+cover is now covered rather than assumed.
 
 ## Pick up here
 
@@ -147,16 +149,22 @@ has been run for the first time and succeeded, and the bundle is signed by the
 right key — see "The first App Bundle". What is left is one engineering check,
 one hour with a screen reader, and a store listing nobody has started.
 
-### Six defects, and the blind spot that hid them
+### Thirteen defects found and fixed, and what found them
 
-**Do not list this app until these are fixed.** A pre-release sweep asked the
-suite one question it had never been asked — open a tab other than the one
-`AppShell` starts on — and six defects fell out. One of them, the Tools grid,
-overflows **at the default font scale on a 360dp phone**. See "The pre-release
-sweep" for how they were found and Open work item 2 for the ordered list.
+A pre-release sweep asked the suite one question it had never been asked —
+lay out something other than the screen the app opens on — and it kept
+answering. Six defects on the four tabs no test had ever built, then seven
+more behind the sheets, and the second seven were one missing line repeated
+across seven dropdowns. **All thirteen are fixed**, each one proved by a named
+red case turning green. See "The six, fixed" and "The layer under the tabs".
 
-The first item on that list is not a defect. It is the sweep itself, made
-permanent, because nothing else in the backlog can be proved fixed without it.
+Two sweeps and three source rules hold the line now, and the suite went from
+903 tests to 1025.
+
+**One of the fixes was worse than the defect**, which is the part worth
+carrying forward: `IntrinsicHeight` removed the Tools overflow, turned every
+test green, and grew a 130dp gap the design never had. No test could have
+said so. It was found by installing the release build and looking at it.
 
 **The release path itself is clear.** The signed bundle builds, and the
 release APK was installed on a clean device and driven by hand: onboarding,
@@ -189,6 +197,8 @@ The last open release-only question is answered; see "The first App Bundle".
 | 4 | The first App Bundle, signed, measured, and 11MB on a real phone | "The first App Bundle" |
 | 5 | A release build installed and driven by hand to a live price | "The first App Bundle" |
 | 6 | Six defects on four tabs no test had ever opened | "The pre-release sweep" |
+| 7 | Those six fixed, and a fix that broke the screen its tests passed | "The six, fixed" |
+| 8 | Seven more behind the sheets, all one missing line | "The layer under the tabs" |
 
 The machine moved from Windows 11 to CachyOS and the whole toolchain was
 rebuilt under `~/dev` without root; nothing in the repository had to change
@@ -2205,10 +2215,10 @@ still takes four and a half minutes. So it was measured properly:
 
 | Run | Tests | Time |
 | --- | --- | --- |
-| `flutter test` | 903 | 4m44s |
+| `flutter test` | 1025 | 4m38s |
 | `test/backup_service_test.dart` alone | 23 | 4m35s |
 | the same file, from a `/dev/shm` copy | 23 | 4m40s |
-| everything else | 880 | 24.6s |
+| everything else | 1002 | ~25s |
 
 **The tmpfs run is the one that settles it.** A `git archive` of `HEAD`
 unpacked into `/dev/shm` — RAM, no disk under it at all — runs the same file
@@ -2330,7 +2340,8 @@ wrong on its own and one of them was not written here: a template default and
 an upstream fix can be individually correct and jointly fatal, and the error
 they produce names a missing class rather than a missing compiler.
 
-**Proof.** `flutter analyze` clean; 903 unit tests; all 14 device tests on a
+**Proof.** `flutter analyze` clean; the 903 unit tests there were at the time;
+all 14 device tests on a
 CLEAN INSTALL on `emulator-5554`, including the four that drive the real
 Android Keystore and the two that open a real socket; and a debug build that
 now prints **no warnings at all** — neither the KGP one this work set out to
@@ -2452,6 +2463,134 @@ what is laid out depends on what is above it in a scroll view.
 of a release build, and a hand-driven purchase flow all passed while six
 defects sat on four tabs. Not one of them is subtle in the code; every one of
 them is invisible to a test that never builds the screen.
+
+### The six, fixed — and one fix that passed its test and broke the screen
+
+All six defects from the sweep are closed, in the order the backlog set, and
+the order mattered: the instrument went in first so every fix below had a
+named red case to turn green rather than an argument to make.
+
+| | Fix | Sweep after |
+| --- | --- | --- |
+| P1 | `test/screens/tab_sweep_test.dart` — 40 cases, five tabs | **red: 26 pass, 14 fail** |
+| P2 | Tools' fixed `mainAxisExtent` replaced by `IntrinsicHeight` rows | 33 / 7 |
+| P3 | `MergeSemantics` on the Cards switch row; a `tooltip` on Assets' `+` | 34 / 6 |
+| P4-P6a | Month labels `Flexible`, chart legend `Wrap`, card title `maxLines: 1` | 38 / 2 |
+| P6b | The credit-card badge made `Flexible` | **40 / 40** |
+
+**The backlog predicted two things and both held.** Tools' contrast and
+tap-target failures were listed as "not separate defects — they are the
+overflow surfacing, and if they do not disappear with P2 they are real". They
+disappeared with P2: seven failures went at once. And `cards_screen.dart:445`
+was invisible until `310` was fixed — a 0.6-pixel overflow standing behind a
+30-pixel one. Both texts in that row can give ground now, and the name gives
+it first because it is the one with a flex factor.
+
+**Then the fix that was worse than the defect.**
+
+`IntrinsicHeight` around a row of two `_ToolCard`s removed the overflow and
+turned every test green. It also grew a gap the design never had: about 130dp
+of nothing between the subtitle and the first card. **Nothing in the suite
+could have said so**, because a gap is not an overflow and no test asserts
+what a screen looks like. It was found by installing the release build and
+looking at it.
+
+The cause is a trap worth writing down. `_ToolCard`'s `Column` used a
+`Spacer()` to push the label to the bottom, which is correct under a fixed
+height and wrong under `IntrinsicHeight`: the intrinsic-height pass scales the
+inflexible children by the largest flex fraction it finds, so a card whose
+content needs about 124dp reported about 215. The card was not too tall
+because of its contents — it was too tall because of how it asked to be
+measured.
+
+`mainAxisAlignment: MainAxisAlignment.spaceBetween` and a real `SizedBox` do
+the same job: the label still sits at the bottom when there is slack, and the
+intrinsic height is the content's. Verified on a device, at 411dp — the cards
+begin one gutter under the subtitle, and "Monthly Budget", "Interest Return"
+and "Compound Interest" all wrap to two lines inside their cards without
+clipping.
+
+**This is the working agreement's first line, aimed at a fix rather than at a
+feature.** Run it, don't just read it — including after the tests go green,
+because a green suite says the defect is gone and says nothing at all about
+what replaced it.
+
+**And one rule that reads the source, because the guideline could not.**
+`test/icon_button_tooltip_test.dart` requires every enabled `IconButton` in
+`lib/` to carry a tooltip. A tooltip IS the semantic label on an
+`IconButton`, and without one the control is absent from the semantics tree
+rather than merely unnamed — which is why `labeledTapTargetGuideline` did not
+catch Assets' `+` on any screen, on any tab: the guideline reads the tree, the
+tree holds what was laid out, and that button is below where either test lays
+the screen out. A rule that reads the source has no such blind spot. Disabled
+buttons are exempt, which is the framework's own exemption and covers
+`app_shell.dart`'s notifications bell.
+
+**Checked for teeth, three mutations, one at a time:**
+
+| Mutation | Result |
+| --- | --- |
+| Drop `MergeSemantics` from the Cards switch row | fails, as it should |
+| Put `mainAxisExtent: 168` back in the Tools grid | fails — 26 pixels, again |
+| Delete the `tooltip` from Assets' `+` | fails, naming `assets_screen.dart:294` |
+
+### The layer under the tabs, and one line missing from seven places
+
+The tab sweep's own entry ended by saying the sheets were still uncovered and
+that opening them through their `show...Sheet` functions was probably the
+right seam. Both turned out to be right, and the estimate that it would find
+things was low.
+
+`test/screens/sheet_sweep_test.dart`: nine ways into a form — add account, add
+transaction (twice, with and without a preselected account), buy, sell, budget
+line, pay debt, new goal, move money, subscription — against the same eight
+conditions every tab is held to. **80 cases. The first run passed 57.**
+
+**Every one of the 23 failures was the same missing line.**
+`DropdownButtonFormField` sizes its button to the selected item, so without
+`isExpanded: true` the row takes the item's intrinsic width and a label wider
+than the sheet OVERFLOWS rather than ellipsizing. The
+`overflow: TextOverflow.ellipsis` sitting on those items does nothing at all,
+because there is no width constraint for it to ellipsize against. And the
+labels are account rows — a name and a balance, in a sheet, on a phone.
+
+**Seven of the app's nine dropdowns were missing it. Two had it.** That is the
+part worth keeping: the fix was already in this codebase, applied twice where
+somebody had run into it, and never generalised. An answer that exists in two
+places and is needed in nine is not a solved problem, it is a solved instance.
+
+**The worst of them overflowed by 152 pixels at the DEFAULT font scale** — the
+pay-debt sheet, which has a widget test file of its own that walks it end to
+end, types into it, and asserts on both sides of the transfer.
+
+It walks past this because `pumpScreen` lays out on **800x2400 at a device
+pixel ratio of 1**. An 800dp-wide surface. No phone is 800dp. This file has
+said for a long time that the wide surface "proves NOTHING about
+reachability", and that was true and incomplete: it also means **no widget
+test had ever laid a sheet out at a width a phone has.** The sheet sweep uses
+360dp and 320dp, and that is the whole difference between a suite that walks
+the pay-debt sheet and one that sees it.
+
+Seven lines later the sweep is 80 for 80.
+
+**And a rule, because two of the seven were not failing.**
+`test/dropdown_expanded_test.dart` requires every `DropdownButtonFormField` in
+`lib/` to set `isExpanded`. Two of the seven do not overflow today, purely
+because their item labels are short — a category name, an asset type. They
+carry the same defect and no sweep would have found them, for the reason this
+file keeps rediscovering: a sweep sees what is laid out, and what is laid out
+depends on the data it happens to be given. A rule that reads the source does
+not depend on either.
+
+Checked for teeth, one at a time: delete a single `isExpanded` and the rule
+fails naming `pay_debt_sheet.dart:162`, and the sweep fails with it.
+
+**What the two sweeps still do not cover**, so it is a decision rather than an
+oversight: pushed routes that are not sheets — the four calculators, the
+calendar, category settings, backup — are each held to the guidelines by
+`accessibility_test.dart`, but on its own surface rather than at 320dp and not
+at any font scale. That is the next thinnest layer, and on this evidence it is
+worth walking too.
 
 ### The permission a release build did not have
 
@@ -3189,121 +3328,38 @@ account may face a closed-testing period before production access, which moves
 a launch date by weeks rather than days — so it is the item that sets the
 schedule, and it can run while everything else is finished.
 
-### 2. The pre-release defect backlog
+### 2. The last layer nothing walks at phone width
 
-Six defects, found by the sweep described under "The pre-release sweep". They
-are listed in the order they should be attacked, and the order is not by
-severity alone: the first item is what lets every other one be proved.
+Two sweeps now exist. `tab_sweep_test.dart` walks the five tabs;
+`sheet_sweep_test.dart` walks the nine sheets. Between them they found
+thirteen defects that 903 tests did not, and every one is fixed.
 
-**None of these is a regression.** Every one has been in the app since the
-screen was written; what changed is that something finally looked.
+**What is left is the pushed routes that are not sheets** — the four
+calculators, the calendar, category settings, Backup & Restore.
+`accessibility_test.dart` does hold each of them to the three guidelines,
+which is more than the tabs or the sheets had, so this is the thinnest of the
+three layers. What it does NOT do is lay them out at a large font scale or on
+a 320dp phone, and it runs them on `pumpScreen`'s 800dp surface.
 
-#### P1 — Make the tab sweep permanent, before fixing anything
+On the evidence of the two layers below it, that is worth an afternoon:
 
-The six below survived 903 tests because no test in this repository has ever
-selected a tab other than the one `AppShell` opens on. Fixing them without
-fixing that leaves the next six exactly as invisible.
+* the tab sweep found six, one of them wrong at the default font scale;
+* the sheet sweep found seven, one of them 152 pixels wrong at the default
+  font scale, on a screen with its own end-to-end test file.
 
-The sweep exists and works: five tabs x {three guidelines, 1.5x, 2.0x, 320dp,
-Turkish, Turkish at 2.0x}. It belongs beside `accessibility_test.dart` as a
-test that walks the shell rather than one that pumps it. Land it FIRST, with
-its failures visible, so each fix below has a red test to turn green — and so
-the fixes are proved rather than asserted.
-
-Two things to carry into it from the diagnostic version:
-
-* the font scale must go through `platformDispatcher.textScaleFactorTestValue`,
-  not a `MediaQuery` wrapper, which replaces the whole `MediaQueryData`;
-* the Turkish cases need the Turkish tab labels, which is a reminder that a
-  sweep driving the UI by visible text is language-dependent in a way the rest
-  of the suite is not.
-
-#### P2 — `tools_screen.dart:192`: the Tools grid overflows on an ordinary phone
-
-**The only one that is wrong at default settings**, and the reason it goes
-second rather than first is P1.
-
-`SliverGridDelegateWithFixedCrossAxisCount(mainAxisExtent: 168)` fixes each
-tool card at 168dp, under a comment reading "Tall enough for a two-line label
-without clipping." It is not: on a 360dp-wide phone at the default font the
-card's `Column` needs 194 and overflows by 26 pixels. A hard-coded extent
-also cannot respond to a font scale at all, which is where the rest of the
-numbers come from.
-
-| Condition | Overflow |
-| --- | --- |
-| 360dp, default scale | 26px |
-| 320dp, default scale | 26px |
-| Turkish, default scale | 26px |
-| 360dp at 1.5x | 124px |
-| 360dp at 2.0x | 306px |
-
-The emulator is a Pixel 7 at 411dp, which is why the device pass never saw it.
-A 360dp phone is not an edge case — it is most of the mid-range.
-
-The fix is to stop fixing the height: a delegate that measures, or a card that
-can grow, or an extent derived from the text scale. Whichever it is, the
-comment on the line has to stop making a claim nothing checked.
-
-#### P3 — Controls a screen reader cannot name
-
-Two findings, one fix each, and they go together because the TalkBack hour in
-item 3 below is wasted while known labels are missing.
-
-* **`cards_screen.dart:650`** — `Switch(value: value, onChanged: onChanged)`
-  in a row whose title sits in a sibling `Text`. The switch is its own
-  tappable node and carries no label, so a screen reader announces the title
-  and the switch separately, the second as nothing. Two of them fail the
-  guideline on the Cards tab.
-* **`assets_screen.dart:295`** — the `+` beside "My Active Assets", an
-  `IconButton` with no `tooltip`. Confirmed on a device: it is absent from the
-  semantics tree while every other control on the screen is in it. **The
-  sweep does not catch this one** — the Assets tab passes the label guideline
-  — so it needs its own test, and that test has to lay out the part of the
-  screen the button is on.
-
-#### P4 — `assets_screen.dart:976`: the month labels overflow at 320dp
-
-The `Row` of four month labels across the trend chart overflows by 2 pixels on
-a 320dp phone. Small, real, and the cheapest fix in the list.
-
-#### P5 — `assets_screen.dart:917`: the chart legend overflows at a large font
-
-The Income/Expense legend `Row` overflows to the right at 1.5x (12px) and 2.0x
-(90px), and a second `Row` on the same screen by 82px and 202px. A user who
-has turned the font up is not an edge case; Android's own display settings
-offer it three taps in.
-
-#### P6 — `cards_screen.dart:310`: the card face overflows at 2.0x
-
-The credit-card visual is a fixed-height `Column`; at 2.0x it overflows by
-30px, with a 0.6px right overflow beside it. Same shape as P2 — a fixed size
-holding text that scales.
-
-#### What is NOT in this list, and why
-
-* **Tools' contrast and tap-target failures.** Both reported, both are the P2
-  overflow surfacing again: the test aborts on the layout assertion before the
-  guideline runs. They will disappear with P2, and if they do not, they are
-  real and get their own entry.
-* **`InkWell` and `GestureDetector` without a label.** Eight of them across
-  `lib/`, and none is a defect: each wraps content that carries its own text,
-  which is what the guideline reads. Listed here so the grep result is not
-  rediscovered and mistaken for a finding.
-* **`app_shell.dart:214`.** An `IconButton` with no tooltip and
-  `onPressed: null` — the notifications bell, disabled because nothing raises
-  one yet. The guideline skips disabled controls, correctly.
-
-#### Then, and only then
-
-Sheets and pushed routes — the transaction form, the buy/sell sheets, the
-budget line, the savings sheets, pay-debt, subscriptions — are in no
-accessibility or layout sweep at all. They are reached by tapping, so the same
-blind spot covers them, and the sweep in P1 does not extend to them. That is
-the next layer down and it should be opened only once this one is closed,
-because it will find more.
+**And there is a wider question under all three**, which should be answered
+once rather than three times: `pumpScreen` lays out on 800x2400 at a device
+pixel ratio of 1. Every screen and sheet widget test in this repository uses
+it, and no phone is 800dp wide. It was chosen so that tests would not have to
+scroll — the roadmap says so, under "A finder matching is not a user reaching"
+— and that trade was made knowingly for reachability. What was not noticed is
+that it also removes width as a variable everywhere at once. Moving it to a
+phone width would be a large change with a lot of fallout; the sweeps are the
+cheap version of the same coverage and they are in. Worth deciding
+deliberately rather than leaving as an accident.
 
 ### 3. Judgement rather than engineering
+
 
 
 * **Anything to do with more than one user or device.** Untouched, and the
@@ -3479,19 +3535,19 @@ move back to Linux". Here, on an NVMe disk with no sync and no scanner:
 
 | Run | Tests | Time |
 | --- | --- | --- |
-| `flutter test` | 903 | 4m44s |
+| `flutter test` | 1025 | 4m38s |
 | `test/backup_service_test.dart` alone | 23 | 4m35s |
 | the same file from a `/dev/shm` copy | 23 | 4m40s |
-| everything else (`test/*.dart` + `test/screens/`) | 880 | 24.6s |
+| everything else (`test/*.dart` + `test/screens/`) | 1002 | ~25s |
 
-880 of the 903 tests finish in twenty-five seconds. The remaining 23 make 182
+1002 of the 1025 tests finish in under half a minute. The remaining 23 make 182
 PBKDF2 derivations at 600 000 rounds each, one derivation costs 1.50s on this
 CPU, and 182 × 1.50s is 4m33s against a measured 4m35s. The suite is a key
 derivation benchmark with a test suite attached to it, and no disk anywhere
 can help.
 
-4m44s for everything against 4m35s for that one file: the other 880 tests add
-nine seconds to the critical path, because `flutter test` runs files in
+4m38s for everything against 4m35s for that one file: the other 1002 tests
+add three seconds to the critical path, because `flutter test` runs files in
 parallel and they finish long before it does. **The suite's wall clock is one
 file's key derivation and almost nothing else.**
 
@@ -3536,7 +3592,7 @@ The downloads themselves are 1.57GB for Flutter, 192MB for the JDK and 158MB
 for the command-line tools.
 
 Verified on this machine, in this order: `flutter analyze` clean in under
-10s, 903 unit tests pass in 4m44s, and all 14 device tests pass on
+10s, 1025 unit tests pass in 4m38s, and all 14 device tests pass on
 `emulator-5554` —
 four in `key_provider_device_test.dart` against the real Keystore, eight in
 `app_device_test.dart` driving the real screens, and two in

@@ -241,6 +241,7 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
                   )
                 else
                   DropdownButtonFormField<int>(
+                    isExpanded: true,
                     // Keyed so a test can reach the field itself: tapping its
                     // label text hits the decoration, not the button.
                     key: const Key('field-account'),
@@ -304,6 +305,7 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
                 if (_isCard(accounts) && _type == 'expense') ...[
                   const SizedBox(height: Spacing.stackMd),
                   DropdownButtonFormField<int?>(
+                    isExpanded: true,
                     key: const Key('field-installments'),
                     initialValue: _installments,
                     decoration: _decoration(l10n.fieldInstallments),
@@ -400,9 +402,8 @@ class _AmountField extends StatelessWidget {
       inputFormatters: [
         FilteringTextInputFormatter.allow(RegExp(r'[0-9.,\s]')),
       ],
-      decoration: _decoration(
-        context.l10n.fieldAmount,
-      ).copyWith(hintText: '0,00'),
+      decoration: _decoration(context.l10n.fieldAmount)
+          .copyWith(hintText: '0,00'),
     );
   }
 }

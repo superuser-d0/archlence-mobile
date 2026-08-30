@@ -160,6 +160,7 @@ class _PayDebtSheetState extends State<_PayDebtSheet> {
             }
             _sourceId ??= sources.first.id;
             return DropdownButtonFormField<int>(
+              isExpanded: true,
               key: const Key('field-source'),
               initialValue: _sourceId,
               decoration: sheetDecoration(l10n.payDebtFrom),

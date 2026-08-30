@@ -151,9 +151,7 @@ class _AssetsScreenState extends State<AssetsScreen> {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final inset = MediaQuery.paddingOf(context);
-    final horizontal = EdgeInsets.symmetric(
-      horizontal: contentInset(context),
-    );
+    final horizontal = EdgeInsets.symmetric(horizontal: contentInset(context));
 
     return RefreshIndicator(
       onRefresh: () async => _reload(),
@@ -217,9 +215,7 @@ class _AssetsBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    final horizontal = EdgeInsets.symmetric(
-      horizontal: contentInset(context),
-    );
+    final horizontal = EdgeInsets.symmetric(horizontal: contentInset(context));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -247,7 +243,10 @@ class _AssetsBody extends StatelessWidget {
         ),
         const SizedBox(height: Spacing.stackMd),
 
-        Padding(padding: horizontal, child: _SplitCard(summary: data.summary)),
+        Padding(
+          padding: horizontal,
+          child: _SplitCard(summary: data.summary),
+        ),
         const SizedBox(height: Spacing.stackMd),
 
         Padding(
@@ -293,6 +292,14 @@ class _AssetsBody extends StatelessWidget {
                   // AssetPurchaseService.createPurchase is ready and has no
                   // form; a disabled button says so.
                   IconButton(
+                    // A tooltip IS the semantic label on an `IconButton`, and
+                    // without one this button was absent from the semantics
+                    // tree entirely — confirmed on a device, where every
+                    // other control on the screen was in it and this one was
+                    // not. `labeledTapTargetGuideline` does not catch it,
+                    // because it sits below where the guideline lays the
+                    // screen out.
+                    tooltip: context.l10n.buyAssetTitle,
                     onPressed: () async {
                       final bought = await showBuyAssetSheet(context);
                       if (bought != null) onChanged();
@@ -488,9 +495,7 @@ class _SplitBar extends StatelessWidget {
     // Guarded because a bar of nothing would divide by zero; the caller only
     // draws this when the total is positive, and this keeps that true here
     // rather than by remote agreement.
-    final firstShare = total > Decimal.zero
-        ? (first / total).toDouble()
-        : 0.0;
+    final firstShare = total > Decimal.zero ? (first / total).toDouble() : 0.0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -914,14 +919,20 @@ class _TrendChart extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
       child: Column(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
+          // A `Wrap`, not a `Row`: at a large font scale the two labels are
+          // wider than the card and a `Row` has nowhere to put the overflow —
+          // 12 pixels over at 1.5x, 90 at 2.0x. This drops the second entry
+          // onto its own line instead, which is what a legend is allowed to
+          // do and an overflow is not.
+          Wrap(
+            alignment: WrapAlignment.end,
+            spacing: Spacing.stackMd,
+            runSpacing: Spacing.stackSm,
             children: [
               _LegendDot(
                 color: ObsidianPalette.tertiary,
                 label: context.l10n.assetsIncome,
               ),
-              const SizedBox(width: Spacing.stackMd),
               _LegendDot(
                 color: ObsidianPalette.error,
                 label: context.l10n.assetsExpense,
@@ -977,13 +988,23 @@ class _TrendChart extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               // Four labels across twelve months: every month would not fit.
+              //
+              // `Flexible` because four of them do not fit either, on a 320dp
+              // phone — two pixels over, which is enough to paint the stripes
+              // and enough to fail a layout. A month label that has to give
+              // up a character is a better answer than a row that cannot be
+              // laid out at all.
               for (final index in [0, 4, 8, 11])
-                Text(
-                  series[index].label(context.l10n),
-                  style: text.labelMedium?.copyWith(
-                    fontSize: 10,
-                    letterSpacing: 0,
-                    color: ObsidianPalette.onSurfaceVariant,
+                Flexible(
+                  child: Text(
+                    series[index].label(context.l10n),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: text.labelMedium?.copyWith(
+                      fontSize: 10,
+                      letterSpacing: 0,
+                      color: ObsidianPalette.onSurfaceVariant,
+                    ),
                   ),
                 ),
             ],
@@ -1190,10 +1211,7 @@ class _HoldingTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  l10n.assetsHoldingName(
-                    holding.assetName,
-                    holding.assetCode,
-                  ),
+                  l10n.assetsHoldingName(holding.assetName, holding.assetCode),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w600),

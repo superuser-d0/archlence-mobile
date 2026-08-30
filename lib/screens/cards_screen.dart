@@ -155,9 +155,7 @@ class _CardsBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final l10n = context.l10n;
-    final horizontal = EdgeInsets.symmetric(
-      horizontal: contentInset(context),
-    );
+    final horizontal = EdgeInsets.symmetric(horizontal: contentInset(context));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -312,7 +310,14 @@ class _CardFace extends StatelessWidget {
         children: [
           Row(
             children: [
-              Expanded(child: Text('Archlence', style: text.titleLarge)),
+              Expanded(
+                child: Text(
+                  'Archlence',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: text.titleLarge,
+                ),
+              ),
               const Icon(Icons.contactless_outlined, size: 22),
             ],
           ),
@@ -452,20 +457,30 @@ class _CardDetailState extends State<_CardDetail> {
                 ),
               ),
               const SizedBox(width: Spacing.stackSm),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: ObsidianPalette.surfaceContainerHigh,
-                  borderRadius: BorderRadius.circular(Radii.full),
-                ),
-                child: Text(
-                  context.l10n.cardsCreditCardBadge,
-                  style: text.labelMedium?.copyWith(
-                    fontSize: 10,
-                    color: ObsidianPalette.onSurfaceVariant,
+              // The badge is flexible too, and it has to be. With only the
+              // name `Expanded`, a large font scale squeezes the name to
+              // nothing and the badge STILL overflows — by 0.6 pixels at
+              // 2.0x, which is as much a failed layout as 300 would be. Both
+              // texts can now give ground, and the name gives it first
+              // because it is the one with a flex factor.
+              Flexible(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: ObsidianPalette.surfaceContainerHigh,
+                    borderRadius: BorderRadius.circular(Radii.full),
+                  ),
+                  child: Text(
+                    context.l10n.cardsCreditCardBadge,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: text.labelMedium?.copyWith(
+                      fontSize: 10,
+                      color: ObsidianPalette.onSurfaceVariant,
+                    ),
                   ),
                 ),
               ),
@@ -625,30 +640,40 @@ class _ControlRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        children: [
-          Icon(icon, size: 18),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: text.bodySmall),
-                if (subtitle != null)
-                  Text(
-                    subtitle!,
-                    style: text.labelMedium?.copyWith(
-                      letterSpacing: 0,
-                      color: ObsidianPalette.onSurfaceVariant,
+    // One node, not three. The title lives in a sibling `Text`, so without
+    // this the switch is its own tappable node carrying NO label — a screen
+    // reader reads the title, then reaches a control it can only call
+    // "switch". `MergeSemantics` folds the row into a single toggleable node
+    // announced with its title, its subtitle and its state.
+    //
+    // Two of these failed `labeledTapTargetGuideline` on the Cards tab and
+    // nothing had ever run it there; see `test/screens/tab_sweep_test.dart`.
+    return MergeSemantics(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(
+          children: [
+            Icon(icon, size: 18),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: text.bodySmall),
+                  if (subtitle != null)
+                    Text(
+                      subtitle!,
+                      style: text.labelMedium?.copyWith(
+                        letterSpacing: 0,
+                        color: ObsidianPalette.onSurfaceVariant,
+                      ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
-          ),
-          Switch(value: value, onChanged: onChanged),
-        ],
+            Switch(value: value, onChanged: onChanged),
+          ],
+        ),
       ),
     );
   }

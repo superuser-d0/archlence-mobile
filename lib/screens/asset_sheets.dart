@@ -150,6 +150,7 @@ class _BuyAssetSheetState extends State<_BuyAssetSheet> {
         SheetField(controller: _code, label: l10n.assetCode, hint: 'GC=F'),
         const SizedBox(height: Spacing.stackMd),
         DropdownButtonFormField<String>(
+          isExpanded: true,
           key: const Key('field-type'),
           initialValue: _type,
           decoration: sheetDecoration(l10n.assetKind),
@@ -221,6 +222,7 @@ class _BuyAssetSheetState extends State<_BuyAssetSheet> {
                 );
               }
               return DropdownButtonFormField<int?>(
+                isExpanded: true,
                 key: const Key('field-account'),
                 initialValue: _accountId,
                 decoration: sheetDecoration(l10n.assetPayFrom),
@@ -396,6 +398,7 @@ class _SellAssetSheetState extends State<_SellAssetSheet> {
             }
             _accountId ??= accounts.first.id;
             return DropdownButtonFormField<int>(
+              isExpanded: true,
               key: const Key('field-account'),
               initialValue: _accountId,
               decoration: sheetDecoration(l10n.sellAssetPayInto),

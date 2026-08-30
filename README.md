@@ -58,16 +58,20 @@ holdings, plans a budget, opens and funds savings goals, pays down a card and
 manages subscriptions. No control in the app is inert.
 
 The release build exists: `flutter build appbundle --release` produces a
-signed App Bundle, which Play serves to a device as about 11MB. What is left
-is the store listing — a privacy policy page, the Data Safety form, and an
-hour with a screen reader. See [docs/ROADMAP.md](docs/ROADMAP.md).
+signed App Bundle, which Play serves to a device as about 11MB. Nothing that
+remains is a coding task: a developer account, a privacy policy at a public
+URL, Play's Data Safety form, and an hour with a screen reader. The account
+is the one that sets the date and the one to open first — a new personal
+account can face a closed-testing period before it may publish to production,
+which moves a launch by weeks rather than days. See
+[docs/ROADMAP.md](docs/ROADMAP.md).
 
 Building your own release needs your own signing keystore, which belongs to
 whoever publishes; it is not in this repository and cannot be.
 
 | | |
 | --- | --- |
-| Unit tests | 903 |
+| Unit tests | 1025 |
 | Device tests | 14, on a real emulator or handset |
 | `flutter analyze` | clean |
 | Languages | Turkish and English, both complete |
@@ -170,6 +174,26 @@ string it was written to catch.
 that had never worked on any build ever made, a release manifest with no
 internet permission, a heading that overflowed a small phone and was never laid
 out where a test could see it.
+
+**And a suite that only ever opens one screen is one screen's worth of proof.**
+Nine hundred tests passed for months without a single one of them selecting a
+tab other than the one the app starts on, so the other four had never been laid
+out anywhere a guideline could look at them. Opening all five — at 1.5x and
+2.0x font scale, on a 320dp phone, in Turkish — found six defects, one of them
+overflowing at the *default* font size on an ordinary 360dp phone. The test
+emulator is 411dp wide, which is why driving the app by hand had not caught
+that one either.
+
+The same question asked one level down — of the nine sheets, opened through
+the functions that open them rather than by tapping a path to each — found
+seven more, and all seven were one missing line: a `DropdownButtonFormField`
+sizes its button to the selected item, so without `isExpanded` an account
+label carrying a name *and* a balance overflows instead of ellipsizing. Two of
+the app's nine dropdowns already had it. The worst of the seven was 152 pixels
+over at the default font size, on a sheet with its own end-to-end test file —
+which walks it on an 800dp surface, a width no phone has. Both sweeps are in
+the suite now, alongside rules that read the source for the cases a sweep
+cannot lay out.
 
 ## Documentation
 

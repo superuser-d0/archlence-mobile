@@ -283,6 +283,7 @@ class _MoveMoneySheetState extends State<_MoveMoneySheet> {
             }
             _accountId ??= accounts.first.id;
             return DropdownButtonFormField<int>(
+              isExpanded: true,
               key: const Key('field-account'),
               initialValue: _accountId,
               decoration: sheetDecoration(

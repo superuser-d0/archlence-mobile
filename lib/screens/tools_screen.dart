@@ -81,9 +81,9 @@ class ToolsScreen extends StatelessWidget {
     // them keeps the grid honest about what the desktop's tool set IS, and
     // that argument holds for a developer reading the grid; it does not hold
     // for someone deciding in a shop whether the app is finished.
-    final tools = _tools(
-      context.l10n,
-    ).where((tool) => showUnbuiltFeatures || tool.isAvailable).toList();
+    final tools = _tools(context.l10n)
+        .where((tool) => showUnbuiltFeatures || tool.isAvailable)
+        .toList();
 
     return ListView(
       key: const PageStorageKey('tools'),
@@ -103,19 +103,43 @@ class ToolsScreen extends StatelessWidget {
           ),
         ),
         const SizedBox(height: Spacing.stackLg),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: tools.length,
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            mainAxisSpacing: Spacing.gutter,
-            crossAxisSpacing: Spacing.gutter,
-            // Tall enough for a two-line label without clipping.
-            mainAxisExtent: 168,
+        // Two columns of cards that are as tall as their CONTENTS, in pairs.
+        //
+        // This was a `GridView` with `mainAxisExtent: 168` and a comment
+        // saying that was "tall enough for a two-line label without
+        // clipping". It was not, and nothing had ever checked: on a 360dp
+        // phone at the DEFAULT font the card needs 194 and overflowed by 26
+        // pixels, and because the extent was a constant it could not respond
+        // to a font scale at all — 124 pixels over at 1.5x, 306 at 2.0x. It
+        // had been wrong since the screen was written and no test built this
+        // tab. See `test/screens/tab_sweep_test.dart`.
+        //
+        // `IntrinsicHeight` is what replaces the constant: each row is as
+        // tall as the taller of its two cards, both are stretched to it, and
+        // the `Spacer`s inside `_ToolCard` still have the bounded height they
+        // need. Nothing here is a number that can go stale.
+        for (var row = 0; row < tools.length; row += 2)
+          Padding(
+            padding: EdgeInsets.only(
+              bottom: row + 2 < tools.length ? Spacing.gutter : 0,
+            ),
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(child: _ToolCard(tool: tools[row])),
+                  const SizedBox(width: Spacing.gutter),
+                  // An odd tool count leaves the last cell empty rather than
+                  // letting the one card stretch across both columns.
+                  Expanded(
+                    child: row + 1 < tools.length
+                        ? _ToolCard(tool: tools[row + 1])
+                        : const SizedBox.shrink(),
+                  ),
+                ],
+              ),
+            ),
           ),
-          itemBuilder: (context, index) => _ToolCard(tool: tools[index]),
-        ),
       ],
     );
   }
@@ -191,6 +215,16 @@ class _ToolCard extends StatelessWidget {
       onTap: available ? () => _open(context) : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        // `spaceBetween` and a real gap, NOT a `Spacer`.
+        //
+        // A `Spacer` inside a Column under `IntrinsicHeight` is a trap: the
+        // intrinsic-height pass scales the inflexible children by the largest
+        // flex fraction, so a card that needs 124dp reports about 215 and the
+        // grid grows a gap the design never had. The first version of this
+        // fix passed every layout test and made the screen visibly worse,
+        // which no test was going to say. `spaceBetween` pins the label to
+        // the bottom the same way and leaves the intrinsic height honest.
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Row(
             children: [
@@ -207,7 +241,7 @@ class _ToolCard extends StatelessWidget {
               if (!available) const NotYetChip(),
             ],
           ),
-          const Spacer(),
+          const SizedBox(height: Spacing.stackMd),
           Text(
             tool.label,
             style: text.titleLarge?.copyWith(
