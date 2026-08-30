@@ -128,9 +128,16 @@ to `flutter_secure_storage` 11 on the way, which cost two build failures and
 turned up a default that had flipped from reporting an error to erasing the
 data. See "The key store, moved to version 11" and "The first App Bundle".
 
-903 unit tests and 14 device tests pass. `flutter analyze` is clean, no
-control in the app is inert, and every screen in it has now been opened on a
-device — which is where the last four defects came from.
+**And it is not ready to list.** A pre-release sweep opened the four tabs no
+test had ever built and found six defects, one of which overflows on an
+ordinary 360dp phone at the default font size. They are small, none is a
+regression, and every one of them survived 903 tests for the same reason: the
+suite only ever laid out the tab the app opens on. See "The pre-release
+sweep", and Open work item 2 for the order to fix them in.
+
+903 unit tests and 14 device tests pass, and `flutter analyze` is clean. No
+control in the app is inert. What that count does not cover is now written
+down rather than assumed.
 
 ## Pick up here
 
@@ -140,18 +147,22 @@ has been run for the first time and succeeded, and the bundle is signed by the
 right key — see "The first App Bundle". What is left is one engineering check,
 one hour with a screen reader, and a store listing nobody has started.
 
-### The one engineering item still open
+### Six defects, and the blind spot that hid them
 
-**Install the release build and watch a price arrive.** A crypto holding must
-read `Current` rather than `Cost`. The merged release manifest carries the
-INTERNET permission — proven — and the device tests prove the network path in
-debug. What nothing has seen is a price arriving with R8 on and the release
-manifest under it, which is the configuration that ships. See "The permission
-a release build did not have".
+**Do not list this app until these are fixed.** A pre-release sweep asked the
+suite one question it had never been asked — open a tab other than the one
+`AppShell` starts on — and six defects fell out. One of them, the Tools grid,
+overflows **at the default font scale on a 360dp phone**. See "The pre-release
+sweep" for how they were found and Open work item 2 for the ordered list.
 
-Everything else a device can be asked has been asked, in debug and on a clean
-install: 14 device tests, four of them against the real Android Keystore and
-two against the real network.
+The first item on that list is not a defect. It is the sweep itself, made
+permanent, because nothing else in the backlog can be proved fixed without it.
+
+**The release path itself is clear.** The signed bundle builds, and the
+release APK was installed on a clean device and driven by hand: onboarding,
+an account, an income, a Bitcoin purchase — and the holding read `Current`
+188.480,46 ₺ rather than `Cost`, with R8 on and the release manifest under it.
+The last open release-only question is answered; see "The first App Bundle".
 
 ### The things that are not coding tasks
 
@@ -176,6 +187,8 @@ two against the real network.
 | 2 | A wrong diagnosis of the suite's speed, measured and replaced | "The move back to Linux" |
 | 3 | The key store moved to version 11, and a default that would have erased it | "The key store, moved to version 11" |
 | 4 | The first App Bundle, signed, measured, and 11MB on a real phone | "The first App Bundle" |
+| 5 | A release build installed and driven by hand to a live price | "The first App Bundle" |
+| 6 | Six defects on four tabs no test had ever opened | "The pre-release sweep" |
 
 The machine moved from Windows 11 to CachyOS and the whole toolchain was
 rebuilt under `~/dev` without root; nothing in the repository had to change
@@ -2387,6 +2400,59 @@ INTERNET permission and the device tests prove the network path in debug; what
 no test has seen is prices arriving in a build with R8 on and the release
 manifest under it. See "The permission a release build did not have".
 
+### The pre-release sweep, and the four tabs no test had ever opened
+
+Before a listing, everything was run again and then some: `flutter analyze`,
+903 unit tests, 14 device tests, a signed App Bundle, a release APK installed
+on a clean device and driven by hand to a live price. All of that passed. Then
+the suite was asked a question it had never been asked, and **six defects fell
+out of one blind spot.**
+
+**The blind spot.** `accessibility_test.dart` applies Flutter's three
+guidelines to `AppShell`. `wide_layout_test.dart` lays `AppShell` out at
+360x800. Both are good tests and both see the same thing: **the Home tab.**
+`AppShell` opens on it, nothing in the file taps anything, and the other four
+tabs are never built. Checked rather than assumed — `grep` across `test/` finds
+no test anywhere that selects a tab other than the default.
+
+So a temporary sweep was written that opens each of the five tabs and then
+applies, to each: the three accessibility guidelines; a layout at 1.5x and
+2.0x font scale; a layout on a 320dp phone; and a layout in Turkish, at
+default and at 2.0x. 26 cases against the suite's usual 5.
+
+**Its first draft produced findings that were its own fault**, and that is
+worth recording because the mistake is easy and invisible. The font scale was
+applied by wrapping the app in `MediaQuery(data: MediaQueryData(textScaler:
+...))` — which does not override one field, it replaces the whole
+`MediaQueryData`. Size, padding and insets all went to defaults, so screens
+laid out against a zero-size window and overflowed for reasons that had
+nothing to do with fonts. The scale goes through
+`platformDispatcher.textScaleFactorTestValue` now, which is the seam that
+leaves the rest of the window alone. Every number below is from the corrected
+run.
+
+**What it found.** Six defects, at
+`tools_screen.dart:192`, `assets_screen.dart:917`, `assets_screen.dart:976`,
+`cards_screen.dart:310`, the Cards screen's switch row, and
+`assets_screen.dart:295` — listed with their reproductions and their order of
+attack under "Open work". One of them, the Tools grid, overflows **at the
+default font scale on a 360dp phone**, which is to say on an ordinary device
+in an ordinary configuration, and has done since the screen was written.
+
+**Two of the findings are not layout at all**, and one of those was found by
+hand rather than by the sweep. Driving the release build on the emulator with
+`uiautomator dump` reading Flutter's semantics tree, the `+` button beside
+"My Active Assets" is absent from the tree entirely while every other control
+is present. It is an `IconButton` with no `tooltip`. The sweep's own label
+guideline does NOT catch it — the Assets tab passes that check — which is a
+second layer of the same lesson: a guideline only sees what is laid out, and
+what is laid out depends on what is above it in a scroll view.
+
+**The count that matters.** 903 unit tests, 14 device tests, a full manual walk
+of a release build, and a hand-driven purchase flow all passed while six
+defects sat on four tabs. Not one of them is subtle in the code; every one of
+them is invisible to a test that never builds the screen.
+
 ### The permission a release build did not have
 
 Found while checking this file's own claims, not by running anything — which
@@ -3102,12 +3168,16 @@ left is the one no test can stand in for.**
   measurement: `bundletool get-size` puts what a device actually downloads at
   10.6–11.2MB depending on ABI. See "The first App Bundle".
 - ~~**The keystore itself.**~~ Done, by hand, outside the repository.
-- **Install that release build and confirm a price arrives.** Open Assets and
-  check a crypto holding reads `Current` rather than `Cost`. The merged
-  release manifest carries the INTERNET permission — proven by running
-  `:app:processReleaseMainManifest` and reading its output — and the device
-  tests prove the network path, but in debug. The build that ships has R8 on.
-  See "The permission a release build did not have".
+- ~~**Install that release build and confirm a price arrives.**~~ Done. The
+  release APK was installed on a clean emulator and driven by hand through
+  onboarding, an account, an income and a Bitcoin purchase; the holding read
+  `Current` 188.480,46 ₺ against a cost of 50.000,00 ₺, priced through
+  CoinGecko and Frankfurter with R8 on and the release manifest under it.
+  `dumpsys package` confirms the INSTALLED package carries
+  `android.permission.INTERNET`, which until now had only been read out of the
+  manifest merger. See "The first App Bundle".
+- **Nothing else here is blocked on engineering** — but see item 2, which is,
+  and which should be finished before a listing rather than after.
 
 Not engineering, and none of it started: a privacy policy URL and the Data
 Safety form, both of which Play requires. The app has an unusually strong
@@ -3119,7 +3189,121 @@ account may face a closed-testing period before production access, which moves
 a launch date by weeks rather than days — so it is the item that sets the
 schedule, and it can run while everything else is finished.
 
-### 2. Judgement rather than engineering
+### 2. The pre-release defect backlog
+
+Six defects, found by the sweep described under "The pre-release sweep". They
+are listed in the order they should be attacked, and the order is not by
+severity alone: the first item is what lets every other one be proved.
+
+**None of these is a regression.** Every one has been in the app since the
+screen was written; what changed is that something finally looked.
+
+#### P1 — Make the tab sweep permanent, before fixing anything
+
+The six below survived 903 tests because no test in this repository has ever
+selected a tab other than the one `AppShell` opens on. Fixing them without
+fixing that leaves the next six exactly as invisible.
+
+The sweep exists and works: five tabs x {three guidelines, 1.5x, 2.0x, 320dp,
+Turkish, Turkish at 2.0x}. It belongs beside `accessibility_test.dart` as a
+test that walks the shell rather than one that pumps it. Land it FIRST, with
+its failures visible, so each fix below has a red test to turn green — and so
+the fixes are proved rather than asserted.
+
+Two things to carry into it from the diagnostic version:
+
+* the font scale must go through `platformDispatcher.textScaleFactorTestValue`,
+  not a `MediaQuery` wrapper, which replaces the whole `MediaQueryData`;
+* the Turkish cases need the Turkish tab labels, which is a reminder that a
+  sweep driving the UI by visible text is language-dependent in a way the rest
+  of the suite is not.
+
+#### P2 — `tools_screen.dart:192`: the Tools grid overflows on an ordinary phone
+
+**The only one that is wrong at default settings**, and the reason it goes
+second rather than first is P1.
+
+`SliverGridDelegateWithFixedCrossAxisCount(mainAxisExtent: 168)` fixes each
+tool card at 168dp, under a comment reading "Tall enough for a two-line label
+without clipping." It is not: on a 360dp-wide phone at the default font the
+card's `Column` needs 194 and overflows by 26 pixels. A hard-coded extent
+also cannot respond to a font scale at all, which is where the rest of the
+numbers come from.
+
+| Condition | Overflow |
+| --- | --- |
+| 360dp, default scale | 26px |
+| 320dp, default scale | 26px |
+| Turkish, default scale | 26px |
+| 360dp at 1.5x | 124px |
+| 360dp at 2.0x | 306px |
+
+The emulator is a Pixel 7 at 411dp, which is why the device pass never saw it.
+A 360dp phone is not an edge case — it is most of the mid-range.
+
+The fix is to stop fixing the height: a delegate that measures, or a card that
+can grow, or an extent derived from the text scale. Whichever it is, the
+comment on the line has to stop making a claim nothing checked.
+
+#### P3 — Controls a screen reader cannot name
+
+Two findings, one fix each, and they go together because the TalkBack hour in
+item 3 below is wasted while known labels are missing.
+
+* **`cards_screen.dart:650`** — `Switch(value: value, onChanged: onChanged)`
+  in a row whose title sits in a sibling `Text`. The switch is its own
+  tappable node and carries no label, so a screen reader announces the title
+  and the switch separately, the second as nothing. Two of them fail the
+  guideline on the Cards tab.
+* **`assets_screen.dart:295`** — the `+` beside "My Active Assets", an
+  `IconButton` with no `tooltip`. Confirmed on a device: it is absent from the
+  semantics tree while every other control on the screen is in it. **The
+  sweep does not catch this one** — the Assets tab passes the label guideline
+  — so it needs its own test, and that test has to lay out the part of the
+  screen the button is on.
+
+#### P4 — `assets_screen.dart:976`: the month labels overflow at 320dp
+
+The `Row` of four month labels across the trend chart overflows by 2 pixels on
+a 320dp phone. Small, real, and the cheapest fix in the list.
+
+#### P5 — `assets_screen.dart:917`: the chart legend overflows at a large font
+
+The Income/Expense legend `Row` overflows to the right at 1.5x (12px) and 2.0x
+(90px), and a second `Row` on the same screen by 82px and 202px. A user who
+has turned the font up is not an edge case; Android's own display settings
+offer it three taps in.
+
+#### P6 — `cards_screen.dart:310`: the card face overflows at 2.0x
+
+The credit-card visual is a fixed-height `Column`; at 2.0x it overflows by
+30px, with a 0.6px right overflow beside it. Same shape as P2 — a fixed size
+holding text that scales.
+
+#### What is NOT in this list, and why
+
+* **Tools' contrast and tap-target failures.** Both reported, both are the P2
+  overflow surfacing again: the test aborts on the layout assertion before the
+  guideline runs. They will disappear with P2, and if they do not, they are
+  real and get their own entry.
+* **`InkWell` and `GestureDetector` without a label.** Eight of them across
+  `lib/`, and none is a defect: each wraps content that carries its own text,
+  which is what the guideline reads. Listed here so the grep result is not
+  rediscovered and mistaken for a finding.
+* **`app_shell.dart:214`.** An `IconButton` with no tooltip and
+  `onPressed: null` — the notifications bell, disabled because nothing raises
+  one yet. The guideline skips disabled controls, correctly.
+
+#### Then, and only then
+
+Sheets and pushed routes — the transaction form, the buy/sell sheets, the
+budget line, the savings sheets, pay-debt, subscriptions — are in no
+accessibility or layout sweep at all. They are reached by tapping, so the same
+blind spot covers them, and the sweep in P1 does not extend to them. That is
+the next layer down and it should be opened only once this one is closed,
+because it will find more.
+
+### 3. Judgement rather than engineering
 
 
 * **Anything to do with more than one user or device.** Untouched, and the
