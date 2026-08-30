@@ -216,10 +216,15 @@ void main() {
     // turn Dark Mode off and watch nothing happen.
     expect(find.byType(Switch), findsOneWidget);
     expect(find.text('Lock when I come back'), findsOneWidget);
-    // Four chevrons: Category Settings, Language, BIST share prices and Open
-    // source licences. A chevron promises a destination, and with no backup
-    // service behind it that row has none.
-    expect(find.byIcon(Icons.chevron_right), findsNWidgets(4));
+    // Five chevrons: Category Settings, Language, BIST share prices, the
+    // privacy policy and Open source licences. A chevron promises a
+    // destination, and with no backup service behind it that row has none.
+    //
+    // The privacy policy row is a destination inside the app rather than a
+    // link out to one — Play requires the policy to be reachable from the app
+    // and accepts the text, and rendering it keeps the README's "grep finds
+    // three hosts" claim true. See `lib/screens/privacy_screen.dart`.
+    expect(find.byIcon(Icons.chevron_right), findsNWidgets(5));
   });
 
   testWidgets('Backup & Restore opens when there is a profile behind it', (
@@ -234,9 +239,10 @@ void main() {
       const SettingsScreen(),
     );
 
-    // Five chevrons now: Category Settings, Language, BIST share prices, Open
-    // source licences, and Backup & Restore — the rows that go somewhere.
-    expect(find.byIcon(Icons.chevron_right), findsNWidgets(5));
+    // Six chevrons now: Category Settings, Language, BIST share prices, the
+    // privacy policy, Open source licences, and Backup & Restore — the rows
+    // that go somewhere.
+    expect(find.byIcon(Icons.chevron_right), findsNWidgets(6));
     // And no chip at all, for the same reason there is one more chevron:
     // Backup & Restore is the only row that could still carry one, and it
     // has a profile behind it here.

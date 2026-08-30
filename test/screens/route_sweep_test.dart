@@ -26,6 +26,7 @@ import 'package:archlence_mobile/screens/budget_screen.dart';
 import 'package:archlence_mobile/screens/calculator_screens.dart';
 import 'package:archlence_mobile/screens/calendar_screen.dart';
 import 'package:archlence_mobile/screens/category_settings_screen.dart';
+import 'package:archlence_mobile/screens/privacy_screen.dart';
 import 'package:archlence_mobile/screens/savings_screen.dart';
 import 'package:archlence_mobile/services/account_service.dart';
 import 'package:archlence_mobile/services/recurring_service.dart';
@@ -88,6 +89,7 @@ void main() {
     'calendar': () => const CalendarScreen(),
     'category settings': () => const CategorySettingsScreen(),
     'backup': () => const BackupScreen(),
+    'privacy policy': () => const PrivacyScreen(),
     'basic calculator': () => const BasicCalculatorScreen(),
     'interest calculator': () => const InterestCalculatorScreen(),
     'compound calculator': () => const CompoundCalculatorScreen(),

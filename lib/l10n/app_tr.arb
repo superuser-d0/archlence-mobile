@@ -489,5 +489,7 @@
   "sharesKeySave": "Anahtarı kaydet",
   "sharesKeyRemove": "Anahtarı kaldır",
   "sharesKeySaved": "Kaydedildi. Hisselerini fiyatlamak için Varlıklar sekmesini aşağı çekip yenile.",
-  "sharesKeyRemoved": "Kaldırıldı. Hisseler yeniden maliyetiyle gösterilecek."
+  "sharesKeyRemoved": "Kaldırıldı. Hisseler yeniden maliyetiyle gösterilecek.",
+  "settingsPrivacyPolicy": "Gizlilik politikası",
+  "settingsPrivacyPolicySubtitle": "Bu telefondan ne çıkıyor, ne çıkmıyor"
 }

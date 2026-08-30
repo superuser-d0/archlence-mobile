@@ -69,13 +69,18 @@ which moves a launch by weeks rather than days. See
 Building your own release needs your own signing keystore, which belongs to
 whoever publishes; it is not in this repository and cannot be.
 
-The privacy policy is [`docs/privacy.html`](docs/privacy.html), written from
-what the code does rather than from a template — it names the three hosts, what
-each request carries, and how to check both yourself.
+The privacy policy is written from what the code does rather than from a
+template — it names the three hosts, what each request carries, and how to
+check both yourself. It lives in one place,
+[`lib/legal/privacy_policy.dart`](lib/legal/privacy_policy.dart): the app
+renders it under Settings, [`docs/privacy.html`](docs/privacy.html) and
+[`docs/gizlilik.html`](docs/gizlilik.html) are generated from it, and a test
+fails if the published pages drift from the source or if the app ever gains a
+fourth host the policy does not name.
 
 | | |
 | --- | --- |
-| Unit tests | 1099 |
+| Unit tests | 1110 |
 | Device tests | 14, on a real emulator or handset |
 | `flutter analyze` | clean |
 | Languages | Turkish and English, both complete |

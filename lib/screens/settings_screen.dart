@@ -13,6 +13,7 @@ import '../widgets/sheet_frame.dart';
 import '../widgets/surfaces.dart';
 import 'backup_screen.dart';
 import 'category_settings_screen.dart';
+import 'privacy_screen.dart';
 
 /// Settings, grouped into sections rather than one flat list.
 ///
@@ -214,6 +215,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
         const SizedBox(height: Spacing.stackSm),
         _SettingsGroup(
           children: [
+            // Play requires the privacy policy to be reachable from the app
+            // itself, not only from the store listing, and it accepts the
+            // TEXT rather than a link. Text is what this opens: a link would
+            // mean `url_launcher` and a fourth URL in a codebase whose README
+            // invites the reader to grep for three.
+            _SettingsTile(
+              icon: Icons.privacy_tip_outlined,
+              title: l10n.settingsPrivacyPolicy,
+              subtitle: l10n.settingsPrivacyPolicySubtitle,
+              available: true,
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const PrivacyScreen()),
+              ),
+            ),
             _SettingsTile(
               icon: Icons.description_outlined,
               title: l10n.settingsOpenSourceLicenses,
@@ -429,7 +444,10 @@ class _SettingsTile extends StatelessWidget {
 /// inject a fixed key. It says so rather than assuming the best case: claiming
 /// Keystore protection that is not there is the one thing on this screen it
 /// would be worst to be wrong about.
-String _keyProtectionSummary(AppLocalizations l10n, KeyProtectionStatus? status) {
+String _keyProtectionSummary(
+  AppLocalizations l10n,
+  KeyProtectionStatus? status,
+) {
   if (status == null) {
     return l10n.keyProtectionUnknown;
   }

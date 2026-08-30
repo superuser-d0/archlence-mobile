@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Archlence — Gizlilik Politikası</title>
+<meta name="description" content="Archlence'ın hesabı, bize ait bir sunucusu ve analitiği yoktur.">
+<style>
+  :root {
+    --ground: #F3F3F8;
+    --raised: #FFFFFF;
+    --hairline: #DCDCE6;
+    --ink: #17171F;
+    --ink-muted: #55545F;
+    --ink-faint: #7C7B88;
+    --accent: #494BD6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground: #131313;
+      --raised: #1C1B1B;
+      --hairline: #2A2A2A;
+      --ink: #E5E2E1;
+      --ink-muted: #C7C4D7;
+      --ink-faint: #908FA0;
+      --accent: #C0C1FF;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font: 16px/1.65 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+  main { max-width: 44rem; margin: 0 auto; padding: 3rem 1.25rem 5rem; }
+  h1 { font-size: clamp(1.9rem, 5vw, 2.5rem); line-height: 1.15; margin: 0 0 .5rem; letter-spacing: -.02em; }
+  .subtitle { color: var(--ink-faint); font-size: .9rem; margin: 0 0 .4rem; }
+  .langs { font-size: .9rem; margin: 0 0 2rem; }
+  h2 { font-size: 1.25rem; margin: 2.6rem 0 .6rem; letter-spacing: -.01em; padding-top: 1.4rem; border-top: 1px solid var(--hairline); }
+  p, li { color: var(--ink-muted); }
+  strong { color: var(--ink); }
+  a { color: var(--accent); }
+  ul { padding-left: 1.2rem; }
+  li { margin: .4rem 0; }
+  .lede {
+    background: var(--raised);
+    border: 1px solid var(--hairline);
+    border-left: 4px solid var(--accent);
+    border-radius: 10px;
+    padding: 1.1rem 1.2rem;
+    margin: 0 0 1rem;
+  }
+  .lede p { margin: 0; }
+  .table-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; min-width: 30rem; font-size: .94rem; margin: 1rem 0; }
+  th, td { text-align: left; padding: .55rem .8rem .55rem 0; border-bottom: 1px solid var(--hairline); vertical-align: top; color: var(--ink-muted); }
+  th { color: var(--ink); font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; }
+  footer { margin-top: 3rem; padding-top: 1.2rem; border-top: 1px solid var(--hairline); color: var(--ink-faint); font-size: .88rem; }
+</style>
+</head>
+<body>
+<main>
+
+<h1>Archlence — Gizlilik Politikası</h1>
+<p class="subtitle">com.archlence.archlence_mobile Android uygulaması için. Son güncelleme 2026-08-30.</p>
+<p class="langs"><a href="privacy.html" hreflang="en">English</a></p>
+
+<div class="lede">
+  <p><strong>Archlence'ın hesabı, bize ait bir sunucusu ve analitiği yoktur.</strong> Kaydettiğiniz her şey telefonunuzda, şifreli bir dosyada kalır. Finansal verilerinizi almıyoruz ve alabileceğimiz bir yer de yok — uygulamanın arka ucu yok. Bu sayfa cihazdan neyin çıkıp neyin çıkmadığını tam olarak yazar; son bölüm de bunu bize inanmak yerine nasıl doğrulayacağınızı anlatır.</p>
+</div>
+
+<h2>Sorumlu kim</h2>
+<p>Archlence bir şirket tarafından değil, bireysel bir geliştirici tarafından geliştirilip yayınlanmaktadır. GDPR ve KVKK anlamında bu politikanın kapsadığı her şeyin veri sorumlusu o geliştiricidir — ki bir sonraki bölümün açıkladığı gibi, o kapsam boştur.</p>
+<p>Geliştiriciye uygulamanın herkese açık deposundaki issue sayfasından ya da Google Play sayfasında gösterilen iletişim adresinden ulaşabilirsiniz.</p>
+<h2>Ne topluyoruz</h2>
+<p><strong>Hiçbir şey.</strong> Geliştiricinin sunucusu, hesap sistemi, analitiği, çökme raporlaması, reklamı ve herhangi bir izleme mekanizması yoktur. Sizinle ya da uygulamayı kullanımınızla ilgili hiçbir veri bize iletilmez; çünkü iletilebileceği, bize ait bir uç nokta yok.</p>
+<p>Uygulamada reklam SDK'sı, analitik SDK'sı ve çerez bulunmamaktadır. Profilinizi çıkarmaz, verilerinizi reklam için kullanmaz, ve kimseye satacak bir şeyi de yoktur — çünkü elinde hiçbir şey tutmuyor.</p>
+<h2>Uygulama neyi, nerede saklıyor</h2>
+<ul>
+  <li>Hesaplar, kartlar, işlemler, varlıklar, bütçeler ve birikim hedefleri cihazınızdaki uygulamaya özel depolama alanında bir veritabanı dosyasında tutulur.</li>
+  <li>Tutarlar ve açıklamalar <strong>AES-256-GCM ile şifrelenir</strong>. Şifreleme anahtarı, açtığı verilerden ayrı olarak Android Keystore tarafından tutulur.</li>
+  <li>Dil tercihiniz, ekran kilidi ayarınız ve son yedeğinizin tarihi platformun güvenli deposunda saklanır.</li>
+  <li>Kendi BIST hisse fiyatı API anahtarınızı girerseniz o da aynı güvenli depoda tutulur. Ait olduğu sağlayıcı dışında hiçbir yere gönderilmez.</li>
+</ul>
+<p><strong>Saklama süresi:</strong> uygulama bu verileri siz silene ya da uygulamayı kaldırana kadar tutar. Kaldırmak hepsini siler. Başka bir kopya yoktur ve bizim tutabileceğimiz sunucu tarafında bir yedek de yoktur.</p>
+<h2>Cihazdan ne çıkıyor</h2>
+<p>Uygulama tek bir amaçla ağ isteği yapar: kaydettiğiniz varlıklar için fiyat çekmek. Kod tabanının tamamında üç adres vardır ve başkası mümkün değildir.</p>
+<div class="table-wrap">
+<table>
+  <thead><tr>
+    <th>Adres</th>
+    <th>Ne gönderiliyor</th>
+    <th>Ne zaman</th>
+  </tr></thead>
+  <tbody>
+    <tr>
+      <td>api.coingecko.com</td>
+      <td>Elinizdeki kripto tanımlayıcılarının listesi ve "usd" metni. Kimlik bilgisi yok; sizi ya da cihazınızı tanımlayan hiçbir şey yok.</td>
+      <td>Kripto varlık gösteren bir ekran açıldığında.</td>
+    </tr>
+    <tr>
+      <td>api.frankfurter.dev</td>
+      <td>Para birimi kodlarının listesi ve taban olarak "TRY". Kimlik bilgisi yok.</td>
+      <td>Döviz veya altın varlığı gösteren bir ekran açıldığında.</td>
+    </tr>
+    <tr>
+      <td>www.nosyapi.com</td>
+      <td>Elinizdeki BIST hisse kodlarının listesi ve bir istek başlığında <strong>kendi API anahtarınız</strong>.</td>
+      <td><strong>Yalnızca</strong> Ayarlar'da bir anahtar girdiyseniz. Anahtar yoksa bu adrese hiçbir istek gitmez.</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+<p>Yani bir fiyat sağlayıcısı *hangi* varlıkları sorduğunuzu görebilir; bu, birinden fiyat isterken kaçınılmazdır. <strong>Hiçbirine gitmeyen şeyler: ne kadar tuttuğunuz, ne ettiği, ne ödediğiniz, herhangi bir açıklama, herhangi bir hesap adı, ve sizi ya da cihazınızı tanımlayan herhangi bir bilgi.</strong> Sembol listeleri gönderilmeden önce sıralanır ve tekrarlardan arındırılır; dolayısıyla eklediğiniz sırayı da taşımazlar.</p>
+<p><strong>Hukuki sebep.</strong> Bu istekler, bir varlık kaydederek talep ettiğiniz bir özelliği sunmak için yapılır ve kişisel veri taşımaz. IP adresinizin bu sağlayıcılara zorunlu olarak açılması için bir hukuki sebep gerektiği ölçüde, bu bizim size güncel bir fiyat gösterme yönündeki meşru menfaatimizdir — varlık kaydetmeyerek ya da hisse anahtarını boş bırakarak bunu tamamen reddedebilirsiniz.</p>
+<p><strong>Yurt dışına aktarım.</strong> Bu üç servis Türkiye dışındaki üçüncü taraflarca işletilmektedir; dolayısıyla bir istek zorunlu olarak yurt dışındaki bir sunucuya ulaşır ve her web isteğinde olduğu gibi IP adresinizi ona açar. Her birinin kendi gizlilik politikası vardır: coingecko.com, frankfurter.dev ve nosyapi.com. Onlarla bir ilişkimiz yok; onlara sizinle ilgili hiçbir şey göndermiyor ve onlardan sizinle ilgili hiçbir şey almıyoruz.</p>
+<h2>Yedekler</h2>
+<p>Ayarlar ekranından şifrelenmiş bir yedek paketi yazabilirsiniz. Uygulama hazır dosyayı Android'in paylaşım sayfasına verir, nereye gideceğine <strong>siz</strong> karar verirsiniz. Uygulama bir yedeği kendi başına hiçbir yere koyamaz ve hiçbir yere yüklemez. Yedek, sizin seçtiğiniz bir parola ile korunur; o parola hiçbir yerde saklanmaz ve kurtarılamaz.</p>
+<p>Bir yedeği bulut sürücüsüne ya da bir mesajlaşma uygulamasına gönderirseniz, gönderdiğiniz kopya için o servisin kendi gizlilik politikası geçerli olur. Dosya şifrelidir, ama paylaşım sayfasından çıktıktan sonra nereye gittiği bu uygulamanın denetimi dışındadır.</p>
+<h2>İzinler</h2>
+<ul>
+  <li><strong>İnternet</strong> — yukarıdaki üç fiyat isteği için, başka hiçbir şey için değil.</li>
+  <li><strong>Biyometrik / cihaz kimlik bilgisi</strong> — yalnızca isteğe bağlı ekran kilidini açarsanız. Doğrulamayı Android yapar; uygulama parmak izinizi, PIN'inizi ya da parolanızı hiçbir zaman görmez.</li>
+</ul>
+<p>Uygulama konum, rehber, kamera, mikrofon, geniş depolama ya da reklam izni istemez.</p>
+<h2>Haklarınız</h2>
+<p>KVKK, GDPR ve benzeri mevzuat kapsamında, bir veri sorumlusunun sizinle ilgili tuttuğu kişisel veriler üzerinde erişim, düzeltme, silme, işlemenin sınırlandırılması, taşınabilirlik ve itiraz haklarınız vardır. <strong>Biz hiçbir veri tutmuyoruz</strong>; dolayısıyla üretebileceğimiz, düzeltebileceğimiz ya da silebileceğimiz bir şey yok — bize yapılacak bir başvuru hiçbir şey döndüremez.</p>
+<p>Pratikte bu hakları kimseye başvurmadan, doğrudan cihaz üzerinde kullanırsınız:</p>
+<ul>
+  <li><strong>Erişim ve taşınabilirlik</strong> — Ayarlar, verilerinizin istediğiniz yere götürebileceğiniz eksiksiz ve şifreli bir yedeğini yazar.</li>
+  <li><strong>Düzeltme</strong> — her kayıt uygulama içinde düzenlenebilir ya da silinebilir.</li>
+  <li><strong>Silme</strong> — uygulamayı kaldırmak veritabanını ve şifreleme anahtarını siler. Ardından hiçbir şey kalmaz.</li>
+</ul>
+<p>Buna rağmen verilerinizin hatalı işlendiğini düşünüyorsanız ulusal veri koruma otoritenize şikâyette bulunabilirsiniz — Türkiye'de Kişisel Verileri Koruma Kurumu (KVKK), AB'de yerel denetim makamınız.</p>
+<h2>Çocuklar</h2>
+<p>Archlence genel kitleye yönelik bir kişisel finans aracıdır ve çocuklara yönelik değildir. Çocuklar dahil hiç kimseden hiçbir şey toplamaz; reklam, uygulama içi satın alma ve sosyal özellik içermez.</p>
+<h2>Bu politikadaki değişiklikler</h2>
+<p>Uygulama bugün göndermediği bir şeyi göndermeye başlarsa, o sürüm yayınlanmadan önce bu politika güncellenecektir. Metin uygulamanın kendi kaynağındaki tek bir dosyadan üretildiği için, değişiklik ona sebep olan kodla birlikte deponun geçmişinde görünür — ve uygulamanın içindeki kopya ile web'deki kopya birbirinden ayrı düşemez.</p>
+<h2>Bütün bunları nasıl doğrularsınız</h2>
+<p>Archlence, Apache License 2.0 altında açık kaynaktır. Yukarıdaki her iddia güvenmek yerine kaynaktan doğrulanabilir:</p>
+<ul>
+  <li>Uygulamanın kurabileceği her URL tek bir dosyadadır: lib/services/price_providers.dart. Depoda grep -rn "Uri.https" lib/ komutu üçünü de bulur, başkasını bulmaz.</li>
+  <li>Şifreleme lib/crypto/ altındadır.</li>
+  <li>Suite'in tamamında ağ soketi açan tek test integration_test/live_price_device_test.dart dosyasıdır.</li>
+  <li>pubspec.yaml içinde analitik, çökme raporlama ya da reklam bağımlılığı yoktur.</li>
+  <li>Bu politika lib/legal/privacy_policy.dart dosyasından üretilir ve yayınlanan sayfalar ondan ayrı düşerse bir test derlemeyi düşürür.</li>
+</ul>
+<p>Depo: github.com/superuser-d0/archlence-mobile</p>
+
+<footer>
+  Android için Archlence · Apache License 2.0 · lib/legal/privacy_policy.dart dosyasından üretilmiştir; uygulamanın kendi içinde gösterdiği metin de aynı dosyadan gelir.
+</footer>
+
+</main>
+</body>
+</html>

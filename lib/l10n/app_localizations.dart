@@ -2945,6 +2945,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Removed. Shares go back to being shown at cost.'**
   String get sharesKeyRemoved;
+
+  /// No description provided for @settingsPrivacyPolicy.
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy policy'**
+  String get settingsPrivacyPolicy;
+
+  /// No description provided for @settingsPrivacyPolicySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'What leaves this phone, and what does not'**
+  String get settingsPrivacyPolicySubtitle;
 }
 
 class _AppLocalizationsDelegate

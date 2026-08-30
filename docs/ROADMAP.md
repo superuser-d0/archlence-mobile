@@ -144,8 +144,8 @@ app, found three more: every sweep renders a screen in the state it OPENS in,
 the per-screen tests drive real states on an 800dp surface, and nothing
 covered a real state at a real width. Sixteen defects in all.
 
-1099 unit tests and 14 device tests pass, and `flutter analyze` is clean. No
-control in the app is inert. The count grew by 196 because what it did not
+1110 unit tests and 14 device tests pass, and `flutter analyze` is clean. No
+control in the app is inert. The count grew by 207 because what it did not
 cover is now covered rather than assumed.
 
 ## Pick up here
@@ -173,7 +173,7 @@ defects**, in states no sweep can reach because every sweep renders the state
 a screen OPENS in. Sixteen in all, all fixed.
 
 Three sweeps, two source rules and a driven-state file hold the line now, and
-the suite went from 903 tests to 1099. **No screen is left that nothing lays
+the suite went from 903 tests to 1110. **No screen is left that nothing lays
 out at a phone width, and no state that broke one is left unguarded.**
 
 **One of the fixes was worse than the defect**, which is the part worth
@@ -216,6 +216,7 @@ The last open release-only question is answered; see "The first App Bundle".
 | 8 | Seven more behind the sheets, all one missing line | "The layer under the tabs" |
 | 9 | The third layer swept and clean, and what that comparison says | "The third layer, which was clean" |
 | 10 | Three more found by measuring the test surface instead of arguing about it | "What the 800dp surface was hiding" |
+| 11 | A privacy policy Play would accept, generated from one source in two languages | "The privacy policy, generated rather than written twice" |
 
 The machine moved from Windows 11 to CachyOS and the whole toolchain was
 rebuilt under `~/dev` without root; nothing in the repository had to change
@@ -2232,10 +2233,10 @@ still takes four and a half minutes. So it was measured properly:
 
 | Run | Tests | Time |
 | --- | --- | --- |
-| `flutter test` | 1099 | 4m38s |
+| `flutter test` | 1110 | 4m43s |
 | `test/backup_service_test.dart` alone | 23 | 4m35s |
 | the same file, from a `/dev/shm` copy | 23 | 4m40s |
-| everything else | 1076 | ~25s |
+| everything else | 1087 | ~25s |
 
 **The tmpfs run is the one that settles it.** A `git archive` of `HEAD`
 unpacked into `/dev/shm` — RAM, no disk under it at all — runs the same file
@@ -2725,6 +2726,72 @@ the kind that could guard nothing:
 The honest summary of the decision: the 800dp surface was hiding three
 defects, they are fixed, the surface stays, and what stops the next one is a
 file that names the states rather than a number that names a width.
+
+### The privacy policy, generated rather than written twice
+
+Play requires a policy at a public URL, and the first draft of one was written
+from the source rather than from a template — the three hosts out of
+`price_providers.dart`, the request contents off the `Uri.https` calls, the
+permissions off the merged manifest. Then it was compared against what Play
+and the two privacy regimes this app lives under actually ask for, and the
+comparison found a requirement the draft did not meet at all.
+
+**Play requires the policy to be reachable from INSIDE the app, not only from
+the store listing.** It accepts a link or the text. There was no privacy row
+in Settings.
+
+The rest of the comparison, against Play's own page, the GDPR's Article 13
+list and the KVKK's aydınlatma requirements:
+
+| Missing | Required by |
+| --- | --- |
+| The controller's identity | KVKK's first listed element; GDPR Art. 13(1)(a) |
+| A legal basis for processing | GDPR Art. 13(1)(c) |
+| Data subject rights, and the right to complain to a supervisory authority | GDPR; KVKK Art. 11 |
+| International transfers | all three price providers are outside Turkey |
+| Retention, third-party policies, an explicit "no tracking, no cookies, no ads" | standard, and expected |
+| **A Turkish version** | a Turkish-first app under the KVKK |
+
+All of it is in now, in both languages.
+
+**And the shape it is in matters more than the words.** Play treats a policy
+that says something untrue as a policy violation rather than a typo, and the
+requirement above means two copies of a legal document that must never
+contradict each other — the exact arrangement this file refuses everywhere
+else. So:
+
+* `lib/legal/privacy_policy.dart` holds the text, in English and Turkish, as
+  structured sections rather than a blob;
+* `lib/screens/privacy_screen.dart` renders it, reached from Settings;
+* `tool/emit_privacy_pages.dart` generates `docs/privacy.html` and
+  `docs/gizlilik.html`;
+* `test/privacy_pages_test.dart` fails if the committed pages have drifted
+  from the source, if one language has a section the other does not, or if
+  the number of blocks in a section differs between them.
+
+**The in-app copy is the TEXT, not a link**, and that is the decision worth
+recording. A link would have meant adding `url_launcher` and a fourth URL to a
+codebase whose README invites the reader to run `grep -rn "Uri.https" lib/`
+and count three. The requirement would have been met by making the app's
+central claim harder to check. Rendering the text meets it, works with no
+network — which for a policy that opens by saying the app does not need one is
+the difference between a claim and a demonstration — and leaves the grep at
+three.
+
+**One test in that file is not about the document at all.** It reads every
+`Uri.https` host out of `lib/` and requires the set to be exactly the three
+the policy names, in both languages. A fourth host added to the app fails the
+build before the policy can become false. That is the same instinct as the
+parity generators: the claim is checked against the thing it describes, not
+against a memory of it.
+
+The Settings row cost two chevrons in `settings_screen_test.dart`, which
+counts what the screen offers to go to. Four became five and five became six,
+and that test failing was the correct outcome rather than an inconvenience —
+it is the file that would notice a row appearing by accident.
+
+The new screen went into `route_sweep_test.dart` with the rest, and passes at
+320dp and 2.0x like everything else.
 
 ### The permission a release build did not have
 
@@ -3455,16 +3522,14 @@ there is no code work standing between this app and a submission.
   new ones out — so what is left for it is reading order and label QUALITY,
   which no guideline reads. See item 2.
 
-Not engineering. **The privacy policy is written** — `docs/privacy.html`,
-from what the code does rather than from a template, with every claim in it
-checked against the source first. Publishing it is one switch nobody has
-flipped: GitHub Pages, deploy from `main`, `/docs`. `docs/.nojekyll` is there
-so the file is served as written.
+Not engineering. **The privacy policy is done**, in both languages, generated
+from the app's own copy of the text and reachable from inside the app as Play
+requires — see "The privacy policy, generated rather than written twice".
 
 **Play's Data Safety form is not started**, and it is the one thing left that
 needs a person's judgement rather than a person's time: the answers are all in
-the privacy page, but the declaration is binding and the wording on Play's own
-form moves.
+the policy, but the declaration is binding and the wording on Play's own form
+moves.
 
 Worth doing first rather than last: open the developer account. A new personal
 account may face a closed-testing period before production access, which moves
@@ -3648,19 +3713,19 @@ move back to Linux". Here, on an NVMe disk with no sync and no scanner:
 
 | Run | Tests | Time |
 | --- | --- | --- |
-| `flutter test` | 1099 | 4m38s |
+| `flutter test` | 1110 | 4m43s |
 | `test/backup_service_test.dart` alone | 23 | 4m35s |
 | the same file from a `/dev/shm` copy | 23 | 4m40s |
-| everything else (`test/*.dart` + `test/screens/`) | 1076 | ~25s |
+| everything else (`test/*.dart` + `test/screens/`) | 1087 | ~25s |
 
-1076 of the 1099 tests finish in under half a minute. The remaining 23 make 182
+1087 of the 1110 tests finish in under half a minute. The remaining 23 make 182
 PBKDF2 derivations at 600 000 rounds each, one derivation costs 1.50s on this
 CPU, and 182 × 1.50s is 4m33s against a measured 4m35s. The suite is a key
 derivation benchmark with a test suite attached to it, and no disk anywhere
 can help.
 
-4m38s for everything against 4m35s for that one file: the other 1076 tests
-add three seconds to the critical path, because `flutter test` runs files in
+4m43s for everything against 4m35s for that one file: the other 1087 tests
+add eight seconds to the critical path, because `flutter test` runs files in
 parallel and they finish long before it does. **The suite's wall clock is one
 file's key derivation and almost nothing else.**
 
@@ -3705,7 +3770,7 @@ The downloads themselves are 1.57GB for Flutter, 192MB for the JDK and 158MB
 for the command-line tools.
 
 Verified on this machine, in this order: `flutter analyze` clean in under
-10s, 1099 unit tests pass in 4m38s, and all 14 device tests pass on
+10s, 1099 unit tests pass in 4m43s, and all 14 device tests pass on
 `emulator-5554` —
 four in `key_provider_device_test.dart` against the real Keystore, eight in
 `app_device_test.dart` driving the real screens, and two in

@@ -902,5 +902,7 @@
   "sharesKeySave": "Save the key",
   "sharesKeyRemove": "Remove the key",
   "sharesKeySaved": "Saved. Pull to refresh the Assets tab to price your shares.",
-  "sharesKeyRemoved": "Removed. Shares go back to being shown at cost."
+  "sharesKeyRemoved": "Removed. Shares go back to being shown at cost.",
+  "settingsPrivacyPolicy": "Privacy policy",
+  "settingsPrivacyPolicySubtitle": "What leaves this phone, and what does not"
 }

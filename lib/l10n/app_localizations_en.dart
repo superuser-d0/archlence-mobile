@@ -1610,4 +1610,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get sharesKeyRemoved =>
       'Removed. Shares go back to being shown at cost.';
+
+  @override
+  String get settingsPrivacyPolicy => 'Privacy policy';
+
+  @override
+  String get settingsPrivacyPolicySubtitle =>
+      'What leaves this phone, and what does not';
 }

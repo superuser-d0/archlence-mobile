@@ -1603,4 +1603,11 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get sharesKeyRemoved =>
       'Kaldırıldı. Hisseler yeniden maliyetiyle gösterilecek.';
+
+  @override
+  String get settingsPrivacyPolicy => 'Gizlilik politikası';
+
+  @override
+  String get settingsPrivacyPolicySubtitle =>
+      'Bu telefondan ne çıkıyor, ne çıkmıyor';
 }
