@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Archlence Privacy Policy</title>
+<meta name="description" content="What Archlence for Android stores, what it sends, and how to check both.">
+<style>
+  :root {
+    --ground: #F3F3F8;
+    --raised: #FFFFFF;
+    --hairline: #DCDCE6;
+    --ink: #17171F;
+    --ink-muted: #55545F;
+    --ink-faint: #7C7B88;
+    --accent: #494BD6;
+    --code-bg: #E9E9F1;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground: #131313;
+      --raised: #1C1B1B;
+      --hairline: #2A2A2A;
+      --ink: #E5E2E1;
+      --ink-muted: #C7C4D7;
+      --ink-faint: #908FA0;
+      --accent: #C0C1FF;
+      --code-bg: #0E0E0E;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font: 16px/1.65 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+  main { max-width: 44rem; margin: 0 auto; padding: 3rem 1.25rem 5rem; }
+  h1 { font-size: clamp(1.9rem, 5vw, 2.5rem); line-height: 1.15; margin: 0 0 .5rem; letter-spacing: -.02em; }
+  .updated { color: var(--ink-faint); font-size: .9rem; margin: 0 0 2rem; }
+  h2 { font-size: 1.25rem; margin: 2.6rem 0 .6rem; letter-spacing: -.01em; padding-top: 1.4rem; border-top: 1px solid var(--hairline); }
+  h2:first-of-type { border-top: none; padding-top: 0; }
+  p, li { color: var(--ink-muted); }
+  strong { color: var(--ink); }
+  a { color: var(--accent); }
+  ul { padding-left: 1.2rem; }
+  li { margin: .4rem 0; }
+  code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: .9em;
+    background: var(--code-bg);
+    border: 1px solid var(--hairline);
+    border-radius: 4px;
+    padding: .06em .35em;
+    word-break: break-word;
+  }
+  .lede {
+    background: var(--raised);
+    border: 1px solid var(--hairline);
+    border-left: 4px solid var(--accent);
+    border-radius: 10px;
+    padding: 1.1rem 1.2rem;
+    margin: 0 0 2rem;
+  }
+  .lede p { margin: 0; }
+  .table-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; min-width: 30rem; font-size: .94rem; margin: 1rem 0; }
+  th, td { text-align: left; padding: .55rem .8rem .55rem 0; border-bottom: 1px solid var(--hairline); vertical-align: top; color: var(--ink-muted); }
+  th { color: var(--ink); font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; }
+  footer { margin-top: 3rem; padding-top: 1.2rem; border-top: 1px solid var(--hairline); color: var(--ink-faint); font-size: .88rem; }
+</style>
+</head>
+<body>
+<main>
+
+<h1>Archlence — Privacy Policy</h1>
+<p class="updated">For the Android app <code>com.archlence.archlence_mobile</code>. Last updated 30 August 2026.</p>
+
+<div class="lede">
+  <p><strong>Archlence has no account, no server of ours, and no analytics.</strong> Everything you record stays in a file on your phone, encrypted. We do not receive your financial data, and there is nowhere for us to receive it — the app has no backend. This page says exactly what leaves the device and what does not, and the last section says how to check it rather than take our word for it.</p>
+</div>
+
+<h2>What we collect</h2>
+<p><strong>Nothing.</strong> The developer operates no server, no account system, no analytics, no crash reporting and no advertising. No data about you or your use of the app is transmitted to us, because there is no endpoint belonging to us for it to be transmitted to.</p>
+
+<h2>What the app stores, and where</h2>
+<ul>
+  <li>Accounts, cards, transactions, holdings, budgets and savings goals are stored in a database file in the app's private storage on your device.</li>
+  <li>Amounts and descriptions are <strong>encrypted with AES-256-GCM</strong>. The encryption key is held by the Android Keystore, apart from the data it opens.</li>
+  <li>Your language choice, the screen-lock preference and the date of your last backup are stored in the platform's secure storage.</li>
+  <li>If you enter a BIST share-price API key of your own, it is stored in that same secure storage. It is never sent anywhere except to the provider it belongs to.</li>
+</ul>
+<p>Uninstalling the app removes all of it. There is no other copy.</p>
+
+<h2>What leaves the device</h2>
+<p>The app makes network requests for one purpose only: fetching prices for holdings you have recorded. There are three destinations in the entire codebase, and no others are possible.</p>
+
+<div class="table-wrap">
+<table>
+  <thead>
+    <tr><th>Destination</th><th>What is sent</th><th>When</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>api.coingecko.com</code></td>
+      <td>A list of the crypto identifiers you hold, and the string <code>usd</code>. No credential, no identifier for you or your device.</td>
+      <td>When a screen showing crypto holdings is opened.</td>
+    </tr>
+    <tr>
+      <td><code>api.frankfurter.dev</code></td>
+      <td>A list of currency codes, and <code>TRY</code> as the base. No credential.</td>
+      <td>When a screen showing currency or gold holdings is opened.</td>
+    </tr>
+    <tr>
+      <td><code>www.nosyapi.com</code></td>
+      <td>A list of the BIST share codes you hold, and <strong>your own API key</strong> in a request header.</td>
+      <td><strong>Only</strong> if you have entered a key in Settings. Without one, no request is ever made to this host.</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<p>So a price provider can see <em>which</em> assets you asked about, which is unavoidable when asking a third party for a price. <strong>What none of them receives is how much you hold, what it is worth, what you paid, any description, any account name, or any identifier for you or your device.</strong> The symbol lists are sorted and deduplicated before being sent, so they do not carry the order in which you added things either.</p>
+
+<p>Those three services have their own privacy policies, and requests to them necessarily disclose your IP address to them, as any web request does. We have no relationship with them, send them nothing about you, and receive nothing from them about you.</p>
+
+<h2>Backups</h2>
+<p>You can write an encrypted backup package from the Settings screen. The app hands the finished file to Android's share sheet, and <strong>you</strong> choose where it goes. The app cannot put a backup anywhere on its own, and does not upload one anywhere. A backup is protected by a passphrase you choose; that passphrase is stored nowhere and cannot be recovered.</p>
+
+<h2>Permissions</h2>
+<ul>
+  <li><strong>Internet</strong> — for the three price requests above, and nothing else.</li>
+  <li><strong>Biometric / device credential</strong> — only if you turn on the optional screen lock. Authentication is performed by Android; the app never sees your fingerprint, PIN or password.</li>
+</ul>
+<p>The app requests no location, contacts, camera, microphone, storage-wide or advertising permissions.</p>
+
+<h2>Children</h2>
+<p>Archlence is a personal finance tool intended for general audiences. It collects nothing from anyone, including children.</p>
+
+<h2>Changes to this policy</h2>
+<p>If the app ever begins sending something it does not send today, this page will be updated before that version is published, and the change will be visible in the repository's history along with the code that caused it.</p>
+
+<h2>How to check all of this</h2>
+<p>Archlence is open source under the Apache License 2.0. Every claim above is checkable in the source rather than taken on trust:</p>
+<ul>
+  <li>Every URL the app can build is in one file, <code>lib/services/price_providers.dart</code>. Running <code>grep -rn "Uri.https" lib/</code> over the repository finds all three and nothing else.</li>
+  <li>The encryption lives in <code>lib/crypto/</code>.</li>
+  <li>There is exactly one test in the whole suite that opens a network socket: <code>integration_test/live_price_device_test.dart</code>.</li>
+  <li>There is no analytics, crash-reporting or advertising dependency in <code>pubspec.yaml</code>.</li>
+</ul>
+<p>The repository is at <a href="https://github.com/superuser-d0/archlence-mobile">github.com/superuser-d0/archlence-mobile</a>.</p>
+
+<h2>Contact</h2>
+<p>Questions about this policy, or about the app's handling of data, can be raised as an issue on the repository above, or sent to the developer contact address listed on the app's Google Play store page.</p>
+
+<footer>
+  Archlence for Android · Apache License 2.0 · This page is part of the repository and its history is public.
+</footer>
+
+</main>
+</body>
+</html>

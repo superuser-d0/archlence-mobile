@@ -69,6 +69,10 @@ which moves a launch by weeks rather than days. See
 Building your own release needs your own signing keystore, which belongs to
 whoever publishes; it is not in this repository and cannot be.
 
+The privacy policy is [`docs/privacy.html`](docs/privacy.html), written from
+what the code does rather than from a template — it names the three hosts, what
+each request carries, and how to check both yourself.
+
 | | |
 | --- | --- |
 | Unit tests | 1087 |
