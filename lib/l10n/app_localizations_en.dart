@@ -493,7 +493,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'One cash account to start with. Everything else — spending, cards, holdings, goals — needs somewhere for money to come from.';
 
   @override
-  String get onboardingDefaultAccountName => 'Cash';
+  String get onboardingDefaultAccountName => 'Wallet';
 
   @override
   String get onboardingAccountName => 'Name';

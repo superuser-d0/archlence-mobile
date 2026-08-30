@@ -159,6 +159,14 @@ class GradientButton extends StatelessWidget {
     // emulator and looking at it — every finder in the widget test was
     // checking `onPressed`, which was correctly null the whole time.
     final enabled = onPressed != null;
+    // Its own node, announced as a button.
+    //
+    // `InkWell` adds a tap ACTION to the nearest semantics node rather than
+    // making one, so this button had no node of its own: on the Cards tab it
+    // merged upward and the whole scroll body — 1080x1129 of it — became one
+    // tappable region labelled "+ ADD", announced before everything it
+    // contained. `container` gives it a boundary and `button` makes a screen
+    // reader say what kind of thing it is. Found with TalkBack running.
     final button = Opacity(
       opacity: enabled ? 1 : 0.38,
       child: DecoratedBox(
@@ -186,7 +194,17 @@ class GradientButton extends StatelessWidget {
         ),
       ),
     );
-    return expand ? SizedBox(width: double.infinity, child: button) : button;
+    final labelled = Semantics(
+      container: true,
+      button: true,
+      enabled: enabled,
+      label: label,
+      excludeSemantics: true,
+      child: button,
+    );
+    return expand
+        ? SizedBox(width: double.infinity, child: labelled)
+        : labelled;
   }
 }
 

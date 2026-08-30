@@ -959,7 +959,7 @@ abstract class AppLocalizations {
   /// Prefilled into the first account's name field. Translated even though it becomes stored DATA, because it is a suggestion the user types over and nothing in either app groups or reports on an account's name — unlike the category literals, which stay verbatim.
   ///
   /// In en, this message translates to:
-  /// **'Cash'**
+  /// **'Wallet'**
   String get onboardingDefaultAccountName;
 
   /// No description provided for @onboardingAccountName.

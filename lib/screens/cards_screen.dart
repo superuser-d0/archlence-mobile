@@ -187,7 +187,18 @@ class _CardsBody extends StatelessWidget {
           padding: horizontal,
           child: Row(
             children: [
-              Expanded(child: Text(l10n.cardsMyCards, style: text.titleLarge)),
+              // Its own announcement. Loose text in a scroll body merges
+              // into the body's own node, which is then read out BEFORE
+              // everything it contains — here that put "My Cards, ADD, My
+              // Accounts" ahead of the cards and accounts themselves. Same
+              // shape as the Assets headings; see the roadmap's label-quality
+              // entry.
+              Expanded(
+                child: Semantics(
+                  container: true,
+                  child: Text(l10n.cardsMyCards, style: text.titleLarge),
+                ),
+              ),
               GradientButton(
                 label: l10n.cardsAdd,
                 expand: false,
@@ -243,7 +254,10 @@ class _CardsBody extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(l10n.cardsMyAccounts, style: text.titleLarge),
+              Semantics(
+                container: true,
+                child: Text(l10n.cardsMyAccounts, style: text.titleLarge),
+              ),
               const SizedBox(height: Spacing.stackMd),
               if (data.holdingsCount > 0) ...[
                 _AccountTile(

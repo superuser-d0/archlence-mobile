@@ -220,6 +220,7 @@ The last open release-only question is answered; see "The first App Bundle".
 | 12 | The Data safety answers, decided by recording what the app actually sends | "The Data safety declaration, decided by listening to the wire" |
 | 13 | The TalkBack hour: two defects, two false alarms, and three instruments that disagreed | "The TalkBack hour, and what the tooling gets wrong" |
 | 14 | Label quality: a whole tab that was one sentence, and four smaller things | "Label quality, which is the half a guideline cannot reach" |
+| 15 | A first release published, then pulled: the Turkish was in the wrong register | "The Turkish was in the wrong register" |
 
 The machine moved from Windows 11 to CachyOS and the whole toolchain was
 rebuilt under `~/dev` without root; nothing in the repository had to change
@@ -3038,6 +3039,83 @@ heading — depends on the TTS engine on the phone, and no dump can answer it.
 That is the last piece of the accessibility work and it needs a person
 listening, in Turkish.
 
+### The Turkish was in the wrong register, and nothing here could have said so
+
+`v1.0.0` was published and then deleted, because of the Turkish.
+
+**Every string that addressed the user was in the informal second person.**
+`sen`: "Hesapların, kartların… bütçen", "kaybedersen", "bir tane ekle",
+"Archlence'i kullanmaya başla". English has one "you" and no choice to make.
+Turkish makes you choose, and for an app that holds somebody's money the
+familiar form reads as presumptuous — the publisher's word for it was that it
+sounded like the app was joking around with you.
+
+**Not one instrument in this project could have caught it.** `l10n_test`
+checks that every key exists in both files and that the placeholders match —
+both were fine. The sweeps check layout, the guidelines check labels and
+contrast, the wire test checks what is sent. A translation can be complete,
+accurate, correctly placeheld, and wrong in a way that only a native speaker
+reading the screen will name. That is a harder version of the same lesson as
+the TalkBack hour, and it is the reason the release was pulled rather than
+patched later.
+
+**57 of the 478 strings were rewritten.** 286 are single-word labels — nouns,
+untouched. Of the 192 that are sentences, the ones addressing the user moved
+to `siz`, and the ones already impersonal were left exactly as they were:
+`assetsLivePricingNote`, `errNotAnAmount`, `backupFileUnusable` and their kind
+never had the problem.
+
+Two changes beyond the register:
+
+* **Tone.** "Yani yedekler **sana kalmış**" — the `-mış` suffix adds hearsay,
+  which is a strange thing for an app to do about its own behaviour; now
+  "Yani yedek almak size kalıyor". And `toolsSubtitle`'s "**keşfet**" was
+  marketing language where the English said "explore"; "inceleyin" is what a
+  Turkish app says.
+* **One title out of line.** Every sheet title is a noun phrase — "Yeni
+  hesap", "Yeni varlık", "Yeni bütçe kalemi" — except `payDebtTitle`, which
+  was the imperative "{card} borcunu öde". It is "{card} borç ödemesi" now.
+
+**Button labels were deliberately NOT changed.** "Kaydet", "Öde", "Ekle",
+"Hedefi oluştur". A Turkish button carries the short imperative; "Kaydedin" on
+a button reads as artificial. The polite form belongs in sentences addressed
+to the reader, not on controls. A scan for informal endings flags all 18 of
+them, which is why the scan is a starting point and not the answer.
+
+**And a default that stuttered.** The onboarding prefill for the first account
+was `Nakit`, and the account type beside it is `Nakit / Vadesiz` — so every new
+Turkish user got a row that reads "Nakit, Nakit, Vadesiz". It is `Cüzdan` now.
+The English had the identical defect — `Cash` against `Cash / Checking` — and
+is `Wallet`.
+
+### The button that was the whole screen
+
+Fixing the Cards tab's remaining announcement blob turned up a root cause
+worth more than the fix.
+
+After the cards were split into their own containers, one node still spanned
+the Cards body — `[0,325][1080,1454]`, 1080x1129 — **tappable, and labelled
+`+  EKLE`**. Wrapping the section headings took the headings out of it, and the
+button was still there.
+
+`InkWell` does not create a semantics node. It adds a tap ACTION to the
+nearest one. `GradientButton` is an `InkWell` around a `Text`, so it had no
+node of its own and merged upward, taking its label with it and turning the
+entire scroll body into one tappable region announced before everything it
+contained.
+
+`Semantics(container: true, button: true, label:, enabled:)` gives it a
+boundary and a role — and because `GradientButton` is the app's shared primary
+action, that one change fixed **every** primary button in the app: every
+sheet's save, add, pay and create. Cards now reads as nine items in visual
+order, with `+  EKLE` a 274x137 button where the button is.
+
+The general shape, now seen three times in three different widgets: **a
+tappable ancestor with no semantics boundary absorbs everything beneath it.**
+`AppCard` needed `container`, the loose section headings needed `container`,
+and `GradientButton` needed `container` and `button`. None of it is visible in
+the source; all of it is obvious in a device dump.
+
 ### The permission a release build did not have
 
 Found while checking this file's own claims, not by running anything — which
@@ -3995,6 +4073,12 @@ anything `clean` can restore. The most likely cause is one-off warm-up in a
 freshly unpacked Flutter install, but that was not established, so what the
 table carries is the number that reproduces.
 
+- **The device tests assert ENGLISH strings.** Six of the eight in
+  `app_device_test.dart` read UI text, so running them against an emulator
+  set to Turkish fails all six at once and reads exactly like the app having
+  broken. It happened here, while the emulator was in `tr-TR` to review the
+  translation. `adb shell setprop persist.sys.locale en-US` needs a full
+  `adb reboot` to take — restarting zygote is not enough.
 - **Do not run the emulator and `flutter test` at the same time.** Carried
   over from the Windows setup, where it cost a diagnosis: with the emulator
   up, `backup_service_test.dart` crossed its timeout and the whole file

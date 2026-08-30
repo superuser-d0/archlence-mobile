@@ -47,7 +47,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get toolsSubtitle =>
-      'Finansını iyileştirmek için hesaplayıcıları ve planlayıcıları keşfet.';
+      'Finansınızı iyileştirmek için hesaplayıcıları ve planlayıcıları inceleyin.';
 
   @override
   String get toolBudget => 'Aylık\nBütçe';
@@ -81,7 +81,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get lockedExplanation =>
-      'Bu telefonda kullandığın parmak izi ya da PIN ile aç.';
+      'Bu telefonda kullandığınız parmak izi ya da PIN ile açın.';
 
   @override
   String get lockedRefused => 'Kilit açılmadı.';
@@ -93,18 +93,18 @@ class AppLocalizationsTr extends AppLocalizations {
   String get lockedUnlock => 'Kilidi Aç';
 
   @override
-  String get unlockPrompt => 'Archlence kilidini aç';
+  String get unlockPrompt => 'Archlence kilidini açın';
 
   @override
   String get savingsGoalsTitle => 'Birikim Hedefleri';
 
   @override
   String get savingsGoalsExplanation =>
-      'Bir hedefteki para bakiyenden ayrı tutulur. Harcama olmadığı için hiçbir gider grafiğinde görünmez.';
+      'Bir hedefteki para bakiyenizden ayrı tutulur. Harcama olmadığı için hiçbir gider grafiğinde görünmez.';
 
   @override
   String get savingsGoalsEmpty =>
-      'Henüz birikim hedefi yok. Yukarıdaki + ile bir tane ekle.';
+      'Henüz birikim hedefi yok. Yukarıdaki + ile bir tane ekleyin.';
 
   @override
   String get goalUnreadable => 'Okunamayan hedef';
@@ -214,7 +214,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get lockTileExplanation =>
-      'Bir dakika uzak kaldıktan sonra parmak izini ya da PIN’ini ister. Telefonu eline alan birinden ekranı gizler — şifreleme eklemez.';
+      'Bir dakika uzak kaldıktan sonra parmak izinizi ya da PIN’inizi ister. Telefonu eline alan birinden ekranı gizler — şifreleme eklemez.';
 
   @override
   String get lockTileUnavailable =>
@@ -231,7 +231,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get settingsBackupSubtitle =>
-      'Saklayabileceğin bir yedek oluştur ya da bir yedeği geri yükle — masaüstü uygulamasının yazdığı yedekler dahil.';
+      'Saklayabileceğiniz bir yedek oluşturun ya da bir yedeği geri yükleyin — masaüstü uygulamasının yazdığı yedekler dahil.';
 
   @override
   String get settingsSectionAbout => 'Hakkında';
@@ -285,7 +285,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get settingsChangePasswordSubtitle =>
-      'Şifreni buradan yenileyebilirsin.';
+      'Şifrenizi buradan yenileyebilirsiniz.';
 
   @override
   String get settingsBalanceHistory => 'Bakiye Geçmişi';
@@ -310,13 +310,13 @@ class AppLocalizationsTr extends AppLocalizations {
   String get errNotAnAmount => 'Bu bir tutar değil.';
 
   @override
-  String get errAmountNotPositive => 'Sıfırdan büyük bir tutar gir.';
+  String get errAmountNotPositive => 'Sıfırdan büyük bir tutar girin.';
 
   @override
-  String get errAccountEmptyName => 'Hesaba bir ad ver.';
+  String get errAccountEmptyName => 'Hesaba bir ad verin.';
 
   @override
-  String get errAccountUnknownType => 'Bir hesap türü seç.';
+  String get errAccountUnknownType => 'Bir hesap türü seçin.';
 
   @override
   String get errAccountInvalidStatementDay =>
@@ -331,14 +331,14 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get errAccountOpeningDebtExceedsLimit =>
-      'Borç, girdiğin limitten büyük.';
+      'Borç, girdiğiniz limitten büyük.';
 
   @override
   String get errAccountNotFound => 'Bu hesap artık yok.';
 
   @override
   String get errAccountCardFrozen =>
-      'Bu kart donduruldu. Harcama yapmak için dondurmayı kaldır.';
+      'Bu kart donduruldu. Harcama yapmak için dondurmayı kaldırın.';
 
   @override
   String get errAccountInsufficientLimit =>
@@ -355,7 +355,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get errAccountSourceMustBeChecking =>
-      'Kartı başka bir kartla değil, nakit bir hesaptan öde.';
+      'Kartı başka bir kartla değil, nakit bir hesaptan ödeyin.';
 
   @override
   String get errAccountBalanceUpdateFailed =>
@@ -379,7 +379,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get errAssetNotFound => 'Bu varlık artık yok.';
 
   @override
-  String get errSavingsEmptyName => 'Hedefin ne için olduğunu yaz.';
+  String get errSavingsEmptyName => 'Hedefin ne için olduğunu yazın.';
 
   @override
   String get errSavingsNegativeOpeningAmount =>
@@ -387,7 +387,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get errSavingsIdentityMismatch =>
-      'Bu hedef, ekran çizildiğinden beri değişti. Hiçbir para taşınmadı — aşağı çekip yenile ve tekrar dene.';
+      'Bu hedef, ekran çizildiğinden beri değişti. Hiçbir para taşınmadı — aşağı çekip yenileyin ve tekrar deneyin.';
 
   @override
   String get errSavingsAccountNotFound => 'Bu nakit hesap artık yok.';
@@ -400,16 +400,16 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get errSavingsRefundAccountRequired =>
-      'Paranın nereye gideceğini seç.';
+      'Paranın nereye gideceğini seçin.';
 
   @override
-  String get errBudgetUnknownItemType => 'Gelir ya da gider seç.';
+  String get errBudgetUnknownItemType => 'Gelir ya da gider seçin.';
 
   @override
-  String get errBudgetEmptyName => 'Kaleme bir ad ver.';
+  String get errBudgetEmptyName => 'Kaleme bir ad verin.';
 
   @override
-  String get errBudgetInvalidMonth => 'Ocak ile Aralık arasında bir ay seç.';
+  String get errBudgetInvalidMonth => 'Ocak ile Aralık arasında bir ay seçin.';
 
   @override
   String get errBudgetInvalidAlertThreshold =>
@@ -434,7 +434,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get onboardingTagline =>
-      'Hesapların, kartların, varlıkların ve bütçen — bu telefonda, başka hiçbir yerde.';
+      'Hesaplarınız, kartlarınız, varlıklarınız ve bütçeniz — bu telefonda, başka hiçbir yerde.';
 
   @override
   String get onboardingNoServerTitle => 'Üyelik yok, sunucu yok';
@@ -451,11 +451,11 @@ class AppLocalizationsTr extends AppLocalizations {
       'Birinde alınan yedek, diğerinde kuruşuna kadar açılır.';
 
   @override
-  String get onboardingBackupsTitle => 'Yani yedekler sana kalmış';
+  String get onboardingBackupsTitle => 'Yani yedek almak size kalıyor';
 
   @override
   String get onboardingBackupsBody =>
-      'Yedek almadan telefonu kaybedersen veriler de onunla gider. Kimsede başka bir kopya yok.';
+      'Yedek almadan telefonu kaybederseniz veriler de onunla gider. Kimsede başka bir kopya yok.';
 
   @override
   String get onboardingEncryptedTitle => 'Verilerin şifreli';
@@ -487,7 +487,7 @@ class AppLocalizationsTr extends AppLocalizations {
       'Başlangıç için bir nakit hesap. Diğer her şey — harcamalar, kartlar, varlıklar, hedefler — paranın geleceği bir yer ister.';
 
   @override
-  String get onboardingDefaultAccountName => 'Nakit';
+  String get onboardingDefaultAccountName => 'Cüzdan';
 
   @override
   String get onboardingAccountName => 'Ad';
@@ -497,13 +497,13 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get onboardingBalanceOptional =>
-      'Burayı boş bırakıp sonra ekleyebilirsin.';
+      'Burayı boş bırakıp sonra ekleyebilirsiniz.';
 
   @override
   String get onboardingSettingUp => 'Hazırlanıyor…';
 
   @override
-  String get onboardingStart => 'Archlence’i kullanmaya başla';
+  String get onboardingStart => 'Archlence’i kullanmaya başlayın';
 
   @override
   String get addAccountTitle => 'Yeni hesap';
@@ -555,11 +555,11 @@ class AppLocalizationsTr extends AppLocalizations {
   String get transactionTypeIncome => 'Gelir';
 
   @override
-  String get errEnterAnAmount => 'Bir tutar gir.';
+  String get errEnterAnAmount => 'Bir tutar girin.';
 
   @override
   String get addTransactionNoAccount =>
-      'Önce bir hesap ekle — paranın bir yerden gelmesi gerekir.';
+      'Önce bir hesap ekleyin — paranın bir yerden gelmesi gerekir.';
 
   @override
   String get fieldAccount => 'Hesap';
@@ -590,14 +590,14 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get transactionScheduledNote =>
-      'İleri tarihli — o güne kadar bakiyene dokunmaz.';
+      'İleri tarihli — o güne kadar bakiyenize dokunmaz.';
 
   @override
   String get addTransactionAction => 'Kaydet';
 
   @override
   String payDebtTitle(String card) {
-    return '$card borcunu öde';
+    return '$card borç ödemesi';
   }
 
   @override
@@ -624,10 +624,10 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get payDebtFrozenNote =>
-      'Bu kart donduruldu ama yine de ödenebilir. Dondurma yeni harcamayı durdurur, borcunu kapatmanı değil.';
+      'Bu kart donduruldu ama yine de ödenebilir. Dondurma yeni harcamayı durdurur, borcunuzu kapatmanızı değil.';
 
   @override
-  String get errChooseSource => 'Paranın nereden geleceğini seç.';
+  String get errChooseSource => 'Paranın nereden geleceğini seçin.';
 
   @override
   String accountWithBalance(String name, String balance) {
@@ -641,7 +641,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get subscriptionNoLongerActive => 'Bu abonelik artık aktif değil.';
 
   @override
-  String get errEnterNewPrice => 'Yeni ücreti gir.';
+  String get errEnterNewPrice => 'Yeni ücreti girin.';
 
   @override
   String get subscriptionSavePrice => 'Yeni ücreti kaydet';
@@ -670,7 +670,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get subscriptionStopNote =>
-      'Tamamen durdurur. Geçmiş ödemeler geçmişinde kalır.';
+      'Tamamen durdurur. Geçmiş ödemeler geçmişinizde kalır.';
 
   @override
   String get subscriptionStopTitle => 'Takip durdurulsun mu?';
@@ -712,7 +712,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get budgetLineCategoryNote =>
-      'Yalnızca kategorisi olan bir kalem, gerçekte harcadığına karşı izlenir.';
+      'Yalnızca kategorisi olan bir kalem, gerçekte harcadığınıza karşı izlenir.';
 
   @override
   String get budgetLineEveryMonth => 'Her ay';
@@ -741,7 +741,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get newGoalExplanation =>
-      'Bir hedefteki para bakiyenden ayrılır. Harcama değildir ve hiçbir gider grafiğinde görünmez.';
+      'Bir hedefteki para bakiyenizden ayrılır. Harcama değildir ve hiçbir gider grafiğinde görünmez.';
 
   @override
   String get newGoalName => 'Ne için';
@@ -753,10 +753,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String get newGoalTarget => 'Hedef tutar';
 
   @override
-  String get errEnterTargetAmount => 'Bir hedef tutar gir.';
+  String get errEnterTargetAmount => 'Bir hedef tutar girin.';
 
   @override
-  String get errChooseCashAccount => 'Bir nakit hesap seç.';
+  String get errChooseCashAccount => 'Bir nakit hesap seçin.';
 
   @override
   String get goalFallbackName => 'Birikim hedefi';
@@ -789,13 +789,13 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get goalMayGoNegative =>
-      'Hesabın eksiye düşebilir — Archlence seni durdurmaz.';
+      'Hesabınız eksiye düşebilir — Archlence sizi durdurmaz.';
 
   @override
-  String get errEnterPriceAndQuantity => 'Bir fiyat ve bir adet gir.';
+  String get errEnterPriceAndQuantity => 'Bir fiyat ve bir adet girin.';
 
   @override
-  String get errChooseDestination => 'Paranın nereye gideceğini seç.';
+  String get errChooseDestination => 'Paranın nereye gideceğini seçin.';
 
   @override
   String get buyAssetTitle => 'Yeni varlık';
@@ -835,7 +835,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get assetNoCashAccount =>
-      'Ödeme yapılacak nakit hesap yok. Bir tane ekle ya da bunu zaten sahip olduğun bir şey olarak kaydet.';
+      'Ödeme yapılacak nakit hesap yok. Bir tane ekleyin ya da bunu zaten sahip olduğunuz bir şey olarak kaydedin.';
 
   @override
   String get assetPayFrom => 'Ödeme kaynağı';
@@ -853,7 +853,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String sellAssetHoldingLine(String quantity, String price) {
-    return 'Elinde $quantity var, birimi $price alınmış.';
+    return 'Elinizde $quantity var, birimi $price alınmış.';
   }
 
   @override
@@ -965,7 +965,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get budgetLeftToSpendNote =>
-      'Planlanan gelirden planlanan gider ve aboneliklerinin götüreceği tutar düşülmüş hâli.';
+      'Planlanan gelirden planlanan gider ve aboneliklerinizin götüreceği tutar düşülmüş hâli.';
 
   @override
   String get budgetReservedForSubscriptions => 'Aboneliklere ayrılan';
@@ -1234,7 +1234,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get backupCreateExplanation =>
-      'Bir yedek, veritabanının tamamını ve onu açan anahtarı, senin seçtiğin bir parolayla sarmalanmış hâlde tutar. En az on iki karakter.\n\nPAROLA HİÇBİR YERDE SAKLANMAZ. Parola olmadan yedek açılamaz — bu uygulama tarafından da, başka kimse tarafından da.';
+      'Bir yedek, veritabanınızın tamamını ve onu açan anahtarı, sizin seçtiğiniz bir parolayla sarmalanmış hâlde tutar. En az on iki karakter.\n\nPAROLA HİÇBİR YERDE SAKLANMAZ. Parola olmadan yedek açılamaz — bu uygulama tarafından da, başka kimse tarafından da.';
 
   @override
   String get backupPassphrase => 'Parola';
@@ -1277,14 +1277,14 @@ class AppLocalizationsTr extends AppLocalizations {
   String get backupRestorePassphrase => 'Yedeğin parolası';
 
   @override
-  String get backupRestoreAction => 'Bir dosya seç ve geri yükle';
+  String get backupRestoreAction => 'Bir dosya seçin ve geri yükleyin';
 
   @override
   String get backupRestoreConfirmButton => 'Geri yükle';
 
   @override
   String get backupRestoreBusy =>
-      'Yedek doğrulanıyor ve verilerin değiştiriliyor. Uygulamayı kapatma.';
+      'Yedek doğrulanıyor ve verileriniz değiştiriliyor. Uygulamayı kapatmayın.';
 
   @override
   String get backupRestoreConfirmTitle =>
@@ -1292,7 +1292,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get backupRestoreConfirmBody =>
-      'Bu telefondaki her hesap, işlem, varlık, bütçe ve hedef, yedektekiyle değiştirilir.\n\nŞu anda burada olan, aynı parolayla önce kendi yedeğine yazılır ve uygulama sana adını söyler.';
+      'Bu telefondaki her hesap, işlem, varlık, bütçe ve hedef, yedektekiyle değiştirilir.\n\nŞu anda burada olan, aynı parolayla önce kendi yedeğine yazılır ve uygulama size adını söyler.';
 
   @override
   String get commonCancel => 'Vazgeç';
@@ -1320,7 +1320,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get backupRestoreRolledBack =>
-      'Geri yükleme başarısız oldu ve verilerin olduğu gibi geri kondu.';
+      'Geri yükleme başarısız oldu ve verileriniz olduğu gibi geri kondu.';
 
   @override
   String get backupInterrupted =>
@@ -1341,7 +1341,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get cardsNoCards =>
-      'Henüz kredi kartı yok. Limitini ve borcunu burada izlemek için bir tane ekle.';
+      'Henüz kredi kartı yok. Limitini ve borcunu burada izlemek için bir tane ekleyin.';
 
   @override
   String get cardsMyAccounts => 'Hesaplarım';
@@ -1429,7 +1429,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get assetsNoHoldings =>
-      'Henüz varlık yok. Aldığın her şey, maliyetiyle birlikte burada görünür.';
+      'Henüz varlık yok. Aldığınız her şey, maliyetiyle birlikte burada görünür.';
 
   @override
   String get assetsOpeningBalance => 'Açılış Bakiyesi';
@@ -1461,7 +1461,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get assetsNoGoals =>
-      'Henüz birikim hedefi yok. Bir hedef, harcama sayılmadan parayı bakiyenden ayrı tutar.';
+      'Henüz birikim hedefi yok. Bir hedef, harcama sayılmadan parayı bakiyenizden ayrı tutar.';
 
   @override
   String assetsHoldingName(String name, String code) {
@@ -1496,20 +1496,20 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get recoveryExported =>
-      'Anahtar yazıldı ve doğrulandı. Bu telefondan başka bir yerde sakla — hem ona hem parolasına sahip olan biri verilerini okuyabilir.';
+      'Anahtar yazıldı ve doğrulandı. Bu telefondan başka bir yerde saklayın — hem ona hem parolasına sahip olan biri verilerinizi okuyabilir.';
 
   @override
   String get recoverySectionImport => 'Anahtarı geri koy';
 
   @override
   String get recoveryImportExplanation =>
-      'Şifreleme anahtarını dosyadakiyle değiştirir — ama önce, bu telefondaki veriyi açtığını doğrular. Hesaplarına ve işlemlerine dokunulmaz; veriyi açmayan bir anahtar hiçbir şeyi değiştirmez.';
+      'Şifreleme anahtarını dosyadakiyle değiştirir — ama önce, bu telefondaki veriyi açtığını doğrular. Hesaplarınıza ve işlemlerinize dokunulmaz; veriyi açmayan bir anahtar hiçbir şeyi değiştirmez.';
 
   @override
   String get recoveryImportPassphrase => 'Paketin parolası';
 
   @override
-  String get recoveryImportAction => 'Bir dosya seç ve anahtarı geri koy';
+  String get recoveryImportAction => 'Bir dosya seçin ve anahtarı geri koyun';
 
   @override
   String get recoveryImportConfirmButton => 'İçe aktar';
@@ -1519,7 +1519,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get recoveryImportBusy =>
-      'Anahtar verilerine karşı doğrulanıyor. Uygulamayı kapatma.';
+      'Anahtar verilerinize karşı doğrulanıyor. Uygulamayı kapatmayın.';
 
   @override
   String recoveryImportedStored(int records) {
@@ -1585,7 +1585,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get sharesKeyExplanation =>
-      'Kripto, altın ve döviz için anahtar gerekmez. Türk hisse fiyatları istisna: Archlence\'in kutudan çıkarabileceği ücretsiz bir kaynak yok, bu yüzden onları fiyatlamak için nosyapi.com\'dan kendi API anahtarın gerekiyor.\n\nAnahtar yalnızca bu telefonda saklanır. Yedeğe girmez, yani başka bir yerde yedek geri yüklersen taşınmaz — ve yalnızca nosyapi.com\'a gönderilir.';
+      'Kripto, altın ve döviz için anahtar gerekmez. Türk hisse fiyatları istisna: Archlence\'in kutudan çıkarabileceği ücretsiz bir kaynak yok, bu yüzden onları fiyatlamak için nosyapi.com\'dan kendi API anahtarınız gerekiyor.\n\nAnahtar yalnızca bu telefonda saklanır. Yedeğe girmez, yani başka bir yerde yedek geri yüklerseniz taşınmaz — ve yalnızca nosyapi.com\'a gönderilir.';
 
   @override
   String get sharesKeyField => 'API anahtarı';
@@ -1598,7 +1598,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get sharesKeySaved =>
-      'Kaydedildi. Hisselerini fiyatlamak için Varlıklar sekmesini aşağı çekip yenile.';
+      'Kaydedildi. Hisselerinizi fiyatlamak için Varlıklar sekmesini aşağı çekip yenileyin.';
 
   @override
   String get sharesKeyRemoved =>
