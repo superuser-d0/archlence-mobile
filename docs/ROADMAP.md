@@ -104,15 +104,14 @@ The share provider is the one piece of the price layer whose live response
 has NOT been seen by this codebase — checking it needs a key that belongs to
 whoever signs up for it. See "Shares, on the user's own key".
 
-**And it is built on Windows now.** The development machine was formatted and
-came back as Windows 11; the whole toolchain was rebuilt and the "Environment"
-section rewritten around it. The app did not change. The repository did, twice,
-and both were things that had been leaning on the old operating system without
-saying so: every fixture in `test/` arrived rewritten to CRLF by Git for
-Windows' default, which broke the schema parity test outright and went
-unnoticed through all the others — and one test's premise asked
-`package:path` a question whose answer depends on the developer's machine. See
-"The move to Windows".
+**And it is built on Arch again.** The machine moved a second time — Windows
+11 to CachyOS — and this crossing cost the repository nothing, which is what
+the previous one paid for: `.gitattributes` held every fixture at LF, and the
+one test premise that had asked `package:path` a host-dependent question was
+already asking `p.posix`. The toolchain was rebuilt from nothing for the
+second time and the "Environment" section rewritten around it. What the round
+trip did settle is a claim that section had been making about the suite's
+speed, which was wrong and is now measured. See "The move back to Linux".
 
 **And it is public, under Apache-2.0.** There had been no licence file at all,
 which means all rights reserved — nobody could legally use, fork or contribute
@@ -129,8 +128,22 @@ device — which is where the last four defects came from.
 **The app is finished; the release is not.** Everything a device can be asked
 without a signing key has now been asked — including the two surfaces that had
 never been opened on one, which cost four defects between them. See "The
-device pass". What is left is the path into the Play Store, and one step of it
-belongs to a person rather than to code.
+device pass". What is left is the path into the Play Store, one step of which
+belongs to a person rather than to code — and, ahead of all of it, a
+dependency move that gets permanently more expensive the day anything is
+installed anywhere.
+
+### Before the keystore: a dependency move with an expiry date
+
+**`flutter_secure_storage` 9 → 11, while nothing is installed anywhere.**
+Every Android build now warns that future Flutter releases will refuse to
+build this app, because `share_plus` 12 applies the Kotlin Gradle Plugin. The
+fix is `share_plus` 13, which does not resolve against `flutter_secure_storage`
+9, and going to 11 moves where the encryption key lives. Today that costs a
+device round. After the first release it also has to pass through 10, on a
+version users actually run, or every installed database is stranded behind a
+key nothing can read. It gets permanently more expensive on launch day. See
+Open work item 2.
 
 ### The one thing that is not a coding task
 
@@ -159,14 +172,17 @@ Three things are waiting behind it, and they are waiting in this order:
 
 | | Item | Section |
 | --- | --- | --- |
-| 1 | The two surfaces no device had opened, and the four defects they cost | "The device pass" |
-| 2 | Unbuilt features are no longer drawn — a reversal, with reasons | "Not drawn rather than marked" |
-| 3 | A backup reminder, closing the app's largest structural gap | "The backup reminder" |
-| 4 | Apache-2.0 on both repositories, and a licence page in the app | "The licence, and the page that shows it" |
+| 1 | The toolchain rebuilt on Arch, and every claim re-verified on it | "Environment" |
+| 2 | A wrong diagnosis of the suite's speed, measured and replaced | "The move back to Linux" |
+| 3 | A build warning that becomes a build failure, traced to a knot with an expiry date | Open work item 2 |
 
-The repository is public now, and the README was rewritten for the audience
-that brings — it opens with the app's privacy claim and, under it, how to
-check the claim rather than believe it.
+**This session wrote no application code.** The machine moved from Windows 11
+to CachyOS, the whole toolchain was rebuilt under `~/dev` without root, and
+everything was run again on it: `flutter analyze` clean, 903 unit tests, 14
+device tests on `archlence_pixel` including the two that open a real socket,
+and the parity generators rebuilt in the desktop checkout and checked against
+a fixture they reproduce byte for byte. Nothing in the repository had to
+change for any of it, which is what the last machine move paid for.
 
 ### What is deliberately NOT in 1.0
 
@@ -2136,6 +2152,89 @@ same thing this file has said twice already about absences: R8's missing
 Here the absence was a test case, and the rule looked covered because an input
 with the right shape was in the list.
 
+### The move back to Linux, and a slow suite that was never the disk
+
+The machine moved again — Windows 11 to CachyOS, an Arch derivative — so the
+toolchain was rebuilt from nothing for the second time: JDK 17, Flutter
+3.47.2, the Android SDK, the `archlence_pixel` AVD. See "Environment", which
+this replaced rather than extended. Everything is under `~/dev` because `sudo`
+wants a password this session cannot give it, and `pacman` was never asked for
+any of it.
+
+**Nothing in the app changed, and this time nothing in the repository did
+either.** That is the return on the last crossing. Both things the Windows
+move cost were fixed at the repository level rather than by configuring a
+machine, and both survived coming back:
+
+* `.gitattributes` pins `* text=auto eol=lf`, so the checkout is LF here as it
+  was there. Checked rather than assumed, and the check was checked first: a
+  file with known CRLF is detected by it, and then all 323 tracked files come
+  back with no CR byte in any of them.
+* `backup_bounds_test.dart` asks `p.posix.basename` rather than the host's
+  path context, so its premise reads the same on Linux, Windows and the
+  Android the app actually runs on.
+
+Had either been fixed by setting `core.autocrlf=false` on that machine, or by
+writing the test around Windows, this move would have broken it again in the
+opposite direction and the breakage would have been just as quiet.
+
+**What the move did break was a claim in this file.** The Windows Environment
+section said the suite took about ten minutes, that
+`backup_service_test.dart` was roughly eight of them, and that the cause was
+the checkout's location — under `OneDrive\Documents`, so every temporary
+database the backup tests write goes through file sync and the virus scanner.
+"Moving the checkout off OneDrive, or excluding it from sync, is the fix."
+
+This machine has no file sync, no virus scanner and an NVMe disk, and the file
+still takes four and a half minutes. So it was measured properly:
+
+| Run | Tests | Time |
+| --- | --- | --- |
+| `flutter test` | 903 | 6m54s |
+| `test/backup_service_test.dart` alone | 23 | 4m35s |
+| the same file, from a `/dev/shm` copy | 23 | 4m40s |
+| everything else | 880 | 24.6s |
+
+**The tmpfs run is the one that settles it.** A `git archive` of `HEAD`
+unpacked into `/dev/shm` — RAM, no disk under it at all — runs the same file
+in the same time. Whatever those minutes are, they are not I/O.
+
+They are the key derivation. `_pbkdf2` in `recovery_material.dart` runs
+600 000 rounds of PBKDF2-HMAC-SHA256, and instrumenting it to print on every
+call gives **182 derivations in that one file, every one of them at the full
+600 000 rounds** — there is no reduced-cost path the tests take. One
+derivation, measured five times on this CPU, costs 1.50s (1497–1509ms). 182 ×
+1.50s is 4m33s, against a measured 4m35s. **The file's runtime is 99% key
+derivation**, and the two seconds left over are everything else those 23 tests
+do — the databases, the packages, the journalled restores.
+
+The arithmetic is not circular, which is why the round count was measured
+rather than assumed: had some tests derived at a lower cost, 182 × 1.50s would
+have overshot the measured time instead of landing two seconds under it.
+
+**The lesson is the one this file keeps relearning, in a new shape.** R8 was
+believed off because a line was absent. Six desktop services looked considered
+because they were never mentioned. Here a cause was believed because it was
+*present*: OneDrive really was there, file sync really is slow, and the story
+fit well enough that nothing measured the thing it was supposed to explain. A
+plausible cause standing next to an unmeasured effect is not a diagnosis, and
+the recommended fix — move the checkout — would have bought nothing that could
+be measured.
+
+**None of which is a defect.** 600 000 rounds is the KDF doing its job, and
+the cost is the point; see "The backup's cryptographic core". What is worth
+knowing is only that this suite's clock is a security parameter rather than an
+engineering one. It scales with the CPU and with nothing else, it will be
+slower on a laptop, and no amount of disk or filesystem tuning will move it.
+
+If it ever does need to be faster, the lever is the tests rather than the
+machine: `_requireIterations` already accepts a range, so a fixture could
+derive at the format's minimum and leave a handful of cases on the shipping
+600 000. That trade has NOT been made — every one of the 182 derivations
+currently runs at the parameter that ships, which is the strongest version of
+the test and, at four and a half minutes, still cheaper than being wrong about
+it.
+
 ### The permission a release build did not have
 
 Found while checking this file's own claims, not by running anything — which
@@ -2856,7 +2955,9 @@ a hard requirement nobody had checked.**
 
   It needs the keystore, so it is the first thing to run once that exists,
   before anything else on this list. A build that cannot be uploaded is worth
-  discovering now rather than on listing day.
+  discovering now rather than on listing day. Item 2 below is the exception,
+  and it goes ahead of the keystore rather than behind it: it is cheapest
+  while nothing is installed anywhere, and launch day is what ends that.
 - **The keystore itself.** Five minutes and one `keytool` command; see "Pick
   up here". Not one to delegate.
 - **Then the release-only check that is still open:** install the signed
@@ -2872,7 +2973,82 @@ story to tell there and no page telling it. Worth checking early: a new
 personal developer account may face a closed-testing period before production
 access, which moves a launch date by weeks rather than days.
 
-### 2. Judgement rather than engineering
+### 2. One dependency knot, with a deadline and an expiry date
+
+**The build prints a warning that says it will become an error.** Every
+Android build ends with:
+
+```
+WARNING: Your app uses the following plugins that apply Kotlin Gradle Plugin
+(KGP): share_plus
+Future versions of Flutter will fail to build if your app uses plugins that
+apply KGP.
+```
+
+It is `share_plus` 12.0.2, whose `android/build.gradle` applies
+`kotlin-android` unconditionally. **Upstream has already fixed it**: 13.2.0
+added built-in Kotlin support, and 13.3.0's build script applies the plugin
+only `if (agpMajor < 9)`. This project is on AGP 9.1.0, so on 13.3.0 that
+branch never runs and the warning goes away. The Dart API did not change
+either — the app's two call sites are
+`SharePlus.instance.share(ShareParams(files: [XFile(path)]))` and read the
+same on both versions.
+
+**It does not resolve.** `share_plus: ^13.3.0` was tried and reverted:
+
+```
+share_plus >=13.1.0 depends on win32 ^6.0.1
+flutter_secure_storage 9.2.4 -> flutter_secure_storage_windows 3.1.2 -> win32 ^5.0.0
+```
+
+13.0.0 bumped win32 to 6.0.0 as well, so no 13.x resolves against
+`flutter_secure_storage` 9.
+
+**This is the same wall `pubspec.yaml` already documents**, hit from a second
+direction. That comment explains why `file_selector` was chosen over
+`file_picker`: the same `win32: ^6` requirement, forbidden by the same Windows
+sibling, "compiled even for an Android build, so the conflict is real rather
+than theoretical". One constraint now blocks two things. The difference is
+that `file_picker` had a working substitute and this does not — the substitute
+for a Flutter release that refuses to build is a Flutter release.
+
+**The way out is `flutter_secure_storage` 9 → 11, and it is not a version
+bump.** Reading its changelog rather than its version number:
+
+* **v10** moved Android storage off Jetpack Security's
+  `EncryptedSharedPreferences` onto its own cipher storage, and migrated
+  `RSA_ECB_PKCS1Padding` → `RSA_ECB_OAEPwithSHA_256andMGF1Padding` and
+  `AES_CBC_PKCS7Padding` → `AES_GCM_NoPadding`. Existing data was migrated
+  automatically.
+* **v11 deleted the old paths.** Its changelog: data saved under the
+  deprecated algorithms "will be unusable after this upgrade. If you used a
+  version prior to v10, upgrade to v10 first so existing data is migrated."
+* v11 also raises `minSdk` to 24 and `compileSdk` to 37.
+
+For this app that store holds the AES-256-GCM key the whole database is
+encrypted under. A phone carrying a build on 9 that receives a build on 11
+would have a key it cannot read and a database nobody can open — not a crash,
+the data.
+
+**Which is why the ordering matters more than the work.** Nothing is shipped,
+so there is no installed base, and today 9 → 11 in one step costs nothing but
+the verification. **That stops being true on the day of the first release.**
+If 1.0 ships on `flutter_secure_storage` 9, the road to 11 has to go through a
+10 that users actually install and run long enough to migrate on — an extra
+release, in the right order, or somebody's data.
+
+So it is cheapest now and gets permanently more expensive. It should go in
+before the keystore work rather than after, and it needs a device round rather
+than the unit suite: the key store is the one thing no unit test speaks for,
+and `key_provider_device_test.dart` is what would have to pass against a real
+Keystore. Doing it would also retire the `file_picker` note in `pubspec.yaml`,
+though `file_selector` works and nothing needs replacing.
+
+Not attempted in this session on purpose. It moves where the encryption key
+lives, which is the decision `pubspec.yaml` already declined to make inside a
+change about something else.
+
+### 3. Judgement rather than engineering
 
 * **Anything to do with more than one user or device.** Untouched, and the
   app's whole shape argues against it — "no account, no server".
@@ -2948,111 +3124,167 @@ What has not been ported is not forgotten:
 
 ## Environment
 
-Set up on this machine and verified working. **The machine was formatted
-mid-project and came back as Windows 11**, so this replaces the Arch Linux
-setup this section used to describe rather than sitting beside it. Nothing in
-the app depends on either; what the move cost is written up in "The move to
-Windows".
+Set up on this machine and verified working. **The machine moved again, from
+Windows 11 to CachyOS** — an Arch derivative — so this replaces the Windows
+setup the section used to describe rather than sitting beside it. It is this
+project's third from-scratch setup, on its second Linux. Nothing in the app
+depends on any of them; what the round trip settled is written up in "The
+move back to Linux".
 
-- JDK 17 — Microsoft Build of OpenJDK, `winget install Microsoft.OpenJDK.17`.
-  **Not** a newer JDK: Gradle/AGP support for the latest releases lags, and 17
-  is what Flutter's Android build is most widely tested against.
-- Flutter 3.47.2 stable at `C:\dev\flutter`, unpacked from the official zip
-  with its SHA-256 checked against the release index. It is **not** in
-  `winget` — the only `Flutter` there is an unrelated Git GUI.
-- Android SDK at `C:\dev\android-sdk`, installed with `cmdline-tools`' own
-  `sdkmanager`: platforms 35 and 36, build-tools 36, platform-tools, emulator,
-  and `system-images;android-35;google_apis;x86_64`. Licences are accepted
-  with `sdkmanager --licenses`, which needs its `y`s on stdin — a PowerShell
-  pipeline of them is not enough, `yes |` from a POSIX shell is.
+The machine: AMD Ryzen 7 9700X, 8 cores and 16 threads, 30GB of RAM, an NVMe
+disk, an NVIDIA RTX 4070 SUPER on the 610.57 driver, kernel
+`7.2.2-1-cachyos`. Both the CPU and the GPU are load-bearing below: the
+suite's runtime turns out to be a CPU measurement, and the emulator renders
+on the card rather than in software.
+
+**Nothing was installed as root.** `sudo` wants a password this session cannot
+give it, so the whole toolchain lives under `~/dev` and `pacman` was never
+asked for any of it. That is not a workaround waiting to be undone — a
+toolchain owned by the user is one that can be replaced, duplicated or thrown
+away without touching the system, and every version below is pinned by the
+archive it came out of rather than by what a rolling distribution happens to
+ship this week.
+
+- JDK 17.0.20.1 LTS — Microsoft Build of OpenJDK, the tarball, unpacked to
+  `~/dev/jdk-17`. **Not** a newer JDK: Gradle/AGP support for the latest
+  releases lags, and 17 is what Flutter's Android build is most widely tested
+  against. It is also what AGP 9.1.0 and Kotlin 2.4.0 in `android/` were
+  proven against on the last machine.
+- Flutter 3.47.2 stable at `~/dev/flutter`, unpacked from the official tarball
+  with its SHA-256 checked against the release index —
+  `447878859d01ca9bfdb99a85f245af07ed8a15fedcd9d189c4749e8e92d1f185`. It is
+  the same version the Windows setup had, because it is still current stable:
+  released 2026-08-27, three days before this rebuild.
+- Android SDK at `~/dev/android-sdk`, installed with `cmdline-tools`' own
+  `sdkmanager`: platform-tools 37.0.1, platforms 35 and 36, build-tools
+  36.0.0, emulator 37.1.11, and `system-images;android-35;google_apis;x86_64`.
+  Licences are accepted with `yes | sdkmanager --licenses`, which is one pipe
+  here — the thing the Windows setup could not do from PowerShell.
 - **The NDK is not in that list on purpose.** Nothing installed it; the first
-  Android build downloaded `android-ndk-r28c` itself, which is a slow few
-  minutes exactly once and then never again.
-- `JAVA_HOME`, `ANDROID_HOME`, `ANDROID_SDK_ROOT` and four `PATH` entries are
-  set at USER scope. A shell started AFTER that has the toolchain and one
-  started before does not — which is worth knowing before concluding a tool
-  failed to install.
+  Android build downloaded `28.2.13676358` itself, which is a slow few minutes
+  exactly once and then never again. Same behaviour as on Windows, and the
+  version it chose is the one `flutter.ndkVersion` names.
+- The shell here is fish, so `JAVA_HOME`, `ANDROID_HOME`, `ANDROID_SDK_ROOT`
+  and the four `PATH` entries are set in
+  `~/.config/fish/conf.d/archlence-android.fish`, which every new fish session
+  reads. A POSIX copy sits at `~/dev/archlence-env.sh` for `bash`/`zsh` and
+  for anything scripted — `. ~/dev/archlence-env.sh`. A shell started AFTER
+  the fish file was written has the toolchain and one started before does not,
+  which is worth knowing before concluding a tool failed to install.
 - Emulator AVD `archlence_pixel` (Pixel 7, Android 15, `google_apis/x86_64`).
-  Start:
+  `avdmanager`'s defaults are frugal — 1.5GB of RAM and a 2GB user partition —
+  so `config.ini` carries 4GB and 8G instead, plus `hw.keyboard=yes`. Start:
 
   ```
-  C:\dev\android-sdk\emulator\emulator.exe -avd archlence_pixel -no-snapshot -no-boot-anim
+  ~/dev/android-sdk/emulator/emulator -avd archlence_pixel -no-snapshot -no-boot-anim
   ```
 
-  No `-gpu` override: `emulator -accel-check` reports WHPX installed and
-  usable, so the `swiftshader_indirect` the Linux setup carried was working
-  around that machine's driver rather than around the emulator.
-- `flutter doctor` reports Chrome and Visual Studio missing. Both are
-  **irrelevant** — they are the web and Windows-desktop toolchains and this is
-  an Android client. The Android toolchain and its licences come back clean,
-  which the Linux setup never managed.
-- **`flutter pub get` warns that building with plugins needs symlink support
-  and asks for Developer Mode. It is not a blocker here** — checked rather
-  than assumed: `AllowDevelopmentWithoutDevLicense` is absent from the
-  registry, so Developer Mode is OFF, and `assembleDebug` still built and
-  installed a debug APK for both device test runs.
-- **The suite is much slower here, and it is the checkout's location rather
-  than the machine.** The repository sits under `OneDrive\Documents`, so every
-  temporary database the backup tests write goes through file sync and the
-  virus scanner. `flutter test` takes about ten minutes, and roughly eight of
-  them are `backup_service_test.dart` alone. Moving the checkout off OneDrive,
-  or excluding it from sync, is the fix; it is a decision about this machine
-  rather than about the code.
-- **Do not run the emulator and `flutter test` at the same time.** Not a
-  preference: with the emulator up, `backup_service_test.dart`'s slowest test
-  crosses its timeout and the whole file reports as "did not complete", which
-  reads exactly like a hang in the code. It cost a diagnosis before the cause
-  was found — the same suite passed on the same commit once the emulator was
-  killed. Anything that looks like a hang in that file, check what else is
+  No `-gpu` override, and this is the third answer this project has given to
+  that question. The FIRST Arch setup carried `-gpu swiftshader_indirect`; the
+  Windows setup dropped it and guessed it had been working around that
+  machine's driver rather than around the emulator. The guess was right. Here
+  `emulator -accel-check` reports **KVM (version 12) installed and usable**,
+  and the emulator log says `vulkan_mode_selected:host` with
+  `Selecting Vulkan device: NVIDIA GeForce RTX 4070 SUPER`. It renders on the
+  real card.
+- `flutter doctor` reports Chrome and ninja missing. Both are **irrelevant** —
+  they are the web and Linux-desktop toolchains and this is an Android client.
+  The Android toolchain, the SDK, the JDK and all licences come back clean,
+  which is what the Windows setup managed and the first Arch setup never did.
+- **`flutter pub get` has nothing to say here.** The Windows setup needed a
+  paragraph about symlink support and Developer Mode; on Linux that whole
+  question does not exist.
+
+### What the suite costs, and what it is spent on
+
+The Windows setup recorded `flutter test` at about ten minutes and blamed the
+checkout's location — OneDrive's file sync and the virus scanner — with
+`backup_service_test.dart` named as roughly eight of them. **The first half of
+that was right and the second half was wrong**, and the numbers are in "The
+move back to Linux". Here, on an NVMe disk with no sync and no scanner:
+
+| Run | Tests | Time |
+| --- | --- | --- |
+| `flutter test` | 903 | 6m54s |
+| `test/backup_service_test.dart` alone | 23 | 4m35s |
+| the same file from a `/dev/shm` copy | 23 | 4m40s |
+| everything else (`test/*.dart` + `test/screens/`) | 880 | 24.6s |
+
+880 of the 903 tests finish in twenty-five seconds. The remaining 23 make 182
+PBKDF2 derivations at 600 000 rounds each, one derivation costs 1.50s on this
+CPU, and 182 × 1.50s is 4m33s against a measured 4m35s. The suite is a key
+derivation benchmark with a test suite attached to it, and no disk anywhere
+can help.
+
+The full run takes longer than the file alone plus everything else because
+`flutter test` runs files in parallel: the other 880 tests compete for the
+same cores as the 182 CPU-bound isolates, and the slow file finishes later
+than it would on its own. Sequential totals do not add up here, which is worth
+remembering before reading a single file's time as a share of the whole.
+
+- **Do not run the emulator and `flutter test` at the same time.** Carried
+  over from the Windows setup, where it cost a diagnosis: with the emulator
+  up, `backup_service_test.dart` crossed its timeout and the whole file
+  reported as "did not complete", which reads exactly like a hang in the code.
+  This session kept them serialised on the strength of that finding and did
+  not re-test it, and the timings above say why it is plausible — that file is
+  CPU-bound for four and a half minutes and an emulator is not a light
+  neighbour. Anything that looks like a hang in that file, check what else is
   running first.
 
 **An Android session does not end when the command does.** Two kinds of
-process outlive it, both by design and neither obvious from Task Manager,
-where they are named after their runtime rather than their job:
+process outlive it, both by design:
 
-* **The emulator** — `qemu-system-x86_64`, and it holds a few GB. Closing its
-  window is enough; `adb -s emulator-5554 emu kill` does the same from a
-  shell and is the one to use when the window is not where you are.
-* **Gradle's daemons** — `java.exe`, listed as *OpenJDK Platform binary*.
-  After the three Android builds a device-test round makes, that was one
-  Gradle daemon at 3.4GB and two Kotlin compile daemons at about 600MB each:
-  4.5GB, all of it idle. They persist deliberately, so the next build does
-  not rebuild a JVM and a configuration, and they respawn on their own. Stop
-  them with `./gradlew --stop` from `android/` — the Kotlin daemons go with
-  the Gradle one and do not need stopping separately.
+* **The emulator** — `qemu-system-x86_64`, holding a few GB. `adb -s
+  emulator-5554 emu kill` from a shell, or close its window.
+* **Gradle's daemons** — JVMs, one Gradle and two Kotlin compile daemons after
+  a device-test round, and on Windows that was 4.5GB of idle memory. They
+  persist deliberately so the next build does not rebuild a JVM and a
+  configuration, and they respawn on their own. Stop them with
+  `./gradlew --stop` from `android/`; the Kotlin daemons go with the Gradle
+  one. Checked afterwards here rather than assumed: with the emulator killed
+  and `--stop` run, `ps` finds no JVM holding anything.
 
 Neither is a leak and neither needs stopping to be correct. It is worth
-knowing which is which before concluding the emulator is still up: the
-emulator had already exited in the session that wrote this, and what was
-still holding the memory was Gradle.
+knowing which is which before concluding the emulator is still up.
 
-Verified on this machine, in this order: `flutter analyze` clean, 903 unit
-tests pass, and all three device test files pass on `emulator-5554` — four in
-`key_provider_device_test.dart` against the real Keystore, eight in
+Disk, for planning a rebuild: `~/dev/android-sdk` 7.3GB, `~/dev/flutter`
+2.3GB, `~/dev/jdk-17` 318MB, and `~/.gradle` 4.9GB after three Android builds.
+The downloads themselves are 1.57GB for Flutter, 192MB for the JDK and 158MB
+for the command-line tools.
+
+Verified on this machine, in this order: `flutter analyze` clean in 8.0s, 903
+unit tests pass in 6m54s, and all 14 device tests pass on `emulator-5554` —
+four in `key_provider_device_test.dart` against the real Keystore, eight in
 `app_device_test.dart` driving the real screens, and two in
-`live_price_device_test.dart` against the real network.
+`live_price_device_test.dart` against the real network, where CoinGecko and
+Frankfurter both answered. The device round takes 4m31s wall, of which 31s is
+the tests; the rest is the first Gradle build and the NDK download.
+
+### The parity generators
 
 Regenerating parity vectors needs `pycryptodome` and `platformdirs`, neither
-installed system-wide. Python itself is not either — `python` on a fresh
-Windows is the Microsoft Store stub, which is not one. So:
-`winget install Python.Python.3.12`, then a venv in the DESKTOP checkout,
-which is at `OneDrive\Documents\archlence\archlence`:
+installed system-wide. Python itself IS here and is a real one — the Windows
+setup had to work around the Microsoft Store stub first. The desktop checkout
+is at `~/Documents/archlence`, and the venv goes in it, which is where each
+generator's doc comment already says it goes:
 
-```
-python -m venv aeadvenv
-aeadvenv\Scripts\pip install pycryptodome platformdirs
+```bash
+python3 -m venv aeadvenv
+./aeadvenv/bin/pip install pycryptodome platformdirs
 ```
 
-`Scripts\` rather than `bin/`, which is the only thing about the generators
-that changed with the platform. **One thing about their OUTPUT did:** Python
-opens files in text mode, so a generator run on Windows writes CRLF where the
-same script on Linux wrote LF. It does not reach the repository —
-`.gitattributes` normalises it back on the way in — but the regenerated file
-will look modified in the working tree when its content is identical.
-Checked, not reasoned about: `emit_summary_vectors.py` run here through the
-desktop's own `financial_summary_service.py` reproduces
-`test/summary_vectors.txt` digest for digest once those CR bytes are removed,
-and `git diff` on the CRLF copy is empty.
+`bin/` rather than `Scripts\`, which puts the doc comments back to being
+literally correct. **And one thing about the OUTPUT goes back too:** Python
+opens files in text mode, so a generator run on Windows wrote CRLF where the
+same script on Linux writes LF. `.gitattributes` normalised it on the way in
+either way, but the regenerated file no longer looks modified when it is not.
+
+Checked rather than reasoned about, on this machine, with pycryptodome 3.23.0:
+`emit_summary_vectors.py` run through the desktop's own
+`financial_summary_service.py` rewrites `test/summary_vectors.txt` to
+`b344021b062d6cac6be18e90daac5a35e4d0d5149dba60cdc54ff373b402dca3` — the
+digest it already had — and `git status` on it is empty.
 
 The generators live in `tool/` and are run from the desktop checkout, because
 each reads that project's own modules:
@@ -3072,16 +3304,14 @@ each reads that project's own modules:
 The last two run the other way — this app writes, the desktop reads — and are
 run by hand, because the assertion lives in the desktop checkout. Each file's
 doc comment carries the exact command and the fixed key to check the answer
-against — written as `./aeadvenv/bin/python`, which is the interpreter's path
-on Linux and `aeadvenv\Scripts\python` here. Everything after it is the same.
-`emit_mobile_backup.dart` goes through `flutter test`, which is the only
-runner that has this package's Flutter dependencies.
+against. `emit_mobile_backup.dart` goes through `flutter test`, which is the
+only runner that has this package's Flutter dependencies.
 
 `keyring` is deliberately absent from `aeadvenv`: without it the desktop's
 `create_platform_key_provider` falls back to its file provider, so the key a
 generator writes is the key its encryption uses. With a real credential store
-reachable — a Secret Service on Linux, Credential Manager here — it would
-instead pick up whatever that store happens to hold for the developer.
+reachable — a Secret Service on this machine — it would instead pick up
+whatever that store happens to hold for the developer.
 
 Nothing that claims parity is transcribed by hand. A generator kept outside
 the repository is a generator that does not exist the next time it is needed.
