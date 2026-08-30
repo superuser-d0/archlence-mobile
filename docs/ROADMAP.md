@@ -144,8 +144,8 @@ app, found three more: every sweep renders a screen in the state it OPENS in,
 the per-screen tests drive real states on an 800dp surface, and nothing
 covered a real state at a real width. Sixteen defects in all.
 
-1116 unit tests and 14 device tests pass, and `flutter analyze` is clean. No
-control in the app is inert. The count grew by 213 because what it did not
+1117 unit tests and 14 device tests pass, and `flutter analyze` is clean. No
+control in the app is inert. The count grew by 214 because what it did not
 cover is now covered rather than assumed.
 
 ## Pick up here
@@ -173,7 +173,7 @@ defects**, in states no sweep can reach because every sweep renders the state
 a screen OPENS in. Sixteen in all, all fixed.
 
 Three sweeps, two source rules and a driven-state file hold the line now, and
-the suite went from 903 tests to 1116. **No screen is left that nothing lays
+the suite went from 903 tests to 1117. **No screen is left that nothing lays
 out at a phone width, and no state that broke one is left unguarded.**
 
 **One of the fixes was worse than the defect**, which is the part worth
@@ -218,6 +218,7 @@ The last open release-only question is answered; see "The first App Bundle".
 | 10 | Three more found by measuring the test surface instead of arguing about it | "What the 800dp surface was hiding" |
 | 11 | A privacy policy Play would accept, generated from one source in two languages | "The privacy policy, generated rather than written twice" |
 | 12 | The Data safety answers, decided by recording what the app actually sends | "The Data safety declaration, decided by listening to the wire" |
+| 13 | The TalkBack hour: two defects, two false alarms, and three instruments that disagreed | "The TalkBack hour, and what the tooling gets wrong" |
 
 The machine moved from Windows 11 to CachyOS and the whole toolchain was
 rebuilt under `~/dev` without root; nothing in the repository had to change
@@ -2234,10 +2235,10 @@ still takes four and a half minutes. So it was measured properly:
 
 | Run | Tests | Time |
 | --- | --- | --- |
-| `flutter test` | 1116 | 4m40s |
+| `flutter test` | 1117 | 4m41s |
 | `test/backup_service_test.dart` alone | 23 | 4m35s |
 | the same file, from a `/dev/shm` copy | 23 | 4m40s |
-| everything else | 1093 | ~25s |
+| everything else | 1094 | ~25s |
 
 **The tmpfs run is the one that settles it.** A `git archive` of `HEAD`
 unpacked into `/dev/shm` — RAM, no disk under it at all — runs the same file
@@ -2877,6 +2878,97 @@ to run at each release: run those two test files, and if they pass, re-confirm
 the form unchanged. The judgement in it belongs to whoever signs the
 declaration; what the tests guarantee is that the facts it was made from are
 still the facts.
+
+### The TalkBack hour, and what the tooling gets wrong
+
+This was the last item on the list that "needs a person with TalkBack on
+rather than another test", and it was done with TalkBack genuinely running:
+`com.google.android.marvin.talkback` enabled through `settings put secure`,
+the release build installed, and the green focus rectangle measured out of
+screenshots to see where focus actually landed.
+
+**Two defects, and two false alarms.** The false alarms are the more useful
+half, because both came from trusting the wrong instrument.
+
+#### The header was read last, on every tab
+
+`Scaffold(extendBodyBehindAppBar: true)` lays the body out FIRST — it sits
+behind the header — and semantics traversal follows layout order. So a screen
+reader read the search box, the balances and the subscriptions block, and
+only then said "Archlence". On all five tabs.
+
+**No guideline checks reading order.** `accessibility_test.dart` and the three
+sweeps read the tree for labels, sizes and contrast; a screen that announces
+everything correctly in a senseless sequence passes every one of them. That is
+exactly what this file has said for months about the TalkBack hour, and it
+turned out to be true in the most literal way.
+
+`Semantics(sortKey: OrdinalSortKey(...))` on the header, body, action button
+and tab bar puts it back. Verified on the device: `Archlence` first, then the
+body, then `Record a transaction`, then the five tabs.
+
+#### The notifications bell was a button with no name
+
+An `IconButton` with `onPressed: null` and no tooltip, in the app bar, for a
+feature that does not exist. In the semantics tree it is a BUTTON with an
+empty label, which a screen reader announces as an unnamed disabled control.
+`labeledTapTargetGuideline` does not catch it — a disabled button is not a tap
+target — and neither did `icon_button_tooltip_test.dart`, which exempts
+`onPressed: null` for exactly that reason.
+
+It is behind `showUnbuiltFeatures` now, like every other unbuilt thing. It had
+simply been missed when the rest were removed. A `SizedBox` of the same width
+keeps the title centred.
+
+#### The first false alarm: "no text field has a label"
+
+`uiautomator dump` showed every `EditText` in the app with `content-desc=""`,
+no text, and Android's own `NAF="true"` — *Not Accessibility Friendly*. That
+looked conclusive, and it was reported as a systematic defect affecting every
+field in the app.
+
+It is wrong. Reading Flutter's own semantics tree instead shows the labels are
+there: `"Search accounts, categories, notes"`, `"Name / Salary account"`,
+`"Opening balance"`. Flutter puts a text field's label in the Android node's
+`hintText`, **uiautomator does not dump that attribute, and its NAF heuristic
+is computed without it.**
+
+**`uiautomator dump` is not what a screen reader hears.** It is a good map of
+what exists and a bad witness for what is announced. The instrument for that
+is `tester.semantics` in a widget test, or TalkBack itself on a device.
+
+#### The second false alarm: "the Add card button is unreachable"
+
+The tree showed the whole Cards body as one merged node with `+  ADD` buried
+in its text, and no separate node for the button anywhere in the XML. It was
+reported as: a screen reader user cannot add a card.
+
+Then the button was tapped, and the sheet opened. The merged node was the
+summary region above it, not the button. Two wrong calls in one session, both
+from reading a dump as if it were speech.
+
+#### And the test that said the fix had not worked
+
+`reading_order_test.dart` pins the new order. Its first draft walked the tree
+with `visitChildren` and reported the header still at index 5 — while the
+device, with the fix installed, read it first. `visitChildren` returns
+INSERTION order; sort keys are applied when the update is compiled for the
+platform. Flutter has a public API for the real thing,
+`tester.semantics.simulatedAccessibilityTraversal()`, and with it the test
+agrees with the device.
+
+Three instruments, three different answers, and only the device was right
+every time. Checked for teeth: take the sort keys out and the header goes back
+to index 5, named in the failure.
+
+#### What the hour could not check, and still cannot
+
+Whether the labels are any GOOD to listen to. "Total Balance / 0,00 ₺ / Net
+Worth / Cash / 0,00 ₺ / Card Debt / 0,00 ₺" is one announcement, correct and
+complete, and read aloud it is a run-on sentence with the caption for one
+figure sitting between two others. Nothing here can tell you that; it needs
+ears, and a Turkish speaker's ears for the Turkish half. That part of the hour
+is still open and still belongs to a person.
 
 ### The permission a release build did not have
 
@@ -3602,10 +3694,13 @@ there is no code work standing between this app and a submission.
   `dumpsys package` confirms the INSTALLED package carries
   `android.permission.INTERNET`, which until now had only been read out of the
   manifest merger. See "The first App Bundle".
-- **An hour with TalkBack on.** Open, and a person's. The labels it would
-  have tripped over are fixed — two unlabelled controls and a rule that keeps
-  new ones out — so what is left for it is reading order and label QUALITY,
-  which no guideline reads. See item 2.
+- ~~**An hour with TalkBack on.**~~ Done, with TalkBack genuinely running on
+  a device. It found the two things no guideline reads: the header was
+  announced AFTER the whole screen on every tab, and the notifications bell
+  was a button with no name. Both fixed and pinned. What is still open out of
+  that hour is label QUALITY — whether the announcements are good to listen
+  to — which needs ears, and Turkish ears for the Turkish half. See "The
+  TalkBack hour, and what the tooling gets wrong".
 
 Not engineering. **The privacy policy is done**, in both languages, generated
 from the app's own copy of the text and reachable from inside the app as Play
@@ -3800,19 +3895,19 @@ move back to Linux". Here, on an NVMe disk with no sync and no scanner:
 
 | Run | Tests | Time |
 | --- | --- | --- |
-| `flutter test` | 1116 | 4m40s |
+| `flutter test` | 1117 | 4m41s |
 | `test/backup_service_test.dart` alone | 23 | 4m35s |
 | the same file from a `/dev/shm` copy | 23 | 4m40s |
-| everything else (`test/*.dart` + `test/screens/`) | 1093 | ~25s |
+| everything else (`test/*.dart` + `test/screens/`) | 1094 | ~25s |
 
-1093 of the 1116 tests finish in under half a minute. The remaining 23 make 182
+1094 of the 1117 tests finish in under half a minute. The remaining 23 make 182
 PBKDF2 derivations at 600 000 rounds each, one derivation costs 1.50s on this
 CPU, and 182 × 1.50s is 4m33s against a measured 4m35s. The suite is a key
 derivation benchmark with a test suite attached to it, and no disk anywhere
 can help.
 
-4m40s for everything against 4m35s for that one file: the other 1093 tests
-add five seconds to the critical path, because `flutter test` runs files in
+4m41s for everything against 4m35s for that one file: the other 1094 tests
+add six seconds to the critical path, because `flutter test` runs files in
 parallel and they finish long before it does. **The suite's wall clock is one
 file's key derivation and almost nothing else.**
 
@@ -3857,7 +3952,7 @@ The downloads themselves are 1.57GB for Flutter, 192MB for the JDK and 158MB
 for the command-line tools.
 
 Verified on this machine, in this order: `flutter analyze` clean in under
-10s, 1099 unit tests pass in 4m40s, and all 14 device tests pass on
+10s, 1099 unit tests pass in 4m41s, and all 14 device tests pass on
 `emulator-5554` —
 four in `key_provider_device_test.dart` against the real Keystore, eight in
 `app_device_test.dart` driving the real screens, and two in

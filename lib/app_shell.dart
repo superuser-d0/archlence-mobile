@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 
 import 'screens/add_transaction_sheet.dart';
 import 'screens/assets_screen.dart';
@@ -8,6 +9,7 @@ import 'screens/settings_screen.dart';
 import 'screens/tools_screen.dart';
 import 'theme/obsidian_prime.dart';
 import 'ui/app_locale.dart';
+import 'widgets/not_yet.dart';
 import 'widgets/surfaces.dart';
 
 /// The five-tab shell: a glass header and bottom bar with content scrolling
@@ -83,6 +85,12 @@ class _AppShellState extends State<AppShell> {
       selectTab: _selectTab,
       child: Scaffold(
         extendBody: true,
+        // `extendBodyBehindAppBar` lays the body out FIRST, because it sits
+        // behind the header — and semantics traversal follows that order, so
+        // a screen reader read the whole screen before it said which app it
+        // was in. Found with TalkBack actually running; no guideline checks
+        // reading order. The sort keys put it back: header, body, action,
+        // tabs.
         extendBodyBehindAppBar: true,
         appBar: const _GlassHeader(),
         // Recording a transaction is the app's most frequent action, so it gets
@@ -91,48 +99,59 @@ class _AppShellState extends State<AppShell> {
         // Freeze Card switch.
         floatingActionButton: _tab == 3 || _tab == 4
             ? null
-            : FloatingActionButton(
-                // A tooltip, which is also the SEMANTIC LABEL: this button is
-                // an icon and nothing else, so without one a screen reader
-                // announces the app's most-used control as "button".
-                tooltip: context.l10n.a11yRecordTransaction,
-                onPressed: () async {
-                  final recorded = await showAddTransactionSheet(context);
-                  if (recorded != null) setState(() => _revision++);
-                },
-                child: const Icon(Icons.add),
+            : Semantics(
+                sortKey: const OrdinalSortKey(2),
+                child: FloatingActionButton(
+                  // A tooltip, which is also the SEMANTIC LABEL: this button is
+                  // an icon and nothing else, so without one a screen reader
+                  // announces the app's most-used control as "button".
+                  tooltip: context.l10n.a11yRecordTransaction,
+                  onPressed: () async {
+                    final recorded = await showAddTransactionSheet(context);
+                    if (recorded != null) setState(() => _revision++);
+                  },
+                  child: const Icon(Icons.add),
+                ),
               ),
         // Both bars are translucent and sit ON TOP of the body, so the body's
         // own inset must grow by their height — otherwise the first and last
         // items of every screen scroll underneath them and are unreachable.
         // Screens read this back through `MediaQuery.paddingOf`.
-        body: MediaQuery(
-          data: media.copyWith(
-            padding: media.padding.copyWith(
-              top: media.padding.top + kToolbarHeight,
-              bottom: media.padding.bottom + _navBarHeight,
+        body: Semantics(
+          sortKey: const OrdinalSortKey(1),
+          explicitChildNodes: true,
+          child: MediaQuery(
+            data: media.copyWith(
+              padding: media.padding.copyWith(
+                top: media.padding.top + kToolbarHeight,
+                bottom: media.padding.bottom + _navBarHeight,
+              ),
+            ),
+            child: KeyedSubtree(
+              key: ValueKey('$_tab-$_revision'),
+              child: switch (_tab) {
+                0 => const HomeScreen(),
+                1 => const AssetsScreen(),
+                2 => const CardsScreen(),
+                3 => const ToolsScreen(),
+                _ => const SettingsScreen(),
+              },
             ),
           ),
-          child: KeyedSubtree(
-            key: ValueKey('$_tab-$_revision'),
-            child: switch (_tab) {
-              0 => const HomeScreen(),
-              1 => const AssetsScreen(),
-              2 => const CardsScreen(),
-              3 => const ToolsScreen(),
-              _ => const SettingsScreen(),
-            },
-          ),
         ),
-        bottomNavigationBar: GlassBar(
-          border: const Border(
-            top: BorderSide(color: ObsidianPalette.cardStroke),
-          ),
-          child: NavigationBar(
-            backgroundColor: Colors.transparent,
-            selectedIndex: _tab,
-            onDestinationSelected: _selectTab,
-            destinations: _destinations(context),
+        bottomNavigationBar: Semantics(
+          sortKey: const OrdinalSortKey(3),
+          explicitChildNodes: true,
+          child: GlassBar(
+            border: const Border(
+              top: BorderSide(color: ObsidianPalette.cardStroke),
+            ),
+            child: NavigationBar(
+              backgroundColor: Colors.transparent,
+              selectedIndex: _tab,
+              onDestinationSelected: _selectTab,
+              destinations: _destinations(context),
+            ),
           ),
         ),
       ),
@@ -179,43 +198,57 @@ class _GlassHeader extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GlassBar(
-      child: SafeArea(
-        bottom: false,
-        child: SizedBox(
-          height: kToolbarHeight,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: Spacing.containerMargin,
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: const BoxDecoration(
-                    color: ObsidianPalette.primary,
-                    shape: BoxShape.circle,
+    return Semantics(
+      sortKey: const OrdinalSortKey(0),
+      explicitChildNodes: true,
+      child: GlassBar(
+        child: SafeArea(
+          bottom: false,
+          child: SizedBox(
+            height: kToolbarHeight,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: Spacing.containerMargin,
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: const BoxDecoration(
+                      color: ObsidianPalette.primary,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.person,
+                      size: 18,
+                      color: ObsidianPalette.onPrimary,
+                    ),
                   ),
-                  child: const Icon(
-                    Icons.person,
-                    size: 18,
-                    color: ObsidianPalette.onPrimary,
+                  Expanded(
+                    child: Text(
+                      'Archlence',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
                   ),
-                ),
-                Expanded(
-                  child: Text(
-                    'Archlence',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                ),
-                // Nothing raises a notification yet.
-                const IconButton(
-                  onPressed: null,
-                  icon: Icon(Icons.notifications_outlined),
-                ),
-              ],
+                  // Nothing raises a notification yet, so this follows the
+                  // same rule as every other unbuilt feature — see
+                  // `showUnbuiltFeatures`. It stayed behind when the rest were
+                  // removed, and a TalkBack round is where that showed: in the
+                  // semantics tree it is a BUTTON with no label and no action,
+                  // which a screen reader announces as an unnamed disabled
+                  // control. The `SizedBox` keeps the title centred, since the
+                  // avatar on the left is 32 wide inside a 48 tap target.
+                  if (showUnbuiltFeatures)
+                    const IconButton(
+                      onPressed: null,
+                      icon: Icon(Icons.notifications_outlined),
+                    )
+                  else
+                    const SizedBox(width: 32, height: 32),
+                ],
+              ),
             ),
           ),
         ),

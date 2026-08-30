@@ -89,7 +89,7 @@ stops being true.
 
 | | |
 | --- | --- |
-| Unit tests | 1116 |
+| Unit tests | 1117 |
 | Device tests | 14, on a real emulator or handset |
 | `flutter analyze` | clean |
 | Languages | Turkish and English, both complete |
@@ -192,6 +192,16 @@ string it was written to catch.
 that had never worked on any build ever made, a release manifest with no
 internet permission, a heading that overflowed a small phone and was never laid
 out where a test could see it.
+
+**And some things only a screen reader can find.** An hour with TalkBack
+actually running turned up two defects no guideline reads: the app bar was
+announced *after* the whole screen on every tab — `extendBodyBehindAppBar`
+lays the body out first and traversal follows layout — and a leftover
+notifications bell was a button with no name. It also produced two false
+alarms, both from trusting `uiautomator dump` as if it were speech: it does
+not dump the `hintText` a Flutter text field's label lives in, and it flags
+those fields `NAF` on that basis. The dump is a map of what exists, not a
+witness for what is announced.
 
 **And a suite that only ever opens one screen is one screen's worth of proof.**
 Nine hundred tests passed for months without a single one of them selecting a
