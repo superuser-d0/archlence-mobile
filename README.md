@@ -71,7 +71,7 @@ whoever publishes; it is not in this repository and cannot be.
 
 | | |
 | --- | --- |
-| Unit tests | 1025 |
+| Unit tests | 1087 |
 | Device tests | 14, on a real emulator or handset |
 | `flutter analyze` | clean |
 | Languages | Turkish and English, both complete |
@@ -191,9 +191,11 @@ sizes its button to the selected item, so without `isExpanded` an account
 label carrying a name *and* a balance overflows instead of ellipsizing. Two of
 the app's nine dropdowns already had it. The worst of the seven was 152 pixels
 over at the default font size, on a sheet with its own end-to-end test file —
-which walks it on an 800dp surface, a width no phone has. Both sweeps are in
-the suite now, alongside rules that read the source for the cases a sweep
-cannot lay out.
+which walks it on an 800dp surface, a width no phone has. A third sweep, of
+the nine pushed routes, found nothing — and that is the comparison worth
+keeping, because those are the screens that already had the guidelines applied
+to them. All three sweeps are in the suite now, alongside rules that read the
+source for the cases a sweep cannot lay out.
 
 ## Documentation
 

@@ -137,8 +137,13 @@ seven were a single missing line repeated across seven dropdowns — one of them
 test file. None was a regression. All are fixed. See "The six, fixed" and
 "The layer under the tabs".
 
-1025 unit tests and 14 device tests pass, and `flutter analyze` is clean. No
-control in the app is inert. The count grew by 122 because what it did not
+A third sweep walked the nine pushed routes under the same conditions and
+found none, which is the comparison worth keeping: that is the one layer that
+already had guideline coverage, and the two that had none held thirteen
+between them.
+
+1087 unit tests and 14 device tests pass, and `flutter analyze` is clean. No
+control in the app is inert. The count grew by 184 because what it did not
 cover is now covered rather than assumed.
 
 ## Pick up here
@@ -158,8 +163,11 @@ more behind the sheets, and the second seven were one missing line repeated
 across seven dropdowns. **All thirteen are fixed**, each one proved by a named
 red case turning green. See "The six, fixed" and "The layer under the tabs".
 
-Two sweeps and three source rules hold the line now, and the suite went from
-903 tests to 1025.
+A third sweep then walked the nine pushed routes under the same conditions
+and found nothing — which is its own finding, because that is the layer that
+already had guideline coverage. Three sweeps and two source rules hold the
+line now, and the suite went from 903 tests to 1087. **No screen in the app is
+left that nothing lays out at a width a phone has.**
 
 **One of the fixes was worse than the defect**, which is the part worth
 carrying forward: `IntrinsicHeight` removed the Tools overflow, turned every
@@ -199,6 +207,7 @@ The last open release-only question is answered; see "The first App Bundle".
 | 6 | Six defects on four tabs no test had ever opened | "The pre-release sweep" |
 | 7 | Those six fixed, and a fix that broke the screen its tests passed | "The six, fixed" |
 | 8 | Seven more behind the sheets, all one missing line | "The layer under the tabs" |
+| 9 | The third layer swept and clean, and what that comparison says | "The third layer, which was clean" |
 
 The machine moved from Windows 11 to CachyOS and the whole toolchain was
 rebuilt under `~/dev` without root; nothing in the repository had to change
@@ -2215,10 +2224,10 @@ still takes four and a half minutes. So it was measured properly:
 
 | Run | Tests | Time |
 | --- | --- | --- |
-| `flutter test` | 1025 | 4m38s |
+| `flutter test` | 1087 | 4m39s |
 | `test/backup_service_test.dart` alone | 23 | 4m35s |
 | the same file, from a `/dev/shm` copy | 23 | 4m40s |
-| everything else | 1002 | ~25s |
+| everything else | 1064 | ~25s |
 
 **The tmpfs run is the one that settles it.** A `git archive` of `HEAD`
 unpacked into `/dev/shm` — RAM, no disk under it at all — runs the same file
@@ -2591,6 +2600,48 @@ calendar, category settings, backup — are each held to the guidelines by
 `accessibility_test.dart`, but on its own surface rather than at 320dp and not
 at any font scale. That is the next thinnest layer, and on this evidence it is
 worth walking too.
+
+### The third layer, which was clean — and why that is the finding
+
+`test/screens/route_sweep_test.dart` walks the nine pushed routes — budget,
+savings, the calendar, category settings, Backup & Restore and the four
+calculators — at 360dp and 320dp, at 1.5x and 2.0x, and in Turkish. 62 cases.
+
+**All 62 passed on the first run, and nothing was fixed.**
+
+That is worth writing down rather than skipping, because of what it contrasts
+with. Three layers were swept in the same session, under the same conditions:
+
+| Layer | Guidelines it already had | Cases | Defects found |
+| --- | --- | --- | --- |
+| Tabs | none — only the Home tab was ever built | 40 | **6** |
+| Sheets | none | 80 | **7** |
+| Pushed routes | all three, per screen, in `accessibility_test.dart` | 62 | **0** |
+
+The layer that already had guideline coverage had nothing wrong with it. The
+two that had none had thirteen between them. That is not proof of causation
+from a sample of three, but it is the shape you would expect if the coverage —
+rather than the care taken while writing those screens — is what makes the
+difference. The routes were written by the same hand as the tabs.
+
+**A sweep that finds nothing proves nothing until it can fail**, which is this
+file's most-paid-for habit and applies hardest to a green result. A `Row` of
+two 500dp boxes was put into `budget_screen.dart`'s column and the sweep
+caught it, 688 pixels over, on every condition. Removed again, and 62 for 62.
+
+Worth being precise about what the table's third row does NOT say.
+`accessibility_test.dart` runs those screens at **one font scale, on
+`pumpScreen`'s 800dp surface** — so the coverage it gave them was the three
+guidelines, not the widths and scales this file adds. The routes passed the
+new conditions on their own merit. What the table shows is that a screen held
+to guidelines from the start also came out sound under conditions those
+guidelines never applied, and the two layers with no guideline at all did not.
+
+The calendar keeps its one exemption from `androidTapTargetGuideline`, argued
+in full in `accessibility_test.dart` and unchanged here: seven columns cannot
+each have 48dp on a 360dp phone, and its cells are 48 TALL, which is the
+dimension that is free. It is laid out at every width and scale like
+everything else.
 
 ### The permission a release build did not have
 
@@ -3328,35 +3379,43 @@ account may face a closed-testing period before production access, which moves
 a launch date by weeks rather than days — so it is the item that sets the
 schedule, and it can run while everything else is finished.
 
-### 2. The last layer nothing walks at phone width
+### 2. One decision about the surface every widget test lays out on
 
-Two sweeps now exist. `tab_sweep_test.dart` walks the five tabs;
-`sheet_sweep_test.dart` walks the nine sheets. Between them they found
-thirteen defects that 903 tests did not, and every one is fixed.
+Three sweeps now exist — `tab_sweep_test.dart`, `sheet_sweep_test.dart`,
+`route_sweep_test.dart` — covering the five tabs, the nine sheets and the nine
+pushed routes at 360dp and 320dp, at 1.5x and 2.0x, and in Turkish. They found
+thirteen defects, all fixed, and the routes came back clean. **There is no
+screen left in the app that nothing lays out at a width a phone has.**
 
-**What is left is the pushed routes that are not sheets** — the four
-calculators, the calendar, category settings, Backup & Restore.
-`accessibility_test.dart` does hold each of them to the three guidelines,
-which is more than the tabs or the sheets had, so this is the thinnest of the
-three layers. What it does NOT do is lay them out at a large font scale or on
-a 320dp phone, and it runs them on `pumpScreen`'s 800dp surface.
+What is left is not a defect. It is a question the sweeps answered around
+rather than answered.
 
-On the evidence of the two layers below it, that is worth an afternoon:
+**`pumpScreen` lays out on 800x2400 at a device pixel ratio of 1.** Every
+screen and sheet widget test in this repository uses it. No phone is 800dp
+wide. It was chosen knowingly — a tall, wide surface means a test does not
+have to scroll to reach what it asserts on, and this file argues that trade
+under "A finder matching is not a user reaching". That reasoning still holds.
 
-* the tab sweep found six, one of them wrong at the default font scale;
-* the sheet sweep found seven, one of them 152 pixels wrong at the default
-  font scale, on a screen with its own end-to-end test file.
+What was not noticed until the sweeps is that the same choice removes WIDTH as
+a variable, everywhere, at once. A 152-pixel overflow sat in the pay-debt
+sheet while that sheet's own test file walked it end to end, typed into it and
+asserted on both sides of a transfer.
 
-**And there is a wider question under all three**, which should be answered
-once rather than three times: `pumpScreen` lays out on 800x2400 at a device
-pixel ratio of 1. Every screen and sheet widget test in this repository uses
-it, and no phone is 800dp wide. It was chosen so that tests would not have to
-scroll — the roadmap says so, under "A finder matching is not a user reaching"
-— and that trade was made knowingly for reachability. What was not noticed is
-that it also removes width as a variable everywhere at once. Moving it to a
-phone width would be a large change with a lot of fallout; the sweeps are the
-cheap version of the same coverage and they are in. Worth deciding
-deliberately rather than leaving as an accident.
+Two ways to answer it, and they are not equal:
+
+* **Leave `pumpScreen` alone.** The sweeps cover width and scale now, on every
+  screen; the per-screen tests keep the surface that lets them assert without
+  scrolling. Cheap, already done, and the coverage is real — but the width a
+  screen is proved at lives in a different file from the screen's own tests,
+  which is exactly the arrangement that let this happen.
+* **Move it to a phone width.** Honest, and expensive: every existing screen
+  test would have to scroll to what it taps, which is the cost the 800dp
+  surface was chosen to avoid, and the roadmap has a whole entry about how
+  that failure mode reads as something else entirely.
+
+It should be decided rather than left. If the answer is the first one, that is
+a reasonable answer and it should be written down as one, because right now it
+looks like nobody chose.
 
 ### 3. Judgement rather than engineering
 
@@ -3535,19 +3594,19 @@ move back to Linux". Here, on an NVMe disk with no sync and no scanner:
 
 | Run | Tests | Time |
 | --- | --- | --- |
-| `flutter test` | 1025 | 4m38s |
+| `flutter test` | 1087 | 4m39s |
 | `test/backup_service_test.dart` alone | 23 | 4m35s |
 | the same file from a `/dev/shm` copy | 23 | 4m40s |
-| everything else (`test/*.dart` + `test/screens/`) | 1002 | ~25s |
+| everything else (`test/*.dart` + `test/screens/`) | 1064 | ~25s |
 
-1002 of the 1025 tests finish in under half a minute. The remaining 23 make 182
+1064 of the 1087 tests finish in under half a minute. The remaining 23 make 182
 PBKDF2 derivations at 600 000 rounds each, one derivation costs 1.50s on this
 CPU, and 182 × 1.50s is 4m33s against a measured 4m35s. The suite is a key
 derivation benchmark with a test suite attached to it, and no disk anywhere
 can help.
 
-4m38s for everything against 4m35s for that one file: the other 1002 tests
-add three seconds to the critical path, because `flutter test` runs files in
+4m39s for everything against 4m35s for that one file: the other 1064 tests
+add four seconds to the critical path, because `flutter test` runs files in
 parallel and they finish long before it does. **The suite's wall clock is one
 file's key derivation and almost nothing else.**
 
@@ -3592,7 +3651,7 @@ The downloads themselves are 1.57GB for Flutter, 192MB for the JDK and 158MB
 for the command-line tools.
 
 Verified on this machine, in this order: `flutter analyze` clean in under
-10s, 1025 unit tests pass in 4m38s, and all 14 device tests pass on
+10s, 1087 unit tests pass in 4m39s, and all 14 device tests pass on
 `emulator-5554` —
 four in `key_provider_device_test.dart` against the real Keystore, eight in
 `app_device_test.dart` driving the real screens, and two in
