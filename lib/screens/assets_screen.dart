@@ -1251,25 +1251,37 @@ class _HoldingTile extends StatelessWidget {
             ),
           ),
           const SizedBox(width: Spacing.stackSm),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                priced ? l10n.assetCurrent : l10n.assetsCost,
-                style: text.labelMedium?.copyWith(
-                  letterSpacing: 0,
-                  color: ObsidianPalette.onSurfaceVariant,
+          // The trailing block is `Flexible` for the same reason the credit-card
+          // badge is: with only the middle column `Expanded`, a narrow phone
+          // squeezes that to nothing and this side STILL overflows. Found by
+          // moving `pumpScreen` to a phone width -- the tab and route sweeps
+          // do not reach this state, because a holding only has a Current
+          // column once a price has arrived.
+          Flexible(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  priced ? l10n.assetCurrent : l10n.assetsCost,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: text.labelMedium?.copyWith(
+                    letterSpacing: 0,
+                    color: ObsidianPalette.onSurfaceVariant,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                formatLira(priced ? pnl.totalValue! : cost),
-                style: text.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: priced ? tone : null,
+                const SizedBox(height: 2),
+                Text(
+                  formatLira(priced ? pnl.totalValue! : cost),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: text.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: priced ? tone : null,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),

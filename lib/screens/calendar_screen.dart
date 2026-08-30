@@ -446,17 +446,30 @@ class _EntryRow extends StatelessWidget {
           const SizedBox(width: 8),
           // No figure is invented for a row that will not open. The row stays
           // — something DID happen — and says what it cannot tell you.
-          entry.amount == null
-              ? Text(
-                  l10n.calendarUnreadable,
-                  textAlign: TextAlign.end,
-                  style: text.bodySmall?.copyWith(color: ObsidianPalette.error),
-                )
-              : Text(
-                  '${entry.isIncome ? '+' : '−'}'
-                  '${formatLira(entry.amount ?? Decimal.zero)}',
-                  style: text.bodyMedium?.copyWith(color: tone),
-                ),
+          // `Flexible`, because the unreadable case is a WORD rather than a
+          // number: on a 360dp phone a fixed time column, a category and
+          // "Unreadable" together do not fit, and the row cannot be laid out
+          // at all. A truncated label is a worse day than a whole one and a
+          // better day than a striped box.
+          Flexible(
+            child: entry.amount == null
+                ? Text(
+                    l10n.calendarUnreadable,
+                    textAlign: TextAlign.end,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: text.bodySmall?.copyWith(
+                      color: ObsidianPalette.error,
+                    ),
+                  )
+                : Text(
+                    '${entry.isIncome ? '+' : '−'}'
+                    '${formatLira(entry.amount ?? Decimal.zero)}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: text.bodyMedium?.copyWith(color: tone),
+                  ),
+          ),
         ],
       ),
     );

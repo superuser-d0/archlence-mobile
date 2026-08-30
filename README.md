@@ -75,7 +75,7 @@ each request carries, and how to check both yourself.
 
 | | |
 | --- | --- |
-| Unit tests | 1087 |
+| Unit tests | 1099 |
 | Device tests | 14, on a real emulator or handset |
 | `flutter analyze` | clean |
 | Languages | Turkish and English, both complete |

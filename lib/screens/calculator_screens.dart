@@ -106,14 +106,38 @@ class _CalculatorScaffold extends StatelessWidget {
                   for (final (label, value) in result!) ...[
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        Text(
-                          label,
-                          style: text.bodySmall?.copyWith(
-                            color: ObsidianPalette.onSurfaceVariant,
+                        // The label wraps; the figure does not. A result row
+                        // carries a sentence on one side and a number on the
+                        // other, and on a 360dp phone they do not both fit on
+                        // one line -- nine of the twelve overflows found by
+                        // moving `pumpScreen` to a phone width were this row.
+                        // The number is the thing being read, so it keeps its
+                        // width and the label takes the second line.
+                        Expanded(
+                          child: Text(
+                            label,
+                            style: text.bodySmall?.copyWith(
+                              color: ObsidianPalette.onSurfaceVariant,
+                            ),
                           ),
                         ),
-                        Text(value, style: text.titleMedium),
+                        const SizedBox(width: Spacing.stackSm),
+                        // The figure SHRINKS rather than truncating. At 2.0x
+                        // the label giving up its width is not enough — the
+                        // number alone is wider than the card — and an
+                        // ellipsized money figure is a WRONG number, where a
+                        // slightly smaller one is the right one. Same
+                        // `FittedBox(scaleDown)` the card face uses for a
+                        // long card number, and it only engages when it must.
+                        Flexible(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerRight,
+                            child: Text(value, style: text.titleMedium),
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 8),

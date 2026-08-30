@@ -137,13 +137,15 @@ seven were a single missing line repeated across seven dropdowns — one of them
 test file. None was a regression. All are fixed. See "The six, fixed" and
 "The layer under the tabs".
 
-A third sweep walked the nine pushed routes under the same conditions and
-found none, which is the comparison worth keeping: that is the one layer that
-already had guideline coverage, and the two that had none held thirteen
-between them.
+A third sweep walked the nine pushed routes and found none — the comparison
+worth keeping, since that is the one layer which already had guideline
+coverage. And a fourth question, asked of the test surface rather than of the
+app, found three more: every sweep renders a screen in the state it OPENS in,
+the per-screen tests drive real states on an 800dp surface, and nothing
+covered a real state at a real width. Sixteen defects in all.
 
-1087 unit tests and 14 device tests pass, and `flutter analyze` is clean. No
-control in the app is inert. The count grew by 184 because what it did not
+1099 unit tests and 14 device tests pass, and `flutter analyze` is clean. No
+control in the app is inert. The count grew by 196 because what it did not
 cover is now covered rather than assumed.
 
 ## Pick up here
@@ -163,11 +165,16 @@ more behind the sheets, and the second seven were one missing line repeated
 across seven dropdowns. **All thirteen are fixed**, each one proved by a named
 red case turning green. See "The six, fixed" and "The layer under the tabs".
 
-A third sweep then walked the nine pushed routes under the same conditions
-and found nothing — which is its own finding, because that is the layer that
-already had guideline coverage. Three sweeps and two source rules hold the
-line now, and the suite went from 903 tests to 1087. **No screen in the app is
-left that nothing lays out at a width a phone has.**
+A third sweep then walked the nine pushed routes and found nothing — its own
+finding, because that is the layer which already had guideline coverage. Then
+the last open decision, about the 800dp surface every widget test uses, was
+measured rather than argued: moving it to a phone width surfaced **three more
+defects**, in states no sweep can reach because every sweep renders the state
+a screen OPENS in. Sixteen in all, all fixed.
+
+Three sweeps, two source rules and a driven-state file hold the line now, and
+the suite went from 903 tests to 1099. **No screen is left that nothing lays
+out at a phone width, and no state that broke one is left unguarded.**
 
 **One of the fixes was worse than the defect**, which is the part worth
 carrying forward: `IntrinsicHeight` removed the Tools overflow, turned every
@@ -208,6 +215,7 @@ The last open release-only question is answered; see "The first App Bundle".
 | 7 | Those six fixed, and a fix that broke the screen its tests passed | "The six, fixed" |
 | 8 | Seven more behind the sheets, all one missing line | "The layer under the tabs" |
 | 9 | The third layer swept and clean, and what that comparison says | "The third layer, which was clean" |
+| 10 | Three more found by measuring the test surface instead of arguing about it | "What the 800dp surface was hiding" |
 
 The machine moved from Windows 11 to CachyOS and the whole toolchain was
 rebuilt under `~/dev` without root; nothing in the repository had to change
@@ -2224,10 +2232,10 @@ still takes four and a half minutes. So it was measured properly:
 
 | Run | Tests | Time |
 | --- | --- | --- |
-| `flutter test` | 1087 | 4m39s |
+| `flutter test` | 1099 | 4m38s |
 | `test/backup_service_test.dart` alone | 23 | 4m35s |
 | the same file, from a `/dev/shm` copy | 23 | 4m40s |
-| everything else | 1064 | ~25s |
+| everything else | 1076 | ~25s |
 
 **The tmpfs run is the one that settles it.** A `git archive` of `HEAD`
 unpacked into `/dev/shm` — RAM, no disk under it at all — runs the same file
@@ -2642,6 +2650,81 @@ in full in `accessibility_test.dart` and unchanged here: seven columns cannot
 each have 48dp on a 360dp phone, and its cells are 48 TALL, which is the
 dimension that is free. It is laid out at every width and scale like
 everything else.
+
+### What the 800dp surface was hiding
+
+Open work item 2 was a decision: `pumpScreen` lays every screen and sheet test
+out on 800x2400 at a device pixel ratio of 1, no phone is 800dp, and nobody
+had chosen that — it was inherited from a trade made for a different reason.
+Rather than argue it, it was measured. The default was changed to 360dp and
+the suite was run.
+
+**32 of 1087 tests failed, and the split is the whole answer:**
+
+| | |
+| --- | --- |
+| Overflow assertions, at three sites | **12** |
+| Unreachable taps — the known cost of the wide surface | 4 |
+| Consequences of the above | the rest |
+
+**The three sites were places the sweeps structurally cannot reach.**
+
+| Site | The state that breaks it |
+| --- | --- |
+| `calculator_screens.dart` result row | a calculator **showing a result** — 9 of the 12 |
+| `calendar_screen.dart` entry row | a day whose amount **cannot be read** |
+| `assets_screen.dart` holding row | a holding **once a live price arrives** |
+
+Read the middle column again, because it is the finding rather than the three
+defects. `tab_sweep_test.dart`, `sheet_sweep_test.dart` and
+`route_sweep_test.dart` lay every screen out at 360dp, 320dp, 1.5x, 2.0x and
+in both languages — **in the state the screen OPENS in.** A calculator with no
+result. A calendar with no day picked. A holding with no price yet. The
+per-screen test files DO drive those states, and they drive them on an 800dp
+surface. So the intersection — **a real state at a real width** — was covered
+by nothing at all, and it held three overflows, one of them on the screen a
+calculator exists to produce.
+
+Three sweeps, 182 cases, and the gap between them was not a screen. It was a
+dimension: every screen was covered at every width in one state, and in every
+state at one width.
+
+**Fixed, and one of them is worth the line it took.** The calculator's figure
+now shrinks rather than truncating — `FittedBox(fit: BoxFit.scaleDown)`, the
+same thing the card face does with a long card number. An ellipsized money
+amount is a WRONG number; a slightly smaller one is the right one. The label
+takes the space it can and the figure keeps its meaning. The other two are the
+familiar shape: a trailing element that could not give ground made `Flexible`,
+which is now the fourth and fifth time that exact fix has appeared in this
+file.
+
+At 360dp after the fixes: **zero overflows.** The 22 failures left are all
+reachability — tests tapping what is now below the fold.
+
+**And then the surface was put back.** `pumpScreen` is 800dp again, and that
+is now a decision rather than an inheritance:
+
+* moving it costs 22 tests learning to scroll, and this file has a whole entry
+  on how that failure mode reads as something else entirely;
+* the benefit was the three defects — and those are already fixed, without
+  moving it.
+
+What replaced the move is `test/screens/driven_state_test.dart`: the three
+states that broke, at the four widths and scales that broke them, twelve
+cases. The cheap half of the experiment, kept. It is three states rather than
+a policy, and a fourth belongs there rather than in a wider surface change.
+
+**Checked for teeth**, because a file written to guard three fixes is exactly
+the kind that could guard nothing:
+
+| Mutation | Result |
+| --- | --- |
+| Put the calculator's result row back as a plain `Row` | fails — 76 pixels |
+| Drop the `Flexible` from the calendar's entry row | fails — 150 and 190 pixels |
+
+The honest summary of the decision: the 800dp surface was hiding three
+defects, they are fixed, the surface stays, and what stops the next one is a
+file that names the states rather than a number that names a width.
 
 ### The permission a release build did not have
 
@@ -3349,8 +3432,9 @@ surfaced only that way:
 
 ### 1. Getting it into the Play Store
 
-**Two of the three engineering items here are now done, and the one that is
-left is the one no test can stand in for.**
+**Every engineering item in this section is done.** What is left below is a
+person's hour and a store listing — and with item 2's backlog closed too,
+there is no code work standing between this app and a submission.
 
 - ~~**An App Bundle, not an APK.**~~ Done. `flutter build appbundle --release`
   built first try, 66.7MB, signed by the release key — verified with
@@ -3366,58 +3450,28 @@ left is the one no test can stand in for.**
   `dumpsys package` confirms the INSTALLED package carries
   `android.permission.INTERNET`, which until now had only been read out of the
   manifest merger. See "The first App Bundle".
-- **Nothing else here is blocked on engineering** — but see item 2, which is,
-  and which should be finished before a listing rather than after.
+- **An hour with TalkBack on.** Open, and a person's. The labels it would
+  have tripped over are fixed — two unlabelled controls and a rule that keeps
+  new ones out — so what is left for it is reading order and label QUALITY,
+  which no guideline reads. See item 2.
 
-Not engineering, and none of it started: a privacy policy URL and the Data
-Safety form, both of which Play requires. The app has an unusually strong
-story to tell there and no page telling it. The repository is public, so a
-page under `docs/` served by GitHub Pages costs nothing and needs no host.
+Not engineering. **The privacy policy is written** — `docs/privacy.html`,
+from what the code does rather than from a template, with every claim in it
+checked against the source first. Publishing it is one switch nobody has
+flipped: GitHub Pages, deploy from `main`, `/docs`. `docs/.nojekyll` is there
+so the file is served as written.
+
+**Play's Data Safety form is not started**, and it is the one thing left that
+needs a person's judgement rather than a person's time: the answers are all in
+the privacy page, but the declaration is binding and the wording on Play's own
+form moves.
 
 Worth doing first rather than last: open the developer account. A new personal
 account may face a closed-testing period before production access, which moves
 a launch date by weeks rather than days — so it is the item that sets the
 schedule, and it can run while everything else is finished.
 
-### 2. One decision about the surface every widget test lays out on
-
-Three sweeps now exist — `tab_sweep_test.dart`, `sheet_sweep_test.dart`,
-`route_sweep_test.dart` — covering the five tabs, the nine sheets and the nine
-pushed routes at 360dp and 320dp, at 1.5x and 2.0x, and in Turkish. They found
-thirteen defects, all fixed, and the routes came back clean. **There is no
-screen left in the app that nothing lays out at a width a phone has.**
-
-What is left is not a defect. It is a question the sweeps answered around
-rather than answered.
-
-**`pumpScreen` lays out on 800x2400 at a device pixel ratio of 1.** Every
-screen and sheet widget test in this repository uses it. No phone is 800dp
-wide. It was chosen knowingly — a tall, wide surface means a test does not
-have to scroll to reach what it asserts on, and this file argues that trade
-under "A finder matching is not a user reaching". That reasoning still holds.
-
-What was not noticed until the sweeps is that the same choice removes WIDTH as
-a variable, everywhere, at once. A 152-pixel overflow sat in the pay-debt
-sheet while that sheet's own test file walked it end to end, typed into it and
-asserted on both sides of a transfer.
-
-Two ways to answer it, and they are not equal:
-
-* **Leave `pumpScreen` alone.** The sweeps cover width and scale now, on every
-  screen; the per-screen tests keep the surface that lets them assert without
-  scrolling. Cheap, already done, and the coverage is real — but the width a
-  screen is proved at lives in a different file from the screen's own tests,
-  which is exactly the arrangement that let this happen.
-* **Move it to a phone width.** Honest, and expensive: every existing screen
-  test would have to scroll to what it taps, which is the cost the 800dp
-  surface was chosen to avoid, and the roadmap has a whole entry about how
-  that failure mode reads as something else entirely.
-
-It should be decided rather than left. If the answer is the first one, that is
-a reasonable answer and it should be written down as one, because right now it
-looks like nobody chose.
-
-### 3. Judgement rather than engineering
+### 2. Judgement rather than engineering
 
 
 
@@ -3594,19 +3648,19 @@ move back to Linux". Here, on an NVMe disk with no sync and no scanner:
 
 | Run | Tests | Time |
 | --- | --- | --- |
-| `flutter test` | 1087 | 4m39s |
+| `flutter test` | 1099 | 4m38s |
 | `test/backup_service_test.dart` alone | 23 | 4m35s |
 | the same file from a `/dev/shm` copy | 23 | 4m40s |
-| everything else (`test/*.dart` + `test/screens/`) | 1064 | ~25s |
+| everything else (`test/*.dart` + `test/screens/`) | 1076 | ~25s |
 
-1064 of the 1087 tests finish in under half a minute. The remaining 23 make 182
+1076 of the 1099 tests finish in under half a minute. The remaining 23 make 182
 PBKDF2 derivations at 600 000 rounds each, one derivation costs 1.50s on this
 CPU, and 182 × 1.50s is 4m33s against a measured 4m35s. The suite is a key
 derivation benchmark with a test suite attached to it, and no disk anywhere
 can help.
 
-4m39s for everything against 4m35s for that one file: the other 1064 tests
-add four seconds to the critical path, because `flutter test` runs files in
+4m38s for everything against 4m35s for that one file: the other 1076 tests
+add three seconds to the critical path, because `flutter test` runs files in
 parallel and they finish long before it does. **The suite's wall clock is one
 file's key derivation and almost nothing else.**
 
@@ -3651,7 +3705,7 @@ The downloads themselves are 1.57GB for Flutter, 192MB for the JDK and 158MB
 for the command-line tools.
 
 Verified on this machine, in this order: `flutter analyze` clean in under
-10s, 1087 unit tests pass in 4m39s, and all 14 device tests pass on
+10s, 1099 unit tests pass in 4m38s, and all 14 device tests pass on
 `emulator-5554` —
 four in `key_provider_device_test.dart` against the real Keystore, eight in
 `app_device_test.dart` driving the real screens, and two in
