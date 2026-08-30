@@ -33,7 +33,9 @@ class ScreenLock {
     : _storage =
           storage ??
           const FlutterSecureStorage(
-            aOptions: AndroidOptions(encryptedSharedPreferences: true),
+            // `resetOnError: false`; see `SecureStorageKeyProvider`. These
+            // entries share one store with the encryption key.
+            aOptions: AndroidOptions(resetOnError: false),
           ),
       _auth = auth ?? LocalAuthentication();
 

@@ -119,54 +119,54 @@ to a repository that was about to be linked from a store listing. The desktop
 app moved to the same licence rather than the two halves carrying different
 ones. See "The licence, and the page that shows it".
 
+**And there is a build a store would take.** The release keystore exists, and
+`flutter build appbundle --release` — a command this project had never run —
+produced a 66.7MB bundle signed by that key rather than by the SDK's debug
+one, verified by reading the certificate out of it. What a phone actually
+downloads is about 11MB, measured rather than estimated. The key store moved
+to `flutter_secure_storage` 11 on the way, which cost two build failures and
+turned up a default that had flipped from reporting an error to erasing the
+data. See "The key store, moved to version 11" and "The first App Bundle".
+
 903 unit tests and 14 device tests pass. `flutter analyze` is clean, no
 control in the app is inert, and every screen in it has now been opened on a
 device — which is where the last four defects came from.
 
 ## Pick up here
 
-**The app is finished; the release is not.** Everything a device can be asked
-without a signing key has now been asked — including the two surfaces that had
-never been opened on one, which cost four defects between them. See "The
-device pass". What is left is the path into the Play Store, one step of which
-belongs to a person rather than to code — and, ahead of all of it, a
-dependency move that gets permanently more expensive the day anything is
-installed anywhere.
+**The app is finished, the build that ships exists, and the listing does
+not.** The release keystore has been made, `flutter build appbundle --release`
+has been run for the first time and succeeded, and the bundle is signed by the
+right key — see "The first App Bundle". What is left is one engineering check,
+one hour with a screen reader, and a store listing nobody has started.
 
-### Before the keystore: a dependency move with an expiry date
+### The one engineering item still open
 
-**`flutter_secure_storage` 9 → 11, while nothing is installed anywhere.**
-Every Android build now warns that future Flutter releases will refuse to
-build this app, because `share_plus` 12 applies the Kotlin Gradle Plugin. The
-fix is `share_plus` 13, which does not resolve against `flutter_secure_storage`
-9, and going to 11 moves where the encryption key lives. Today that costs a
-device round. After the first release it also has to pass through 10, on a
-version users actually run, or every installed database is stranded behind a
-key nothing can read. It gets permanently more expensive on launch day. See
-Open work item 2.
+**Install the release build and watch a price arrive.** A crypto holding must
+read `Current` rather than `Cost`. The merged release manifest carries the
+INTERNET permission — proven — and the device tests prove the network path in
+debug. What nothing has seen is a price arriving with R8 on and the release
+manifest under it, which is the configuration that ships. See "The permission
+a release build did not have".
 
-### The one thing that is not a coding task
+Everything else a device can be asked has been asked, in debug and on a clean
+install: 14 device tests, four of them against the real Android Keystore and
+two against the real network.
 
-**Make the release keystore.** Five minutes and one `keytool` command, written
-out in `android/key.properties.example`. It is not one to delegate — the
-keystore is the app's identity and its password should never be typed into
-this repository.
+### The things that are not coding tasks
 
-Three things are waiting behind it, and they are waiting in this order:
-
-1. **`flutter build appbundle --release`, before anything else.** Play has
-   required an App Bundle for new apps since 2021, so the release APK this
-   project has been building all along is a file the store will not accept.
-   It has never been run here. If it is going to fail, it should fail now
-   rather than on listing day — and it also settles the 65MB question, since
-   Play serves per-device splits.
-2. **Install the signed bundle and open Assets.** A crypto holding must read
-   `Current` rather than `Cost`. The merged release manifest carries the
-   INTERNET permission — that half is proven, by running the manifest merger
-   on its own — and what is unproven is prices actually arriving in the build
-   that ships. See "The permission a release build did not have".
-3. **An hour with TalkBack on.** The accessibility pass covers labels, tap
-   targets and contrast; reading order and label quality need a person.
+1. **An hour with TalkBack on.** The accessibility pass covers labels, tap
+   targets and contrast. Reading order, label quality and large font scales
+   need a person.
+2. **A privacy policy at a public URL, and Play's Data Safety form.** Both are
+   required and neither is started. The app has an unusually strong story to
+   tell there — no account, no server, no telemetry, three hosts in the whole
+   codebase — and no page telling it.
+3. **The developer account, which is the thing that sets the date.** Worth
+   opening before anything else on this list: a new personal account may face
+   a closed-testing period before it can publish to production, which moves a
+   launch by weeks rather than days. Check what the console actually says
+   rather than what this file says; the rule has changed before.
 
 ### What this session closed
 
@@ -174,15 +174,17 @@ Three things are waiting behind it, and they are waiting in this order:
 | --- | --- | --- |
 | 1 | The toolchain rebuilt on Arch, and every claim re-verified on it | "Environment" |
 | 2 | A wrong diagnosis of the suite's speed, measured and replaced | "The move back to Linux" |
-| 3 | A build warning that becomes a build failure, traced to a knot with an expiry date | Open work item 2 |
+| 3 | The key store moved to version 11, and a default that would have erased it | "The key store, moved to version 11" |
+| 4 | The first App Bundle, signed, measured, and 11MB on a real phone | "The first App Bundle" |
 
-**This session wrote no application code.** The machine moved from Windows 11
-to CachyOS, the whole toolchain was rebuilt under `~/dev` without root, and
-everything was run again on it: `flutter analyze` clean, 903 unit tests, 14
-device tests on `archlence_pixel` including the two that open a real socket,
-and the parity generators rebuilt in the desktop checkout and checked against
-a fixture they reproduce byte for byte. Nothing in the repository had to
-change for any of it, which is what the last machine move paid for.
+The machine moved from Windows 11 to CachyOS and the whole toolchain was
+rebuilt under `~/dev` without root; nothing in the repository had to change
+for it, which is what the last machine move paid for. Then the dependency
+knot that had been filed as "not urgent" turned out to hold a build warning
+with a deadline on it, and untying it turned up a default that flips from
+"report the error" to "erase the data" between the two versions. The keystore
+followed, and with it the first bundle this project has ever produced that a
+store would accept.
 
 ### What is deliberately NOT in 1.0
 
@@ -2190,7 +2192,7 @@ still takes four and a half minutes. So it was measured properly:
 
 | Run | Tests | Time |
 | --- | --- | --- |
-| `flutter test` | 903 | 6m54s |
+| `flutter test` | 903 | 4m44s |
 | `test/backup_service_test.dart` alone | 23 | 4m35s |
 | the same file, from a `/dev/shm` copy | 23 | 4m40s |
 | everything else | 880 | 24.6s |
@@ -2234,6 +2236,156 @@ derive at the format's minimum and leave a handful of cases on the shipping
 currently runs at the parameter that ships, which is the strongest version of
 the test and, at four and a half minutes, still cheaper than being wrong about
 it.
+
+### The key store, moved to version 11 — and the default that flipped under it
+
+Open work item 2 was the dependency knot: `share_plus` 12 applies the Kotlin
+Gradle Plugin, Flutter warns that plugins doing so will stop building, every
+`share_plus` that fixes it needs `win32: ^6`, and `flutter_secure_storage` 9
+forbade that through its Windows sibling. It is untied:
+
+| | Before | After |
+| --- | --- | --- |
+| `flutter_secure_storage` | 9.2.4 | 11.0.0 |
+| `share_plus` | 12.0.2 | 13.3.0 |
+| `win32` | 5.15.0 | 6.4.0 |
+
+**The API change is not the dangerous part. The default that moved underneath
+it is.** All five constructions in `lib/` passed
+`AndroidOptions(encryptedSharedPreferences: true)`, and 11 deleted that
+parameter — a compile error, which is the kind of breaking change that
+announces itself. What does not announce itself is `resetOnError`:
+
+* in 9 it defaults to **false**, and the app took the default;
+* in 11 it defaults to **true**, and the package's own doc comment says it
+  "will PERMANENTLY erase the data when an error occurs".
+
+What this store holds is the AES-256-GCM key the entire database is encrypted
+under. A migration that deleted the removed parameter and left the rest alone
+would compile, pass every test, and ship an app that silently destroys every
+account, transaction and holding on the device the first time a read fails —
+with nothing in the log to say it happened, because from the package's point
+of view the error was handled.
+
+It is `AndroidOptions(resetOnError: false)` at all six construction sites now,
+five in `lib/` and one in `key_provider_device_test.dart`. **All six, not just
+the key's**, because the entries share one store: a reset triggered by the
+language preference would take the key with it. `pubspec.yaml` carries the
+reason at the dependency line, and `SecureStorageKeyProvider` carries the long
+version.
+
+A note on what the old flag meant, since it reads like a downgrade: in 9,
+`encryptedSharedPreferences: true` opted INTO Jetpack Security's
+`EncryptedSharedPreferences`, which was stronger than that version's default.
+10 migrated everyone off it onto its own AES-GCM/RSA-OAEP storage and 11
+deleted it. The strongest option is now the default, so the flag is not just
+removed — it has nothing left to ask for.
+
+**Then two build failures, neither of which reading the diff would find.**
+
+**One: `compileSdk` 36 is not enough, and it is not a warning.**
+`flutter_secure_storage` 11 is compiled against 37 and declares it in its AAR
+metadata, so `:app:checkDebugAarMetadata` fails the build. The Flutter tool
+prints a *warning* one line earlier — "requires Android SDK version 37 or
+higher" — and a warning is what it looks like until Gradle refuses. Checked by
+putting `flutter.compileSdkVersion` back: both the plain debug APK and the
+integration-test variant fail identically, on that task, with that dependency
+named. (The first debug build of the session did report success at 36, once,
+which is what made the requirement look optional. It has not reproduced, and
+the cause was not established — worth knowing only as a reason not to trust a
+single green build here.)
+
+`compileSdk = 37` now, written out in `android/app/build.gradle.kts` rather
+than taken from `flutter.compileSdkVersion`. **`targetSdk` did not move.**
+Compiling against a newer SDK changes nothing about behaviour; `targetSdk`
+changes how Android treats the app at runtime, and that is a decision to make
+deliberately and test rather than to inherit from a dependency's build file.
+
+**Two: nothing was compiling `share_plus`'s Kotlin.** The failure reads
+`Share.kt:185: Unresolved reference 'SharePlusPendingIntent'` — a class in the
+file sitting next to it, in the same source directory. The cause is two
+settings that are each reasonable alone:
+
+* `share_plus` 13 stops applying KGP when AGP is 9 or newer — which is the
+  entire reason for upgrading to it;
+* `android/gradle.properties` carried `android.builtInKotlin=false`, from the
+  Flutter template.
+
+Together they leave the plugin with no Kotlin compiler at all. It is
+`android.builtInKotlin=true` now. Worth recording because neither line is
+wrong on its own and one of them was not written here: a template default and
+an upstream fix can be individually correct and jointly fatal, and the error
+they produce names a missing class rather than a missing compiler.
+
+**Proof.** `flutter analyze` clean; 903 unit tests; all 14 device tests on a
+CLEAN INSTALL on `emulator-5554`, including the four that drive the real
+Android Keystore and the two that open a real socket; and a debug build that
+now prints **no warnings at all** — neither the KGP one this work set out to
+remove nor the SDK one it uncovered. Three test fakes needed their override
+signatures updating too: 11 merged `IOSOptions` and `MacOsOptions` into
+`AppleOptions`.
+
+**What could NOT be checked, and is worth saying rather than implying.** The
+in-place 9 → 11 upgrade — an installed app with data written by the old store,
+receiving the new one — was not exercised. The plan was to run it before the
+clean install; the emulator turned out to have no prior install left
+(`pm list packages` found none), so there was nothing to upgrade over. That
+path rests on `flutter_secure_storage`'s changelog rather than on anything
+measured here. **It also does not matter yet, and that is the whole reason
+this was done now:** nothing is released, so no device anywhere holds data
+written by version 9. The day one does, the road to 11 has to pass through 10.
+
+### The first App Bundle, and what a phone actually downloads
+
+The release keystore exists — made by hand, outside the repository, and its
+password typed nowhere near it. `android/key.properties` points at it and is
+ignored by git, checked rather than assumed with `git check-ignore`.
+
+**`flutter build appbundle --release` has now been run, for the first time in
+this project.** It has been sitting at the top of Open work for months on the
+grounds that a build the store cannot accept is worth discovering before
+listing day. It built first try, in 54.8s:
+
+```
+✓ Built build/app/outputs/bundle/release/app-release.aab (66.7MB)
+```
+
+**Signed by the right key**, which is the one thing here that fails silently
+if it is wrong. `jarsigner -verify -certs` reads the certificate out of the
+bundle and needs no password:
+
+```
+Signed by "CN=Archlence, OU=Unknown, O=Archlence, L=Unknown, ST=Unknown, C=TR"
+Signature algorithm: SHA256withRSA, 2048-bit key
+jar verified.
+```
+
+Not `CN=Android Debug`. The refusal wired into `android/app/build.gradle.kts`
+— the one that replaced the Flutter template's habit of signing release
+builds with the SDK's debug key — held, and this is the first build that could
+prove it.
+
+**And the 65MB question is answered by measurement rather than by arithmetic.**
+This file has twice said Play serves per-device splits at "roughly a third" of
+the bundle. That was a guess and it was pessimistic by half.
+`bundletool 1.18.3`, `build-apks` then `get-size total`:
+
+| ABI | What the device downloads |
+| --- | --- |
+| `armeabi-v7a` | 10.59 MB |
+| `arm64-v8a` | 11.12 MB |
+| `x86_64` | 11.19 MB |
+
+A 66.7MB bundle reaches a real phone as **about 11MB** — a sixth, not a
+third. The size concern that has been carried in this file since the first
+release APK is closed.
+
+**Still open, and it is the last engineering item before the listing:** install
+that release build on a device, open Assets, and confirm a crypto holding
+reads `Current` rather than `Cost`. The merged release manifest carries the
+INTERNET permission and the device tests prove the network path in debug; what
+no test has seen is prices arriving in a build with R8 on and the release
+manifest under it. See "The permission a release build did not have".
 
 ### The permission a release build did not have
 
@@ -2941,114 +3093,34 @@ surfaced only that way:
 
 ### 1. Getting it into the Play Store
 
-**This list used to say "the keystore and a Play Store listing, which is not
-engineering". Two of the three items below are engineering, and one of them is
-a hard requirement nobody had checked.**
+**Two of the three engineering items here are now done, and the one that is
+left is the one no test can stand in for.**
 
-- **An App Bundle, not an APK.** Play has required `.aab` for new apps since
-  2021, so `flutter build apk --release` produces something that cannot be
-  uploaded at all. This file had `--split-per-abi` filed under "not urgent, a
-  shipping decision rather than a code one"; it is neither optional nor a
-  decision. `flutter build appbundle --release` is the command, it has NEVER
-  been run in this project, and it also answers the 65MB question on its own —
-  Play serves per-device splits, which is roughly a third of that.
-
-  It needs the keystore, so it is the first thing to run once that exists,
-  before anything else on this list. A build that cannot be uploaded is worth
-  discovering now rather than on listing day. Item 2 below is the exception,
-  and it goes ahead of the keystore rather than behind it: it is cheapest
-  while nothing is installed anywhere, and launch day is what ends that.
-- **The keystore itself.** Five minutes and one `keytool` command; see "Pick
-  up here". Not one to delegate.
-- **Then the release-only check that is still open:** install the signed
-  bundle, open Assets, and confirm a crypto holding reads `Current` rather
-  than `Cost`. The merged release manifest carries the INTERNET permission —
-  proven by running `:app:processReleaseMainManifest` and reading its output —
-  and what is unproven is the behaviour behind it. See "The permission a
-  release build did not have".
+- ~~**An App Bundle, not an APK.**~~ Done. `flutter build appbundle --release`
+  built first try, 66.7MB, signed by the release key — verified with
+  `jarsigner` rather than assumed. And it answered the 65MB question by
+  measurement: `bundletool get-size` puts what a device actually downloads at
+  10.6–11.2MB depending on ABI. See "The first App Bundle".
+- ~~**The keystore itself.**~~ Done, by hand, outside the repository.
+- **Install that release build and confirm a price arrives.** Open Assets and
+  check a crypto holding reads `Current` rather than `Cost`. The merged
+  release manifest carries the INTERNET permission — proven by running
+  `:app:processReleaseMainManifest` and reading its output — and the device
+  tests prove the network path, but in debug. The build that ships has R8 on.
+  See "The permission a release build did not have".
 
 Not engineering, and none of it started: a privacy policy URL and the Data
 Safety form, both of which Play requires. The app has an unusually strong
-story to tell there and no page telling it. Worth checking early: a new
-personal developer account may face a closed-testing period before production
-access, which moves a launch date by weeks rather than days.
+story to tell there and no page telling it. The repository is public, so a
+page under `docs/` served by GitHub Pages costs nothing and needs no host.
 
-### 2. One dependency knot, with a deadline and an expiry date
+Worth doing first rather than last: open the developer account. A new personal
+account may face a closed-testing period before production access, which moves
+a launch date by weeks rather than days — so it is the item that sets the
+schedule, and it can run while everything else is finished.
 
-**The build prints a warning that says it will become an error.** Every
-Android build ends with:
+### 2. Judgement rather than engineering
 
-```
-WARNING: Your app uses the following plugins that apply Kotlin Gradle Plugin
-(KGP): share_plus
-Future versions of Flutter will fail to build if your app uses plugins that
-apply KGP.
-```
-
-It is `share_plus` 12.0.2, whose `android/build.gradle` applies
-`kotlin-android` unconditionally. **Upstream has already fixed it**: 13.2.0
-added built-in Kotlin support, and 13.3.0's build script applies the plugin
-only `if (agpMajor < 9)`. This project is on AGP 9.1.0, so on 13.3.0 that
-branch never runs and the warning goes away. The Dart API did not change
-either — the app's two call sites are
-`SharePlus.instance.share(ShareParams(files: [XFile(path)]))` and read the
-same on both versions.
-
-**It does not resolve.** `share_plus: ^13.3.0` was tried and reverted:
-
-```
-share_plus >=13.1.0 depends on win32 ^6.0.1
-flutter_secure_storage 9.2.4 -> flutter_secure_storage_windows 3.1.2 -> win32 ^5.0.0
-```
-
-13.0.0 bumped win32 to 6.0.0 as well, so no 13.x resolves against
-`flutter_secure_storage` 9.
-
-**This is the same wall `pubspec.yaml` already documents**, hit from a second
-direction. That comment explains why `file_selector` was chosen over
-`file_picker`: the same `win32: ^6` requirement, forbidden by the same Windows
-sibling, "compiled even for an Android build, so the conflict is real rather
-than theoretical". One constraint now blocks two things. The difference is
-that `file_picker` had a working substitute and this does not — the substitute
-for a Flutter release that refuses to build is a Flutter release.
-
-**The way out is `flutter_secure_storage` 9 → 11, and it is not a version
-bump.** Reading its changelog rather than its version number:
-
-* **v10** moved Android storage off Jetpack Security's
-  `EncryptedSharedPreferences` onto its own cipher storage, and migrated
-  `RSA_ECB_PKCS1Padding` → `RSA_ECB_OAEPwithSHA_256andMGF1Padding` and
-  `AES_CBC_PKCS7Padding` → `AES_GCM_NoPadding`. Existing data was migrated
-  automatically.
-* **v11 deleted the old paths.** Its changelog: data saved under the
-  deprecated algorithms "will be unusable after this upgrade. If you used a
-  version prior to v10, upgrade to v10 first so existing data is migrated."
-* v11 also raises `minSdk` to 24 and `compileSdk` to 37.
-
-For this app that store holds the AES-256-GCM key the whole database is
-encrypted under. A phone carrying a build on 9 that receives a build on 11
-would have a key it cannot read and a database nobody can open — not a crash,
-the data.
-
-**Which is why the ordering matters more than the work.** Nothing is shipped,
-so there is no installed base, and today 9 → 11 in one step costs nothing but
-the verification. **That stops being true on the day of the first release.**
-If 1.0 ships on `flutter_secure_storage` 9, the road to 11 has to go through a
-10 that users actually install and run long enough to migrate on — an extra
-release, in the right order, or somebody's data.
-
-So it is cheapest now and gets permanently more expensive. It should go in
-before the keystore work rather than after, and it needs a device round rather
-than the unit suite: the key store is the one thing no unit test speaks for,
-and `key_provider_device_test.dart` is what would have to pass against a real
-Keystore. Doing it would also retire the `file_picker` note in `pubspec.yaml`,
-though `file_selector` works and nothing needs replacing.
-
-Not attempted in this session on purpose. It moves where the encryption key
-lives, which is the decision `pubspec.yaml` already declined to make inside a
-change about something else.
-
-### 3. Judgement rather than engineering
 
 * **Anything to do with more than one user or device.** Untouched, and the
   app's whole shape argues against it — "no account, no server".
@@ -3194,6 +3266,24 @@ ship this week.
 - **`flutter pub get` has nothing to say here.** The Windows setup needed a
   paragraph about symlink support and Developer Mode; on Linux that whole
   question does not exist.
+- **Two Android settings depart from the Flutter template, and both are load
+  bearing.** `android/app/build.gradle.kts` pins `compileSdk = 37` rather than
+  taking `flutter.compileSdkVersion`, which is 36 — `flutter_secure_storage`
+  11 declares 37 in its AAR metadata and Gradle refuses the build below it.
+  And `android/gradle.properties` sets `android.builtInKotlin=true`, where the
+  template ships `false` — `share_plus` 13 stops applying the Kotlin Gradle
+  Plugin on AGP 9, so with both off nothing compiles its Kotlin at all.
+  `targetSdk` is untouched and still Flutter's. See "The key store, moved to
+  version 11".
+- **Building a release needs `android/key.properties` and the keystore it
+  names**, neither of which is in the repository. Without them the build is
+  refused rather than quietly signed with the SDK's debug key. On this machine
+  the keystore is at `~/archlence-release.jks`; it is not backed up by
+  anything here and losing it ends the app's upgrade path.
+- `bundletool` is not part of the SDK install and is not needed for a build.
+  It was fetched once, as a jar from its GitHub releases, to measure what Play
+  would actually deliver: `build-apks` then `get-size total`. See "The first
+  App Bundle".
 
 ### What the suite costs, and what it is spent on
 
@@ -3205,7 +3295,7 @@ move back to Linux". Here, on an NVMe disk with no sync and no scanner:
 
 | Run | Tests | Time |
 | --- | --- | --- |
-| `flutter test` | 903 | 6m54s |
+| `flutter test` | 903 | 4m44s |
 | `test/backup_service_test.dart` alone | 23 | 4m35s |
 | the same file from a `/dev/shm` copy | 23 | 4m40s |
 | everything else (`test/*.dart` + `test/screens/`) | 880 | 24.6s |
@@ -3216,11 +3306,19 @@ CPU, and 182 × 1.50s is 4m33s against a measured 4m35s. The suite is a key
 derivation benchmark with a test suite attached to it, and no disk anywhere
 can help.
 
-The full run takes longer than the file alone plus everything else because
-`flutter test` runs files in parallel: the other 880 tests compete for the
-same cores as the 182 CPU-bound isolates, and the slow file finishes later
-than it would on its own. Sequential totals do not add up here, which is worth
-remembering before reading a single file's time as a share of the whole.
+4m44s for everything against 4m35s for that one file: the other 880 tests add
+nine seconds to the critical path, because `flutter test` runs files in
+parallel and they finish long before it does. **The suite's wall clock is one
+file's key derivation and almost nothing else.**
+
+One number in this file was wrong and is worth recording rather than quietly
+fixing. The first `flutter test` of the session took 6m54s, and that figure
+was published here. It does not reproduce: `flutter clean` followed by the
+full suite takes 4m43s, and running it again immediately takes 4m45s — cold
+and warm are the same, so the cache is not the explanation and neither is
+anything `clean` can restore. The most likely cause is one-off warm-up in a
+freshly unpacked Flutter install, but that was not established, so what the
+table carries is the number that reproduces.
 
 - **Do not run the emulator and `flutter test` at the same time.** Carried
   over from the Windows setup, where it cost a diagnosis: with the emulator
@@ -3253,8 +3351,9 @@ Disk, for planning a rebuild: `~/dev/android-sdk` 7.3GB, `~/dev/flutter`
 The downloads themselves are 1.57GB for Flutter, 192MB for the JDK and 158MB
 for the command-line tools.
 
-Verified on this machine, in this order: `flutter analyze` clean in 8.0s, 903
-unit tests pass in 6m54s, and all 14 device tests pass on `emulator-5554` —
+Verified on this machine, in this order: `flutter analyze` clean in under
+10s, 903 unit tests pass in 4m44s, and all 14 device tests pass on
+`emulator-5554` —
 four in `key_provider_device_test.dart` against the real Keystore, eight in
 `app_device_test.dart` driving the real screens, and two in
 `live_price_device_test.dart` against the real network, where CoinGecko and

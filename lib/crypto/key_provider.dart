@@ -214,10 +214,20 @@ class FileKeyProvider implements KeyProvider {
   }
 }
 
-/// Holds the key in the Android Keystore, via EncryptedSharedPreferences.
+/// Holds the key in the Android Keystore.
 ///
 /// Stands in for the desktop app's Secret Service and DPAPI providers: same
 /// contract, same verify-after-write discipline, different OS facility.
+///
+/// `resetOnError: false` is the important argument, and it is important
+/// because the default went the other way. `flutter_secure_storage` 11
+/// defaults it to TRUE: a read that fails erases the entire store rather
+/// than reporting. For a preference that would be a recovered error. What
+/// this store holds is the key the whole database is encrypted under, so a
+/// silent reset is every account, transaction and holding on the device,
+/// unreadable, with nothing in the log to say it happened. It is set on
+/// every construction in this app for the same reason — the entries share
+/// one store, so a reset triggered by any of them takes the key with it.
 class SecureStorageKeyProvider implements KeyProvider {
   SecureStorageKeyProvider({
     FlutterSecureStorage? storage,
@@ -225,7 +235,7 @@ class SecureStorageKeyProvider implements KeyProvider {
   }) : _storage =
            storage ??
            const FlutterSecureStorage(
-             aOptions: AndroidOptions(encryptedSharedPreferences: true),
+             aOptions: AndroidOptions(resetOnError: false),
            );
 
   final FlutterSecureStorage _storage;

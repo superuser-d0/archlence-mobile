@@ -24,7 +24,17 @@ if (keystorePropertiesFile.exists()) {
 
 android {
     namespace = "com.archlence.archlence_mobile"
-    compileSdk = flutter.compileSdkVersion
+    // 37 rather than `flutter.compileSdkVersion`, which is 36 in Flutter
+    // 3.47. `flutter_secure_storage` 11 is compiled against 37 and declares
+    // it in its AAR metadata, so `:app:checkDebugAarMetadata` FAILS the build
+    // at 36 — it is a hard requirement, not the warning the Flutter tool
+    // prints one line earlier.
+    //
+    // Only the compile SDK moves. `targetSdk` stays on Flutter's number
+    // below, because that one changes how Android treats the app at runtime
+    // and is a decision to make deliberately and test; compiling against a
+    // newer SDK changes nothing about behaviour.
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

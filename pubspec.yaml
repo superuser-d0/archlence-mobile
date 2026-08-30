@@ -23,7 +23,13 @@ dependencies:
   # the database, which needs sqlite3's own online-backup API rather than a
   # copy of the file's bytes.
   sqlite3: ^3.5.2
-  flutter_secure_storage: ^9.2.4
+  # Where the database's encryption key lives. Every construction of it in
+  # `lib/` passes `AndroidOptions(resetOnError: false)`, and that argument is
+  # not decoration: 11 changed the default to TRUE, which erases the whole
+  # store when a read fails. The store holds the key the entire database is
+  # encrypted under, so a silent reset is not a recovered error — it is every
+  # account, transaction and holding on the device, permanently unreadable.
+  flutter_secure_storage: ^11.0.0
   cryptography: ^2.7.0
 
   # Charts (donut + income/expense trend).
@@ -40,14 +46,16 @@ dependencies:
   # into: since Android 11 an app cannot hand another app a path, and a backup
   # the user cannot move somewhere else is not a backup.
   #
-  # `file_selector` rather than `file_picker`: the latter's current release
-  # needs `win32: ^6`, which `flutter_secure_storage` 9 forbids through its
-  # Windows sibling. That sibling is compiled even for an Android build, so
-  # the conflict is real rather than theoretical, and resolving it would mean
-  # moving the key store to `flutter_secure_storage` 11 — a change to where
-  # the encryption key LIVES, which belongs in a change that can be verified
-  # on a real device rather than in one about backups.
-  share_plus: ^12.0.2
+  # `file_selector` rather than `file_picker`. That began as a constraint —
+  # `file_picker` needs `win32: ^6`, which `flutter_secure_storage` 9 forbade
+  # through its Windows sibling, compiled even for an Android build. The
+  # constraint is gone now that the key store is on 11, and the choice
+  # stands anyway: `file_selector` does what this app asks of it.
+  #
+  # `share_plus` had to move for the same knot, in the other direction: 12
+  # applies the Kotlin Gradle Plugin, which Flutter now warns will stop
+  # building, and every release that fixes it needs the same `win32: ^6`.
+  share_plus: ^13.3.0
   file_selector: ^1.1.0
 
 dev_dependencies:

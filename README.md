@@ -57,9 +57,13 @@ opens its first account, and from there records transactions, buys and sells
 holdings, plans a budget, opens and funds savings goals, pays down a card and
 manages subscriptions. No control in the app is inert.
 
-What is left before a release is the signing keystore, which belongs to whoever
-publishes it, and the Play Store listing. See
-[docs/ROADMAP.md](docs/ROADMAP.md).
+The release build exists: `flutter build appbundle --release` produces a
+signed App Bundle, which Play serves to a device as about 11MB. What is left
+is the store listing — a privacy policy page, the Data Safety form, and an
+hour with a screen reader. See [docs/ROADMAP.md](docs/ROADMAP.md).
+
+Building your own release needs your own signing keystore, which belongs to
+whoever publishes; it is not in this repository and cannot be.
 
 | | |
 | --- | --- |
