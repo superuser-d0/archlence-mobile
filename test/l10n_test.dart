@@ -111,6 +111,59 @@ void main() {
     expect(mismatched, isEmpty);
   });
 
+  test('a label that says "your" in English says it politely in Turkish', () {
+    // Turkish marks the second person on the noun, and it has two of them:
+    // `-in` is the familiar form and `-iniz` the polite one. Both are correct
+    // Turkish, only one is right for an app holding somebody's money, and a
+    // release was pulled over the difference once. Nothing else in this file
+    // can see it — the key exists, the placeholders match, and the sentence
+    // is a good translation of the English.
+    //
+    // Three survived that rewrite and were found by opening the app:
+    // `Verilerin şifreli`, `Paran nerede duruyor?` and the `Verilerin`
+    // section heading. All three are short noun phrases, which is how they
+    // passed for labels rather than for sentences addressed to the reader.
+    //
+    // The check reads the ENGLISH to decide where to look. Turkish `-in` is
+    // also the genitive — `kartın limiti` is "the card's limit" and is
+    // perfectly polite — so a scan of the Turkish alone flags every one of
+    // those and cannot tell them apart. The English says whether a possessive
+    // was meant at all.
+    final polite = RegExp('(iniz|ınız|unuz|ünüz|niz|nız|nuz|nüz)');
+    final addressed = RegExp(r'\byour\b', caseSensitive: false);
+
+    // Words that merely contain those letters, removed before looking.
+    // Without this, `Plan yalnızca aylık dağılımı izler` reads as polite to a
+    // regular expression, and so does anything starting `Henüz`.
+    final coincidence = RegExp('yalnız|henüz|deniz', caseSensitive: false);
+
+    // Two labels answer an English "your" with no possessive at all, because
+    // they were written impersonally: the categories belong to the `hane`
+    // rather than to the reader, and the instalment note is about the bank's
+    // limit rather than the reader's. Decisions, not misses.
+    const impersonal = {'settingsCategorySubtitle', 'installmentNote'};
+
+    final familiar = <String>[];
+    for (final key in keys) {
+      if (impersonal.contains(key)) continue;
+      final english = en[key];
+      final turkish = tr[key];
+      if (english is! String || turkish is! String) continue;
+      if (!addressed.hasMatch(english)) continue;
+      if (!polite.hasMatch(turkish.replaceAll(coincidence, ''))) {
+        familiar.add('$key — "$turkish"');
+      }
+    }
+
+    expect(
+      familiar,
+      isEmpty,
+      reason: 'these answer an English "your" without the polite -iniz, so '
+          'they are either addressing the user as "sen" or should be added '
+          'to the impersonal list with a reason',
+    );
+  });
+
   test('the app offers exactly the languages it has labels for', () {
     // `supportedLocales` is hand-written, because its ORDER decides what a
     // phone set to a third language falls back to. A locale added to the ARB

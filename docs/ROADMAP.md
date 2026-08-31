@@ -62,6 +62,15 @@ language; a phone set to anything else gets Turkish, and Settings can override
 the choice. The one thing NOT translated is the backup layer's diagnostic
 detail — see "What i18n did not cover".
 
+**And it speaks it politely.** Every string that addresses the reader is in
+the `siz` form, which is not a style preference: the familiar form got the
+first release pulled. Three survived that rewrite in short noun-phrase
+headings — two of them on onboarding screens — and were found by installing
+the release build and reading it. A check in `test/l10n_test.dart` now fires
+on the class rather than on the three, and it is driven by the ENGLISH,
+because Turkish cannot tell a familiar possessive from a genitive on its own.
+See "Three the register rewrite missed".
+
 **And it does not fall apart on a wide screen.** Every screen was walked at
 five sizes, from a landscape phone to a 1280dp tablet; nothing overflows, and
 content is held to a readable column width rather than running 150 characters
@@ -155,7 +164,7 @@ app, found three more: every sweep renders a screen in the state it OPENS in,
 the per-screen tests drive real states on an 800dp surface, and nothing
 covered a real state at a real width. Sixteen defects in all.
 
-1117 unit tests and 14 device tests pass, and `flutter analyze` is clean. No
+1118 unit tests and 14 device tests pass, and `flutter analyze` is clean. No
 control in the app is inert. The count grew by 214 because what it did not
 cover is now covered rather than assumed.
 
@@ -163,11 +172,13 @@ cover is now covered rather than assumed.
 
 **The app is finished, and what stands between it and a listing is a key
 rather than any code.** The toolchain now lives on a Windows laptop and every
-claim in this file was re-run on it: `flutter analyze` clean, 1117 unit tests
-and 14 device tests passing, a debug APK built and driven on the emulator, and
-a signed release bundle. That bundle is signed by a NEW key, because the one
-that signed `v1.0.0` was on the previous machine and is gone — so what is left
-is two questions in Play Console rather than anything buildable. Everything
+claim in this file was re-run on it: `flutter analyze` clean, 1118 unit tests
+and 14 device tests passing, and a signed release APK installed on a clean
+emulator in Turkish, walked by hand, and priced live from CoinGecko —
+`Güncel 38.175,68 ₺` against a cost of 40.000,00 ₺. That build is signed by a
+NEW key, because the one that signed `v1.0.0` was on the previous machine and
+is gone — so what is left is two questions in Play Console, a 512×512 icon and
+a feature graphic, rather than anything buildable. Everything
 else that used to be open here is closed: the privacy policy, the Data
 safety answers, the TalkBack hour, label quality, and the Turkish that got
 the first release pulled.
@@ -189,7 +200,7 @@ defects**, in states no sweep can reach because every sweep renders the state
 a screen OPENS in. Sixteen in all, all fixed.
 
 Three sweeps, two source rules and a driven-state file hold the line now, and
-the suite went from 903 tests to 1117. **No screen is left that nothing lays
+the suite went from 903 tests to 1118. **No screen is left that nothing lays
 out at a phone width, and no state that broke one is left unguarded.**
 
 **One of the fixes was worse than the defect**, which is the part worth
@@ -219,9 +230,14 @@ is smaller and all of it is somebody's judgement rather than a session's work.
    credential; no session should type its password. The last one was lost
    because it existed in exactly one place.
 3. **Whether the phone PRONOUNCES the Turkish correctly.** The strings are
-   right — 57 of them were rewritten out of the informal register — and the
-   announcements are in visual order, but no dump can say how TTS reads them
-   aloud. It needs Turkish ears and about twenty minutes.
+   right — 57 were rewritten out of the informal register, three more were
+   caught by reading the release build, and a check now guards the class —
+   and the announcements are in visual order, but no dump can say how TTS
+   reads them aloud. It needs Turkish ears and about twenty minutes.
+4. **A 512×512 icon and a 1024×500 feature graphic.** The launcher icon
+   exists as SVG; the store wants raster, and the feature graphic does not
+   exist in any form. The second one is a design decision rather than a
+   conversion. See "Getting it into the Play Store".
 
 ### What recent sessions closed
 
@@ -246,6 +262,10 @@ is smaller and all of it is somebody's judgement rather than a session's work.
 | 17 | Three renamings in the Android SDK, one of which cost a line of source | "The move to a laptop" |
 | 18 | The release keystore, lost with the machine it lived on, and what that blocks | "The key that was on the other machine" |
 | 19 | A replacement keystore, and the first signed bundle built on this machine | "The key that was on the other machine" |
+| 20 | Three informal strings the register rewrite missed, two of them in onboarding | "Three the register rewrite missed" |
+| 21 | A check that fires on the class, driven by the English rather than the Turkish | "Three the register rewrite missed" |
+| 22 | The release build walked by hand on this machine, and a live price in it | "The release build, driven by hand on Windows" |
+| 23 | Ten cases that only pass after the 7th of a month, found by the clock | "The suite that passed on 24 days out of 31" |
 
 The machine moved from Windows 11 to CachyOS and the whole toolchain was
 rebuilt under `~/dev` without root; nothing in the repository had to change
@@ -2315,6 +2335,144 @@ currently runs at the parameter that ships, which is the strongest version of
 the test and, at four and a half minutes, still cheaper than being wrong about
 it.
 
+### The suite that passed on 24 days out of 31
+
+The clock rolled into the first of the month during a run, and ten cases went
+red — six in `calendar_screen_test.dart` and four in `driven_state_test.dart`.
+**Nothing had changed in the app.** Stashing the session's own work and
+running the file on a clean tree reproduced it, which is the only reason this
+is written up as a finding rather than as a regression somebody caused.
+
+Both files seeded transactions into the CURRENT month at fixed day numbers —
+1, 2, 4, 5, 7 — and asserted that the grid marked them. On the first of a
+month, four of those five days are in the FUTURE. The service files a
+future-dated row as pending, and the grid does not mark pending rows.
+
+**The test file already knew that**, three cases below the ones that broke:
+
+> A future month can only hold pending rows, which the grid does not mark, so
+> every one of them is empty by construction.
+
+The rule was written down, asserted, and then contradicted by the fixtures
+above it. What made it invisible is that the same file's header explains why
+the days are relative rather than fixed — *"a fixed date would fall out of
+view the moment the month rolls over"* — so the month-rollover trap had been
+seen and answered, and the day-of-month one hid behind the fix for it.
+
+**One case kept passing and it is the tell.** `a day with nothing recorded
+carries no dot` seeds only day 1, at 10:00, on a run that started at 01:00 —
+nine hours in the future — and the grid marked it anyway. So the pending test
+is by DATE and not by timestamp: later today still counts as today. That one
+green case, sitting among six red ones, is what says the boundary is the day
+rather than the instant.
+
+**The fix is a month that is entirely in the past.** Both files now seed the
+PREVIOUS month and page the screen back onto it; the three cases that are
+genuinely about the current month — the month it opens on, the empty-month
+message, the disabled forward arrow — say `pageBack: false` and stay where
+they were. `paging back changes the month and drops the selection` pages twice
+now, which is a slightly better test than it was.
+
+**What this cost and what it bought.** It cost nothing, because it was found
+by a machine that happened to be running at midnight on the 31st. It could
+have cost a release: the failure would have appeared on whoever ran the suite
+in the first week of a month, in a file about calendars, with no change in
+front of it to blame.
+
+The general shape, which this file has now written three times in different
+words: **a fixture that reads the clock is a fixture that has a schedule.**
+`now.year` and `now.month` were made relative on purpose; the day number was
+left absolute because nothing in a month rollover touches it, and the first
+of the month is not a month rollover — it is a day-of-month rollover, and no
+one had asked what happens on it.
+
+### Three the register rewrite missed, and the instrument that would have caught them
+
+The Turkish rewrite moved 57 strings out of the familiar second person, and
+`v1.0.0` was pulled to make room for it. **Three survived**, and they were
+found the same way the first batch was: by installing the release build and
+reading the screens.
+
+| Key | Was | Is | Where a user meets it |
+| --- | --- | --- | --- |
+| `onboardingEncryptedTitle` | Veriler**in** şifreli | Veriler**iniz** şifreli | Onboarding, screen 2 of 3 |
+| `onboardingAccountTitle` | Para**n** nerede duruyor? | Para**nız** nerede duruyor? | Onboarding, screen 3 of 3 |
+| `settingsSectionYourData` | Veriler**in** | Veriler**iniz** | Settings section heading |
+
+Two of the three are among the first four screens anybody sees.
+
+**Why they survived** is written into the last session's own account of the
+rewrite: *"286 are single-word labels — nouns, untouched"*. All three are
+short noun phrases. `Verilerin` looks exactly like a noun label and is a
+possessive; the rewrite read sentences, and these were not sentences.
+
+**The check that fires on them** is now in `test/l10n_test.dart`, and its
+shape is the point. Scanning the TURKISH cannot work: `-in` is also the
+genitive, so `kartın limiti` ("the card's limit"), `anahtarın yeri` ("the
+key's location") and `verilerin durduğu gün` ("the day the data stayed") all
+match a search for the familiar possessive and all are correct, polite
+Turkish. There is no way to tell them apart from inside one language.
+
+So the rule reads the ENGLISH to decide where to look — every key whose
+English contains "your" — and then requires the Turkish to carry a polite
+possessive. That is 26 keys today, and before the fix exactly three of them
+failed. Two are allowlisted with their reasons: `settingsCategorySubtitle`
+belongs to the `hane` rather than to the reader, and `installmentNote` is
+about the bank's limit rather than the reader's; both were deliberately
+written impersonally, and an impersonal sentence has no register to get
+wrong.
+
+**One thing the rule needs that is not obvious.** Turkish words that merely
+CONTAIN those letters pass it for free: `yalnızca`, `henüz`, `deniz`. Without
+striking them first, `Plan yalnızca aylık dağılımı izler` reads as polite to
+a regular expression, and `installmentNote` — one of the two exceptions —
+passes on a coincidence rather than on its content. The test removes them
+before looking, and each fix was proved by mutation: putting
+`Paran nerede duruyor?` back turns the case red and names the key.
+
+**What it does not do** is judge tone, and nothing can. `Kaydet` on a button
+stays imperative — a Turkish button carries the short imperative and
+`Kaydedin` reads as artificial — and the check never sees buttons, because
+their English does not say "your".
+
+### The release build, driven by hand on Windows
+
+The APK the new key signs was installed on a clean emulator in `tr-TR` and
+walked: onboarding, a first account at 25.000,00 ₺, the three fixed strings
+read off the screen, then a Bitcoin holding at a cost of 4.000.000,00 ₺ × 0,01.
+
+**It priced.** `Güncel 38.175,68 ₺` against a cost of 40.000,00 ₺, with the
+change chip reading `-%4,56 · az önce` — the arithmetic checks, and so does
+the direction. That is R8 on, the release manifest under it, a real socket to
+CoinGecko and Frankfurter, and `dumpsys` confirming
+`android.permission.INTERNET: granted=true` on the installed package. The
+last release-only question this file has ever asked is answered on this
+machine too.
+
+Two notes for whoever drives an emulator by hand next, neither an app defect:
+
+* **Android's own dialogs interrupt.** Tapping into the first text field of a
+  fresh Android 15 image raises the stylus handwriting introduction, which
+  eats the taps that follow. `settings put secure stylus_handwriting_enabled 0`.
+* **The soft keyboard covers the lower half of a bottom sheet**, so blind taps
+  at remembered coordinates all land in the same field and concatenate.
+  `settings put secure show_ime_with_hard_keyboard 0` puts the AVD's hardware
+  keyboard in charge and the sheet stays whole. And `input keyevent 111` —
+  escape — dismisses the SHEET, not the keyboard.
+* **Git Bash rewrites `adb shell` paths.** `adb shell uiautomator dump
+  /sdcard/ui.xml` writes to `/Files/Git/sdcard/ui.xml`, because MSYS translates
+  anything that looks like a POSIX path. `MSYS_NO_PATHCONV=1` for the whole
+  command, and `adb exec-out cat` rather than `adb shell cat` to bring the file
+  back without CRLF.
+
+### The version code, spent
+
+`pubspec.yaml` is `1.0.0+2`. Version code 1 went to Play with the release that
+was pulled, and Play never accepts a version code twice — deleting a release
+does not hand it back. The version NAME stays `1.0.0`, so
+`lib/app_version.dart` and the store listing still agree, which
+`test/app_version_test.dart` checks.
+
 ### The move to a laptop, and what the SDK renamed under us
 
 The machine moved a third time — CachyOS back to Windows 11 — and for the
@@ -2376,7 +2534,7 @@ could not pipe `yes` into it — did not need answering again; it stopped
 existing.
 
 **What the move cost the app: nothing, and that is measured rather than
-assumed.** `flutter analyze` is clean, 1117 unit tests pass, and all 14 device
+assumed.** `flutter analyze` is clean, 1118 unit tests pass, and all 14 device
 tests pass on `archlence_pixel` — including the two that open a real socket,
 where CoinGecko and Frankfurter both answered from this machine. The release
 guard still refuses correctly: `flutter build appbundle --release` fails on
@@ -4043,11 +4201,14 @@ nothing can be uploaded until that is settled. It is a credential problem, not
 an engineering one, and it is the first thing to pick up.
 
 - **The keystore, again.** The one that signed `v1.0.0` is gone; a
-  replacement has been made and a signed 62.0MB bundle built with it. What is
-  NOT done is Play's side — two questions in the console decide whether this
+  replacement has been made and a signed bundle built with it. What is NOT
+  done is Play's side — two questions in the console decide whether this
   certificate can be adopted — and **a backup of the new keystore somewhere
   that is not this machine**, which is the whole reason the last one had to be
   replaced. See "The key that was on the other machine".
+- ~~**A version code Play will accept.**~~ Done: `pubspec.yaml` is `1.0.0+2`.
+  Version code 1 is spent, and deleting the release did not give it back. See
+  "The version code, spent".
 - ~~**An App Bundle, not an APK.**~~ Done. `flutter build appbundle --release`
   built first try, 66.7MB, signed by the release key — verified with
   `jarsigner` rather than assumed. And it answered the 65MB question by
@@ -4088,6 +4249,35 @@ reading the definitions. `docs/data-safety.md` holds the answers, the evidence
 and the check to run at each release; `test/wire_shape_test.dart` fails if any
 of the evidence stops being true. The judgement belongs to whoever signs it;
 see "The Data safety declaration, decided by listening to the wire".
+
+**What the listing still needs, checked against the repository rather than
+remembered.** Everything here is store-side; none of it is code.
+
+- **A 512×512 PNG app icon and a 1024×500 feature graphic.** `assets/icon/`
+  holds two SVGs and nothing else, and Play requires both of those raster
+  sizes for a listing. The feature graphic is a design decision rather than a
+  conversion.
+- **Screenshots.** Four exist at `docs/screenshots/`, 1080×2400. Play wants at
+  least two. Their ratio is 2.22:1, which is wider than the 2:1 that Play's
+  screenshot rules have historically enforced; whether the console still
+  refuses it was not established here, and padding to 1080×1920 is the fix if
+  it does.
+- **The console forms**, which may already be answered from the first
+  publish: content rating (IARC), target audience, app access — *all
+  functionality available with no restrictions*, since there is no account —
+  ads (none), Data safety (the answers are in `docs/data-safety.md`), a short
+  description of 80 characters and a full one of 4000.
+- **The financial features declaration.** Play has a section for it and this
+  is a finance app. Archlence TRACKS crypto holdings and prices them; it is
+  not a wallet, an exchange, or a lender, so the answer is most likely none of
+  the listed features — but it is a declaration somebody has to sign rather
+  than a question this file can close.
+
+Already answered, and verified rather than assumed: the **privacy policy is
+live** at `https://superuser-d0.github.io/archlence-mobile/privacy.html` and
+its Turkish twin at `/gizlilik.html` — both return 200 — and the app links to
+the first from Settings, which is the other half of what Play asks. `targetSdk`
+is 36 and `minSdk` 24, so the target API level requirement is met.
 
 Worth doing first rather than last: open the developer account. A new personal
 account may face a closed-testing period before production access, which moves
@@ -4291,7 +4481,7 @@ makes it the experiment the two claims disagree about. Measured here:
 
 | Run | Tests | This laptop | The desktop, on Linux |
 | --- | --- | --- | --- |
-| `flutter test` | 1117 | 7m28s | 4m41s |
+| `flutter test` | 1118 | 7m28s | 4m41s |
 | `test/backup_service_test.dart` alone | 23 | 7m18s | 4m35s |
 | everything else | 1094 | ~35s | ~25s |
 | `flutter analyze` | — | 34.8s | under 10s |
@@ -4307,6 +4497,14 @@ Ten seconds separate the whole suite from that one file, the same six-to-ten
 seconds the last machine saw: `flutter test` runs files in parallel and the
 other 1094 finish long before it does. **The suite's wall clock is one file's
 key derivation and almost nothing else,** on any machine.
+
+**And the laptop's number moves, which the desktop's did not.** 7m28s is the
+figure that reproduces on mains power in the evening; a later run of the same
+1118 tests, on the same tree, took 13m07s at one in the morning. Nothing in
+the suite changed between them. A laptop throttles — power state, thermals,
+whatever the machine decides while nobody is watching — and that is worth
+knowing before reading a slow run as a regression. The table carries the fast
+one because it is the one that reproduces when the machine is being used.
 
 `flutter analyze` is the one number where the checkout's location may show —
 34.8s against under 10s, on a difference of CPU that is only 1.59×. It reads
@@ -4342,6 +4540,17 @@ process outlive it here, two of them by design:
   `./gradlew --stop` from `android/`; the Kotlin daemons go with the Gradle
   one. Checked afterwards here rather than assumed: `--stop` reported one
   daemon stopped and nothing was left holding memory.
+* **Modern Standby, which is a laptop's answer to an idle machine and a
+  suite's worst neighbour.** A full run started here at 21:53 and the machine
+  entered standby at 21:55; on resume at 00:40 the test that had passed at
+  06:38 on the runner's own clock reported `TimeoutException after 0:05:00`
+  and, behind it, `SqliteException(14): unable to open database file`. Both
+  are the suspension rather than the code: `backup_service_test.dart` is
+  seven minutes of key derivation, and a five-minute per-test timeout does
+  not survive being frozen. The Kernel-Power log settles it — event 506 at
+  21:55:20, event 507 at 00:40:25, a gap of 165 minutes against the 165
+  minutes missing from the runner's clock. Check that log before believing a
+  failure that appears in that file overnight.
 * **`flutter_tester.exe`, which is not by design.** On this machine one of
   them survived a completed `flutter test` by three quarters of an hour,
   slowly accruing CPU, and the shell that launched the suite was not reported
@@ -4360,7 +4569,7 @@ tools — twice, because the current release had to be swapped for the previous
 one. Flutter was already on the machine.
 
 Verified on this machine, in this order: `flutter analyze` clean in 34.8s,
-1117 unit tests pass in 7m28s, a debug APK builds, and all 14 device tests
+1118 unit tests pass in 7m28s, a debug APK builds, and all 14 device tests
 pass on `emulator-5554` — four in `key_provider_device_test.dart` against the
 real Keystore, eight in `app_device_test.dart` driving the real screens, and
 two in `live_price_device_test.dart` against the real network, where CoinGecko

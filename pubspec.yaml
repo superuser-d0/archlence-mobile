@@ -2,7 +2,12 @@ name: archlence_mobile
 description: "Archlence - local-first personal finance, Android client."
 publish_to: 'none'
 
-version: 1.0.0+1
+# The build number is `+2` rather than `+1` because versionCode 1 went to
+# Play with the release that was pulled, and a version code is spent for
+# good once Play has seen it -- deleting the release does not give it back.
+# The name stays 1.0.0, and `lib/app_version.dart` has to agree with it;
+# `test/app_version_test.dart` fails if they drift.
+version: 1.0.0+2
 
 environment:
   sdk: ^3.13.1

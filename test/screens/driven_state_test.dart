@@ -126,14 +126,21 @@ void main() {
           accountType: AccountType.checking,
           initialBalance: 5000,
         );
+        // The month BEFORE this one, and the screen is paged back onto it.
+        // The 7th of the current month is a future date for the first week of
+        // every month, the service files a future-dated row as pending, and
+        // the grid does not mark pending rows — see the same note in
+        // `calendar_screen_test.dart`, which this once matched by seeding the
+        // current month and failed with on the first of a month.
         final now = DateTime.now();
+        final seededMonth = DateTime(now.year, now.month - 1);
         await services.transactions.addTransaction(
           accountId: accountId,
           amount: 500,
           transactionType: 'expense',
           category: 'Market',
           description: 'haftalık alışveriş',
-          transactionDate: DateTime(now.year, now.month, 7),
+          transactionDate: DateTime(seededMonth.year, seededMonth.month, 7),
         );
         // The same corruption `calendar_screen_test.dart` uses: an envelope
         // the field decryptor cannot open, so the row is drawn and the figure
@@ -145,6 +152,8 @@ void main() {
         );
 
         await pumpAt(tester, services, const CalendarScreen(), entry.value);
+        await tester.tap(find.byIcon(Icons.chevron_left));
+        await tester.pumpAndSettle();
         await tester.tap(find.text('7'));
         await tester.pumpAndSettle();
 

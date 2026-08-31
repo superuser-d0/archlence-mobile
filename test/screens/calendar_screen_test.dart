@@ -17,11 +17,26 @@ void main() {
   late AppServices services;
   late int accountId;
 
-  /// Days inside the CURRENT month, so the screen opens on them without any
-  /// paging. A fixed date would fall out of view the moment the month rolls
-  /// over, and a test that only passes in some months is worse than none.
+  /// Days inside a month that is entirely in the PAST, and the screen is
+  /// paged back onto it.
+  ///
+  /// The current month cannot hold them, which this file learned the hard
+  /// way: it used to seed days 1, 2, 4, 5 and 7 of the current month, and on
+  /// the first of a month every one of those but the first is in the future.
+  /// The service files a future-dated row as pending, the grid does not mark
+  /// pending rows — which is exactly what "paging past the current month is
+  /// not offered" asserts below — so six cases went red at midnight on the
+  /// 31st and would have gone green again on the 8th. A suite that passes on
+  /// 24 days out of 31 is worse than one that fails, because the failure
+  /// arrives on someone else's clock.
+  ///
+  /// The comparison is by DATE rather than by timestamp: a row stamped later
+  /// TODAY still counts as today, which is why the one case seeding only day
+  /// 1 kept passing while the rest fell over.
   final now = DateTime.now();
-  DateTime dayInThisMonth(int day) => DateTime(now.year, now.month, day, 10);
+  final seededMonth = DateTime(now.year, now.month - 1);
+  DateTime dayInSeededMonth(int day) =>
+      DateTime(seededMonth.year, seededMonth.month, day, 10);
 
   setUp(() async {
     db = ArchlenceDatabase.memory();
@@ -50,18 +65,27 @@ void main() {
     transactionDate: when,
   );
 
-  Future<void> pump(WidgetTester tester) async {
+  /// Opens the screen and, by default, pages back onto the seeded month.
+  ///
+  /// `pageBack: false` for the three cases that are ABOUT the current month:
+  /// the month it opens on, the empty-month message, and the disabled
+  /// forward arrow.
+  Future<void> pump(WidgetTester tester, {bool pageBack = true}) async {
     await pumpScreen(tester, services, const CalendarScreen());
     await tester.pumpAndSettle();
+    if (pageBack) {
+      await tester.tap(find.byIcon(Icons.chevron_left));
+      await tester.pumpAndSettle();
+    }
   }
 
   testWidgets('the month it opens on is this one', (tester) async {
-    await pump(tester);
+    await pump(tester, pageBack: false);
     expect(find.textContaining('${now.year}'), findsOneWidget);
   });
 
   testWidgets('a day with nothing recorded carries no dot', (tester) async {
-    await record(when: dayInThisMonth(1));
+    await record(when: dayInSeededMonth(1));
     await pump(tester);
 
     // One transaction, one marked day — so exactly one dot on the grid.
@@ -71,9 +95,9 @@ void main() {
   });
 
   testWidgets('two days with activity carry two dots', (tester) async {
-    await record(when: dayInThisMonth(1));
-    await record(when: dayInThisMonth(2));
-    await record(when: dayInThisMonth(2));
+    await record(when: dayInSeededMonth(1));
+    await record(when: dayInSeededMonth(2));
+    await record(when: dayInSeededMonth(2));
     await pump(tester);
 
     // Two DAYS, three transactions: the grid marks days, not rows.
@@ -82,12 +106,12 @@ void main() {
 
   testWidgets('tapping a day lists what happened on it', (tester) async {
     await record(
-      when: dayInThisMonth(4).copyWith(hour: 9, minute: 5),
+      when: dayInSeededMonth(4).copyWith(hour: 9, minute: 5),
       category: 'Ulaşım',
       description: 'Metro',
     );
     await record(
-      when: dayInThisMonth(4).copyWith(hour: 18, minute: 30),
+      when: dayInSeededMonth(4).copyWith(hour: 18, minute: 30),
       category: 'Market',
     );
     await pump(tester);
@@ -104,12 +128,12 @@ void main() {
 
   testWidgets('income and expense are signed differently', (tester) async {
     await record(
-      when: dayInThisMonth(5),
+      when: dayInSeededMonth(5),
       amount: 1000,
       type: 'income',
       category: 'Maaş',
     );
-    await record(when: dayInThisMonth(5), amount: 250, category: 'Market');
+    await record(when: dayInSeededMonth(5), amount: 250, category: 'Market');
     await pump(tester);
 
     await tester.tap(find.text('5'));
@@ -122,7 +146,7 @@ void main() {
   testWidgets('a day with nothing on it says so rather than doing nothing', (
     tester,
   ) async {
-    await record(when: dayInThisMonth(4));
+    await record(when: dayInSeededMonth(4));
     await pump(tester);
 
     // An unmarked day is still tappable: "was there anything on the 6th" is a
@@ -136,12 +160,12 @@ void main() {
   testWidgets('an empty month says so instead of an unexplained blank grid', (
     tester,
   ) async {
-    await pump(tester);
+    await pump(tester, pageBack: false);
     expect(find.text('Nothing recorded this month.'), findsOneWidget);
   });
 
   testWidgets('a month with data asks the user to pick a day', (tester) async {
-    await record(when: dayInThisMonth(4));
+    await record(when: dayInSeededMonth(4));
     await pump(tester);
     expect(find.textContaining('Pick a marked day'), findsOneWidget);
   });
@@ -149,7 +173,7 @@ void main() {
   testWidgets('an unreadable amount is named, not drawn as zero', (
     tester,
   ) async {
-    await record(when: dayInThisMonth(7), amount: 500, category: 'Market');
+    await record(when: dayInSeededMonth(7), amount: 500, category: 'Market');
     await db.customUpdate(
       'UPDATE transactions SET amount = ?',
       variables: [Variable<String>('AEADv1:not-an-envelope')],
@@ -168,7 +192,7 @@ void main() {
   });
 
   testWidgets('paging past the current month is not offered', (tester) async {
-    await pump(tester);
+    await pump(tester, pageBack: false);
     final next = tester.widget<IconButton>(
       find.ancestor(
         of: find.byIcon(Icons.chevron_right),
@@ -183,12 +207,14 @@ void main() {
   testWidgets('paging back changes the month and drops the selection', (
     tester,
   ) async {
-    await record(when: dayInThisMonth(4));
+    await record(when: dayInSeededMonth(4));
     await pump(tester);
     await tester.tap(find.text('4'));
     await tester.pumpAndSettle();
     expect(find.text('1 transaction'), findsOneWidget);
 
+    // A second page back, since `pump` already made one to reach the seeded
+    // month. The month before that one holds nothing.
     await tester.tap(find.byIcon(Icons.chevron_left));
     await tester.pumpAndSettle();
 

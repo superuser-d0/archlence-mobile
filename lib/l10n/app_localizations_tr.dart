@@ -221,7 +221,7 @@ class AppLocalizationsTr extends AppLocalizations {
       'Bu cihazda parmak izi ya da ekran kilidi kurulu değil.';
 
   @override
-  String get settingsSectionYourData => 'Verilerin';
+  String get settingsSectionYourData => 'Verileriniz';
 
   @override
   String get settingsBackupRestore => 'Yedekle ve Geri Yükle';
@@ -458,7 +458,7 @@ class AppLocalizationsTr extends AppLocalizations {
       'Yedek almadan telefonu kaybederseniz veriler de onunla gider. Kimsede başka bir kopya yok.';
 
   @override
-  String get onboardingEncryptedTitle => 'Verilerin şifreli';
+  String get onboardingEncryptedTitle => 'Verileriniz şifreli';
 
   @override
   String get onboardingEncryptedBody =>
@@ -480,7 +480,7 @@ class AppLocalizationsTr extends AppLocalizations {
       'İşletim sisteminin anahtar deposu kullanılamadı; bu yüzden anahtar, yalnızca bu uygulamanın açabildiği bir dosya. Bu, anahtar deposundan daha zayıf ve bilinmesi gereken bir şey.';
 
   @override
-  String get onboardingAccountTitle => 'Paran nerede duruyor?';
+  String get onboardingAccountTitle => 'Paranız nerede duruyor?';
 
   @override
   String get onboardingAccountBody =>
