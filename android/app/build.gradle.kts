@@ -35,6 +35,14 @@ android {
     // and is a decision to make deliberately and test; compiling against a
     // newer SDK changes nothing about behaviour.
     compileSdk = 37
+    // And its minor version, which is not optional any more. Google ships
+    // platform 37 as `android-37.0`, `37.1` and `37.2`; there is no bare
+    // `android-37` package in the SDK repository. With `compileSdk = 37`
+    // alone, AGP asks for target hash `android-37`, downloads
+    // `platforms/android-37.0` on its own initiative, and then fails to find
+    // the thing it just installed. `compileSdkMinor = 0` makes the hash
+    // `android-37.0`, which is the package that exists.
+    compileSdkMinor = 0
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
