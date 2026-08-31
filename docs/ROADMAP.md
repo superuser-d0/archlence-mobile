@@ -234,10 +234,10 @@ is smaller and all of it is somebody's judgement rather than a session's work.
    caught by reading the release build, and a check now guards the class —
    and the announcements are in visual order, but no dump can say how TTS
    reads them aloud. It needs Turkish ears and about twenty minutes.
-4. **A 512×512 icon and a 1024×500 feature graphic.** The launcher icon
-   exists as SVG; the store wants raster, and the feature graphic does not
-   exist in any form. The second one is a design decision rather than a
-   conversion. See "Getting it into the Play Store".
+4. **Whether the feature graphic is the one to ship.** It exists, generated
+   from the app's own mark, dark and opening sentence — see "Getting it into
+   the Play Store" — and it is a first draft rather than a considered piece of
+   marketing. Regenerating it after an edit is one command.
 
 ### What recent sessions closed
 
@@ -4253,10 +4253,17 @@ see "The Data safety declaration, decided by listening to the wire".
 **What the listing still needs, checked against the repository rather than
 remembered.** Everything here is store-side; none of it is code.
 
-- **A 512×512 PNG app icon and a 1024×500 feature graphic.** `assets/icon/`
-  holds two SVGs and nothing else, and Play requires both of those raster
-  sizes for a listing. The feature graphic is a design decision rather than a
-  conversion.
+- ~~**A 512×512 PNG app icon and a 1024×500 feature graphic.**~~ Both are in
+  `docs/store/`, and both are GENERATED — `tool/emit_store_graphics.py` — for
+  the same reason every other fixture here is. The icon is
+  `assets/icon/archlence_icon.svg` rendered square, which is a conversion
+  rather than a decision: it is the mark the launcher and the desktop app
+  already carry. The feature graphic is the app's own `#131313`, that mark,
+  the name in Plus Jakarta Sans, and `onboardingTagline` — the sentence the
+  app opens with, in the register the rest of it now uses. The script refuses
+  to write it if any text reaches the outer eighth of the frame, which Play is
+  free to crop; the first draft did, at 930px of an allowed 896, and the check
+  caught it rather than a reviewer.
 - **Screenshots.** Four exist at `docs/screenshots/`, 1080×2400. Play wants at
   least two. Their ratio is 2.22:1, which is wider than the 2:1 that Play's
   screenshot rules have historically enforced; whether the console still
@@ -4625,8 +4632,14 @@ each reads that project's own modules:
 | `tool/emit_search_folding.py` | `lib/services/search_folding.dart` + `test/search_folding_vectors.txt` |
 | `tool/emit_calculator_vectors.py` | `test/calculator_vectors.txt` |
 | `tool/emit_period_vectors.py` | `test/period_vectors.txt` |
+| `tool/emit_store_graphics.py` | `docs/store/` — the two images Play asks for |
 | `tool/emit_aead_vectors.dart` | the Dart-written AEAD envelopes the desktop reads back |
 | `tool/emit_mobile_backup.dart` | a package for the desktop to read back |
+
+`emit_store_graphics.py` is the odd one out and needs saying: it reads
+nothing from the desktop, only this repository's own SVG, fonts and colours,
+so it runs from THIS checkout in a venv of its own — `svglib`, `reportlab`,
+`rlPyCairo` and `pillow`. Its doc comment carries the two commands.
 
 The last two run the other way — this app writes, the desktop reads — and are
 run by hand, because the assertion lives in the desktop checkout. Each file's
