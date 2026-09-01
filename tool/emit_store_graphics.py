@@ -8,8 +8,19 @@ for them as PNG. Neither is a design decision:
     so nothing is rounded here.
   * The feature graphic is the app's own dark (`#131313`, the launch
     background), that mark, the name in the app's own Plus Jakarta Sans, and
-    the tagline from `onboardingTagline` -- the sentence the app opens with,
-    in the polite register the rest of it uses.
+    one line of slogan in the app's own green.
+
+The slogan is NOT read from the ARB files, and that is deliberate rather than
+an oversight. It began as `onboardingTagline` -- the sentence the app opens
+with -- and read as a list on a banner: four nouns and a clause. A store
+slogan and a first-run explanation are different jobs. This one is written
+here, in one place, and changing it is an edit to this file.
+
+The green is `tertiary` from `lib/theme/` -- #4EDEA3, the app's "positive
+money" colour, the one the balance ring is drawn in. The mark keeps its own
+#5444E5: that ground is the identity this app SHARES with the desktop client,
+it is not an Obsidian Prime token, and a store icon that drifted from the
+launcher would be two marks for one product.
 
 Drawn rather than photographed, so that a change to the mark or the tagline is
 one run away from a new pair rather than a session with an image editor. The
@@ -50,7 +61,8 @@ source = os.path.join(root, "assets", "icon", "archlence_icon.svg")
 MARK_GROUND = 0x5444E5
 DARK = (19, 19, 19)
 INK = (245, 245, 245)
-MUTED = (150, 150, 155)
+# `tertiary` in `lib/theme/` -- "Positive money: income, growth, cash".
+ACCENT = (0x4E, 0xDE, 0xA3)
 
 icon_path = os.path.join(destination, "play_store_512.png")
 drawing = svg2rlg(source)
@@ -73,25 +85,20 @@ banner.paste(mark, (96, (HEIGHT - side) // 2), mask)
 
 fonts = os.path.join(root, "assets", "fonts")
 title_font = ImageFont.truetype(os.path.join(fonts, "PlusJakartaSans-700.ttf"), 84)
-body_font = ImageFont.truetype(os.path.join(fonts, "PlusJakartaSans-400.ttf"), 30)
+body_font = ImageFont.truetype(os.path.join(fonts, "PlusJakartaSans-500.ttf"), 33)
+
+SLOGAN = "Paranızın kaydı sadece sizde."
 
 left = 96 + side + 60
-draw.text((left, 178), "Archlence", font=title_font, fill=INK)
-for index, line in enumerate(
-    [
-        "Hesaplarınız, kartlarınız, varlıklarınız",
-        "ve bütçeniz — bu telefonda,",
-        "başka hiçbir yerde.",
-    ]
-):
-    draw.text((left, 284 + index * 41), line, font=body_font, fill=MUTED)
+draw.text((left, 186), "Archlence", font=title_font, fill=INK)
+draw.text((left, 300), SLOGAN, font=body_font, fill=ACCENT)
 
 # The check that keeps this honest: nothing may reach the outer eighth, which
 # is the band Play is free to crop.
 edge = int(WIDTH * 0.875)
 widest = max(
-    draw.textbbox((left, 0), line, font=body_font)[2]
-    for line in ("Hesaplarınız, kartlarınız, varlıklarınız", "Archlence")
+    draw.textbbox((left, 0), SLOGAN, font=body_font)[2],
+    draw.textbbox((left, 0), "Archlence", font=title_font)[2],
 )
 if widest > edge:
     raise SystemExit(f"text reaches {widest}px of {WIDTH}, past the safe edge at {edge}")

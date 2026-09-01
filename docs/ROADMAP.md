@@ -4259,11 +4259,16 @@ remembered.** Everything here is store-side; none of it is code.
   `assets/icon/archlence_icon.svg` rendered square, which is a conversion
   rather than a decision: it is the mark the launcher and the desktop app
   already carry. The feature graphic is the app's own `#131313`, that mark,
-  the name in Plus Jakarta Sans, and `onboardingTagline` — the sentence the
-  app opens with, in the register the rest of it now uses. The script refuses
-  to write it if any text reaches the outer eighth of the frame, which Play is
-  free to crop; the first draft did, at 930px of an allowed 896, and the check
-  caught it rather than a reviewer.
+  the name in Plus Jakarta Sans, and one line of slogan in the app's own green
+  — `tertiary`, #4EDEA3, which `lib/theme/` calls "positive money" and the
+  balance ring is drawn in. The slogan lives in the script rather than in the
+  ARB files: it began as `onboardingTagline` and read as a list on a banner,
+  because a store slogan and a first-run explanation are different jobs. The
+  mark keeps its #5444E5 deliberately — that ground is the identity shared
+  with the desktop client, not a theme token. The script refuses to write the
+  banner if any text reaches the outer eighth of the frame, which Play is free
+  to crop; it has now caught two drafts, one at 930px of an allowed 896 and one
+  that passed with six pixels to spare, which is a rule waiting to break.
 - **Screenshots.** Four exist at `docs/screenshots/`, 1080×2400. Play wants at
   least two. Their ratio is 2.22:1, which is wider than the 2:1 that Play's
   screenshot rules have historically enforced; whether the console still
