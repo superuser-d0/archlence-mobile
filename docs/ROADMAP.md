@@ -4232,6 +4232,54 @@ surfaced only that way:
 - The floating action button duplicated the "+ ADD" header button and,
   floating, covered the Freeze Card switch. Dropped.
 
+### The release build, driven as a phone would receive it
+
+The bundle was verified as an ARTIFACT — signed, right certificate, right
+version code — and that is not the same as verified as an APP. R8 is on, and
+what R8 breaks does not show up in a debug build or in 1118 unit tests: it
+breaks platform channels, reflection and anything reached by name. This app
+is drift, sqlite3, secure storage and local_auth, all of which cross that
+line. So the last claim standing on a previous machine's evidence was closed
+here.
+
+**Installed the way Play delivers it, not as a fat APK.** `bundletool
+build-apks --connected-device` produced the split set a Pixel-class device
+actually receives — `base-master`, `base-en`, `base-x86_64`, `base-xxhdpi` —
+and `install-apks` put those four on the emulator. `dumpsys` confirms the
+installed package holds `android.permission.INTERNET`, granted.
+
+Driven by hand, in the release build, on the split set:
+
+* Onboarding through all three screens. The key screen reports **Android
+  Keystore**, which is `KeyProtectionStatus` reading the real store rather
+  than assuming — the sentence that was once hard-coded and wrong.
+* First account created with 84.500,00 ₺. The dashboard reads it back from an
+  encrypted database that did not exist a moment earlier.
+* **Switched to Turkish, which was the test worth designing.** The device got
+  only the `en` language split, so the question was whether the app's own
+  Turkish survives. It does, completely — Flutter's l10n is generated Dart in
+  `base-master`, not Android resources in a language split. Worth writing
+  down because the split set makes it look like a risk and it is not.
+* A Bitcoin holding, 0,025 at 2.000.000,00 ₺. The sheet computed **"Toplam
+  50.000,00 ₺ eder"** before saving — decimal arithmetic and Turkish
+  formatting, under R8.
+* **The live price arrived**: `Güncel 92.409,46 ₺`, `+%84,82`, `az önce`.
+  CoinGecko for BTC and Frankfurter for the USD→TRY leg, from a release build
+  with R8 on and the release manifest under it.
+* Force-stopped and relaunched. The database reopened under the key the
+  Keystore had kept, the balance read **34.500,00 ₺** — 84.500 less the
+  50.000 the holding debited — and the Turkish preference persisted.
+
+**Zero `FATAL EXCEPTION`, zero `MissingPluginException`, zero
+`ClassNotFoundException`, zero `NoSuchMethodError`** across the whole run,
+counted from `logcat` rather than from the absence of a visible crash.
+
+One cosmetic thing seen and not fixed: with the soft keyboard up on the
+onboarding account screen, the primary button is squeezed to a sliver rather
+than being scrolled to. It is reachable the moment the keyboard closes, and
+`adb`'s ESC does not close it where BACK does — which is a note about driving
+the emulator as much as about the screen. Worth a look, not worth a release.
+
 ### The release guard fired too late, and overwrote what it was protecting
 
 Found by watching a build rather than by reading one, which is this file's
@@ -4367,7 +4415,11 @@ language. All three refuse.
 **Everything in this section is done, and what is left is not this
 repository's to do.** There is a signed, R8-shrunk App Bundle carrying the
 certificate written down in "The key that was on the other machine", built on
-the current machine from a keystore that now exists in two places. The store
+the current machine from a keystore that now exists in two places — **and it
+has been installed as Play's own split set and driven by hand**, through
+onboarding, a Turkish switch, a holding priced live, and a restart that
+reopened the encrypted database. See "The release build, driven as a phone
+would receive it". The store
 assets conform to Play's rules — checked against the rules rather than against
 memory, and two of the three were not conforming. The listing copy is drafted
 in both languages with the console's other answers gathered beside it.

@@ -58,7 +58,9 @@ holdings, plans a budget, opens and funds savings goals, pays down a card and
 manages subscriptions. No control in the app is inert.
 
 The release build exists: `flutter build appbundle --release` produces a
-signed App Bundle, which Play serves to a device as about 11MB. The privacy
+signed App Bundle, which Play serves to a device as about 11MB — installed as
+the split set Play actually delivers and driven by hand, with R8 on, from
+onboarding to a holding priced live off the network. The privacy
 policy is live at a public URL and linked from Settings, Play's Data safety
 form is answered from recorded traffic, the store assets and listing copy are
 prepared, and the screen-reader hour is done. **Nothing that remains is a
