@@ -4232,6 +4232,54 @@ surfaced only that way:
 - The floating action button duplicated the "+ ADD" header button and,
   floating, covered the Freeze Card switch. Dropped.
 
+### The keyboard sliced the button, and the first diagnosis was wrong
+
+Seen while driving the release build by hand, then fixed. **The description
+this file gave it first was wrong, and the correction is the useful part.**
+
+It was recorded as the button being "squeezed to a sliver". It is not squeezed.
+Nothing in that page can squeeze anything: it is a `SingleChildScrollView` over
+a `Column` of fixed-height children, and a scroll view gives its child
+unbounded height. Reading the code made that plain and made the first
+explanation impossible — which is when it was worth going back to the device
+rather than reasoning further.
+
+**What actually happens.** `Scaffold` shrinks the body by the keyboard's
+height. The page scrolls, as it should, and lands with the button straddling
+the keyboard's top edge — so the scroll view CLIPS it, and about ten pixels of
+gradient are drawn with the page dots sitting on top. Confirmed by reproducing
+it deliberately with a four-second wait, so it is a settled layout and not a
+frame caught mid-animation.
+
+**And it is reachable.** A short drag scrolls the button fully into view, with
+the keyboard still up. So this was never "the button does not work" — it is
+that ten pixels of a gradient reads as a rendering fault rather than as
+something to scroll towards, on the first screen anybody ever fills in. Not
+severe. Cheap to fix, and cheap is the argument.
+
+**The fix.** `_FirstAccountState` becomes a `WidgetsBindingObserver` and, while
+one of its own fields holds focus, answers `didChangeMetrics` by calling
+`Scrollable.ensureVisible` on the button. `ensureVisible` rather than a jump to
+the end of the page, deliberately: it scrolls the LEAST that reveals the
+button, so a taller keyboard or a larger font cannot push the field being typed
+into off the top to make room. `didChangeMetrics` fires repeatedly while the
+keyboard animates, so the content tracks it instead of snapping once at the
+end; the focus test means nothing fights the user once they start scrolling
+themselves.
+
+**Two tests hold it**, and they need something no other test in that file has:
+a PHONE-SHAPED surface. Every widget test here lays out on 800x2400 so a finder
+can reach anything without scrolling — and that is exactly what hid this, since
+a page with room to spare has nothing for a keyboard to push off the bottom.
+The new ones use 360x800 with a simulated 320px inset. One asserts the button
+is both fully above the keyboard AND at its real height, because asserting only
+the height would pass on a button drawn entirely underneath it. The other
+asserts the field stays on screen, which is what stops the fix from being
+"scroll to the bottom and hope".
+
+Checked for teeth by disabling the handler: the button's bottom lands 85px
+past the keyboard's top edge and the first test fails naming that.
+
 ### Reading `lib/` file by file, and the three things it found
 
 A review of the Dart source itself rather than of the README — 76 files and
@@ -4380,11 +4428,10 @@ Driven by hand, in the release build, on the split set:
 `ClassNotFoundException`, zero `NoSuchMethodError`** across the whole run,
 counted from `logcat` rather than from the absence of a visible crash.
 
-One cosmetic thing seen and not fixed: with the soft keyboard up on the
-onboarding account screen, the primary button is squeezed to a sliver rather
-than being scrolled to. It is reachable the moment the keyboard closes, and
-`adb`'s ESC does not close it where BACK does — which is a note about driving
-the emulator as much as about the screen. Worth a look, not worth a release.
+One thing seen here and fixed in the next entry: with the soft keyboard up on
+the onboarding account screen, the primary button came out as a sliver. (Also
+worth knowing for driving the emulator: `adb`'s ESC does not close the
+keyboard where BACK does.)
 
 ### The release guard fired too late, and overwrote what it was protecting
 

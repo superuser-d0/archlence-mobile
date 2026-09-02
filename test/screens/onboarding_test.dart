@@ -7,6 +7,7 @@ import 'package:archlence_mobile/crypto/key_provider.dart';
 import 'package:archlence_mobile/data/database.dart';
 import 'package:archlence_mobile/screens/onboarding_screen.dart';
 import 'package:archlence_mobile/services/account_service.dart';
+import 'package:archlence_mobile/widgets/surfaces.dart';
 import 'package:decimal/decimal.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -34,12 +35,14 @@ void main() {
       true,
     ),
     VoidCallback? onFinished,
+    Size size = const Size(800, 2400),
   }) async {
     final services = servicesWith(status);
     await pumpScreen(
       tester,
       services,
       OnboardingScreen(onFinished: onFinished ?? () {}),
+      size: size,
     );
     return services;
   }
@@ -227,6 +230,74 @@ void main() {
       expect(find.text('That is not an amount.'), findsOneWidget);
       expect(await services.accounts.getAccounts(), isEmpty);
       expect(finished, isFalse);
+    });
+  });
+
+  group('the keyboard', () {
+    // A PHONE-SHAPED surface, unlike every other test in this file. The tall
+    // 2400px one exists so a finder can reach anything without scrolling, and
+    // that is exactly what hides this: with room for the whole page there is
+    // nothing for a keyboard to push off the bottom.
+    const phone = Size(360, 800);
+    const keyboard = 320.0;
+
+    testWidgets('does not slice the primary action in half', (tester) async {
+      // WHAT THIS CAUGHT. `Scaffold` shrinks the body by the keyboard's
+      // height and the page scrolls, so the button ended up straddling the
+      // keyboard's top edge: about ten pixels of gradient with the page dots
+      // sitting on top of it. Not hidden, which the user would scroll for —
+      // SLICED, which reads as a rendering fault, on the first screen anyone
+      // ever fills in. Found by driving an emulator by hand.
+      await pump(tester, size: phone);
+      await next(tester);
+      await next(tester);
+
+      await tester.tap(find.byType(TextField).last);
+      await tester.pumpAndSettle();
+
+      tester.view.viewInsets = const FakeViewPadding(bottom: keyboard);
+      await tester.pumpAndSettle();
+
+      final button = find.widgetWithText(
+        GradientButton,
+        'Start using Archlence',
+      );
+      expect(button, findsOneWidget);
+      final rect = tester.getRect(button);
+
+      // Fully above the keyboard, and at its real height rather than a
+      // sliver. Both halves matter: asserting only the height would pass on
+      // a button drawn entirely underneath the keyboard.
+      expect(
+        rect.bottom,
+        lessThanOrEqualTo(phone.height - keyboard),
+        reason: 'the button is under the keyboard',
+      );
+      expect(
+        rect.height,
+        greaterThan(32),
+        reason: 'the button is clipped to a sliver',
+      );
+    });
+
+    testWidgets('and the field being typed into stays on screen', (
+      tester,
+    ) async {
+      // The reason the fix scrolls the LEAST that reveals the button rather
+      // than jumping to the end of the page: a taller keyboard or a larger
+      // font must not push the field out of sight to make room.
+      await pump(tester, size: phone);
+      await next(tester);
+      await next(tester);
+
+      await tester.tap(find.byType(TextField).last);
+      await tester.pumpAndSettle();
+      tester.view.viewInsets = const FakeViewPadding(bottom: keyboard);
+      await tester.pumpAndSettle();
+
+      final field = tester.getRect(find.byType(TextField).last);
+      expect(field.bottom, lessThanOrEqualTo(phone.height - keyboard));
+      expect(field.top, greaterThanOrEqualTo(0));
     });
   });
 }
