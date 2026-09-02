@@ -390,6 +390,110 @@ void main() {
       expect(rows.single.data['source'], 'CoinGecko + Frankfurter (ECB)');
     });
 
+    test('a price inside its lifetime is served with NO request at all', () async {
+      // The reason `price_ttl.dart` exists. The Assets screen is torn down
+      // and rebuilt on every tab switch, every recorded transaction and every
+      // period chip; before this, each of those was a live round trip for a
+      // figure that had not moved.
+      final first = FakeProviders(
+        coinGeckoBody: _coinGeckoBody,
+        frankfurterBody: _frankfurterBody,
+      );
+      final holdings = [_asset(id: 1, code: 'BTC', type: 'Kripto')];
+      await serviceWith(first, now: fixedNow).priceHoldings(holdings);
+      expect(first.coinGeckoCalls, 1);
+
+      // Two minutes later — inside crypto's three-minute lifetime.
+      final second = FakeProviders(
+        coinGeckoBody: _coinGeckoBody,
+        frankfurterBody: _frankfurterBody,
+      );
+      final result = await serviceWith(
+        second,
+        now: fixedNow.add(const Duration(minutes: 2)),
+      ).priceHoldings(holdings);
+
+      expect(second.requested, isEmpty, reason: 'nothing may leave the phone');
+      expect(result[1], isNotNull);
+      // And it reports the age it actually has, not the moment it was asked.
+      expect(result[1]!.asOf, fixedNow);
+    });
+
+    test('and past its lifetime it is fetched again', () async {
+      final first = FakeProviders(
+        coinGeckoBody: _coinGeckoBody,
+        frankfurterBody: _frankfurterBody,
+      );
+      final holdings = [_asset(id: 1, code: 'BTC', type: 'Kripto')];
+      await serviceWith(first, now: fixedNow).priceHoldings(holdings);
+
+      final second = FakeProviders(
+        coinGeckoBody: _coinGeckoBody,
+        frankfurterBody: _frankfurterBody,
+      );
+      await serviceWith(
+        second,
+        now: fixedNow.add(const Duration(minutes: 4)),
+      ).priceHoldings(holdings);
+
+      expect(second.coinGeckoCalls, 1);
+    });
+
+    test('force ignores the lifetime, which is pull-to-refresh', () async {
+      final first = FakeProviders(
+        coinGeckoBody: _coinGeckoBody,
+        frankfurterBody: _frankfurterBody,
+      );
+      final holdings = [_asset(id: 1, code: 'BTC', type: 'Kripto')];
+      await serviceWith(first, now: fixedNow).priceHoldings(holdings);
+
+      final second = FakeProviders(
+        coinGeckoBody: _coinGeckoBody,
+        frankfurterBody: _frankfurterBody,
+      );
+      await serviceWith(
+        second,
+        now: fixedNow.add(const Duration(seconds: 5)),
+      ).priceHoldings(holdings, force: true);
+
+      expect(second.coinGeckoCalls, 1);
+    });
+
+    test('a fresh crypto row does not drag USDTRY along with it', () async {
+      // The USD leg is fetched "the moment either is present". That has to
+      // key off what is being REFETCHED, or a portfolio held entirely in
+      // cache would still call Frankfurter every time.
+      final first = FakeProviders(
+        coinGeckoBody: _coinGeckoBody,
+        frankfurterBody: _frankfurterBody,
+      );
+      final holdings = [_asset(id: 1, code: 'BTC', type: 'Kripto')];
+      await serviceWith(first, now: fixedNow).priceHoldings(holdings);
+
+      final second = FakeProviders(
+        coinGeckoBody: _coinGeckoBody,
+        frankfurterBody: _frankfurterBody,
+      );
+      await serviceWith(
+        second,
+        now: fixedNow.add(const Duration(minutes: 1)),
+      ).priceHoldings(holdings);
+
+      expect(second.frankfurterCalls, 0);
+    });
+
+    test('a share with no key still touches nothing, cached or not', () async {
+      // The rule that predates this change and must survive it: without a
+      // key the app has never priced a share, so it must not read the store
+      // for one either.
+      final fake = FakeProviders(sharesBody: '{"data":[]}');
+      final result = await serviceWith(fake).priceHoldings([
+        _asset(id: 1, code: 'ASELS', type: 'Hisse'),
+      ]);
+      expect(fake.requested, isEmpty);
+      expect(result.containsKey(1), isFalse);
+    });
+
     test('a provider gap falls back to what the cache already holds', () async {
       // First call: live, and it writes the cache.
       final firstFake = FakeProviders(

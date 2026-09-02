@@ -4232,6 +4232,112 @@ surfaced only that way:
 - The floating action button duplicated the "+ ADD" header button and,
   floating, covered the Freeze Card switch. Dropped.
 
+### Reading `lib/` file by file, and the three things it found
+
+A review of the Dart source itself rather than of the README — 76 files and
+about 23 400 hand-written lines, prompted by an outside critique that had read
+the repository's documentation and rated it highly. Reading the code found
+three things the documentation could not.
+
+**1. The most expensive rule in the app was held by a comment.**
+`pubspec.yaml` says every `FlutterSecureStorage` in `lib/` passes
+`AndroidOptions(resetOnError: false)`, and says why: version 11 flipped that
+default to TRUE, where a failed read ERASES THE STORE — and the store holds
+the key the whole database is encrypted under. All five constructions were
+correct. **Nothing checked.** A sixth added without the argument would
+compile, analyze clean, pass 1118 tests, and destroy a user's data the first
+time a read failed.
+
+This project already has the shape for this — `no_async_set_state_test.dart`,
+`dead_controls_test.dart`, `wire_shape_test.dart`, `privacy_pages_test.dart`,
+`app_version_test.dart` are all source-shape checks over rules the analyzer
+has no opinion about. `secure_storage_options_test.dart` joins them. It reads
+each constructor call by counting parentheses rather than by matching a line,
+because the argument sits two lines below the constructor in every current
+use. Checked for teeth: removing the argument from `shares_api_key.dart` fails
+it, at the right line.
+
+It carries a second test asserting there are still at least five
+constructions. A rule whose subject has vanished passes forever and says
+nothing.
+
+**2. Prices were fetched on actions that have nothing to do with prices.**
+`LivePriceService.priceHoldings` went to CoinGecko and Frankfurter
+unconditionally; `asset_price_cache` was consulted only for symbols a fetch
+had failed to resolve. Meanwhile `AppShell` rebuilds the visible tab under a
+new `KeyedSubtree` key on every write, and every tab switch builds a fresh
+`State`. So a live round trip cost was paid for:
+
+| Trigger | Did the user ask for a price? |
+| --- | --- |
+| Opening the Assets tab | no |
+| Leaving it and coming back | no |
+| Recording a transaction anywhere | no |
+| **Tapping a period chip** | **no** |
+| A holding bought or sold | no |
+| Pull-to-refresh | yes |
+
+The period chip is the clearest of them: the period selects which
+transactions are summarised and has no bearing on a price per unit, so
+tapping through the five chips was five CoinGecko round trips and five
+Frankfurter ones, in about as many seconds, against providers that rate limit.
+It also sat badly beside a decision this file already records — `logo_service`
+was NOT ported because it is "a request per symbol to somebody else's server
+for decoration". The same restraint had not reached prices.
+
+**The fix is a port, not a number somebody picked.** The desktop's
+`services/price_service.py` opens by calling itself "cache-first, dinamik
+TTL'li", and its `get_ttl_minutes` is the rule: crypto 3 minutes; shares 5
+minutes inside Istanbul market hours and **infinite** outside them; gold and
+currency 10 minutes on weekdays and infinite at the weekend. A closed market
+cannot move a price, so refetching one is pure waste.
+
+`lib/services/price_ttl.dart` ports it and
+`tool/emit_price_ttl_vectors.py` generates 120 vectors by calling the real
+desktop function — every asset spelling, both sides of each market edge to the
+minute, and both weekend days. All 120 reproduced on the first run. Generating
+rather than transcribing earned itself immediately: Python's `weekday() < 5`
+is Monday-Friday and Dart's `weekday <= 5` is the same range under a different
+numbering, which is exactly the off-by-one a hand-written table hides.
+
+`priceHoldings` is now cache-first, with a `force` flag wired to
+pull-to-refresh and to nothing else. A portfolio whose rows are all inside
+their lifetime opens the Assets tab **with no request leaving the phone**,
+which `live_price_service_test.dart` now asserts directly against the fake
+provider's request log.
+
+Two pre-existing invariants had to survive it, and both are still asserted:
+a portfolio with no shares never reads the secure store, and a share with no
+key is priced by neither the wire nor the cache. The API key is now read once,
+higher up, because it decides cache eligibility as well as fetch eligibility.
+
+**3. The size problem is in `screens/`, not `services/`.** The critique that
+prompted this review put `services/` at 9 890 lines and called it a possible
+"everything bucket". Measured, 2 873 of those are `search_folding.dart`, a
+GENERATED Unicode table marked "do not edit" — not logic at all. Real service
+code is about 7 000 lines over 22 files, averaging 320, the largest 897.
+
+The screens were the outlier: `assets_screen.dart` 1 307 lines and 18 classes,
+`home_screen.dart` 927 and 16, `cards_screen.dart` 890 and 14. Split along
+their own seams into eleven files, largest now 418.
+
+**`part` rather than separate libraries, and that is the whole reason it is
+cheap.** Every widget in these files is library-private; separate libraries
+would have forced eighteen `_Foo` classes public and widened a screen's API to
+the entire app to gain nothing. A part file shares the parent's privacy and
+its imports, so not one import moved and not one name changed. Verified by
+counting classes before and after: 18, 16 and 14, with no difference in
+either direction.
+
+**What was deliberately NOT changed.** The review also observed that
+`_revision` rebuilds a whole tab for any write, so every tab switch re-queries
+the database and re-decrypts every field it draws. That is left alone. The
+counter is a correctness-favouring choice — it cannot show stale data —
+and making it selective would trade a local, measurable cost for the risk of a
+screen that quietly fails to update, which is the harder bug and the one this
+file has already been bitten by twice. The half with an outside dependency and
+a rate limit is the half that was worth fixing, and it is fixed.
+
 ### The release build, driven as a phone would receive it
 
 The bundle was verified as an ARTIFACT — signed, right certificate, right
@@ -4607,6 +4713,26 @@ schedule, and it can run while everything else is finished.
   screens" — but nothing uses the space: no second pane, no `NavigationRail`.
   That is a design decision, and it should be made by someone looking at a
   tablet rather than inferred from a breakpoint table.
+* **The category names are Turkish in every language, and that is a product
+  decision rather than a defect.** Seen on the emulator while verifying the
+  price fix: an English UI draws the Assets distribution legend as "Opening
+  Balance" beside "Varlık Alımı". The first is a UI string
+  (`assetsOpeningBalance`); the second is a CATEGORY NAME out of the database.
+
+  All 81 seeded categories are Turkish, and `lib/data/default_categories.dart`
+  says why in its own header: they are generated from the desktop's
+  `init_db.py` and "matched as literals by the budget, the distribution chart
+  and the subscription radar", so a name that differs between the two apps
+  silently splits a category in two. Translating them for display would need a
+  lookup from stored name to shown name, which then has to answer what happens
+  to a category the user renamed, one they added themselves, and one arriving
+  in a restored desktop backup.
+
+  So the English build is honest about amounts and dates and shows Turkish
+  category names throughout. Whoever ships this decides whether that is
+  acceptable for an English listing, or whether the English store listing
+  should simply not claim English. It is not a bug to be fixed quietly.
+
 * **Crash visibility.** There is no telemetry, by decision, and that means no
   way to learn about a data-corrupting bug except a one-star review. Play
   Console's Android vitals reports crashes and ANRs with no SDK and no code —

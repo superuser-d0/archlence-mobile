@@ -93,10 +93,10 @@ stops being true.
 
 | | |
 | --- | --- |
-| Unit tests | 1118 |
+| Unit tests | 1132 |
 | Device tests | 14, on a real emulator or handset |
 | `flutter analyze` | clean |
-| Languages | Turkish and English, both complete |
+| Languages | Turkish and English — every UI string, both ways. The seeded CATEGORY names stay Turkish in both, because they are data shared with the desktop app rather than labels |
 | Minimum Android | as Flutter's current stable sets it |
 
 **Holdings show a live price.** Crypto, gold and currency go through CoinGecko

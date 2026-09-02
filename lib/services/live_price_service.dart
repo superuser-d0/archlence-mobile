@@ -13,6 +13,7 @@ import 'package:drift/drift.dart';
 import '../data/database.dart';
 import 'asset_service.dart' show Asset;
 import 'price_providers.dart';
+import 'price_ttl.dart';
 import 'shares_api_key.dart';
 import 'ticker_mapper.dart';
 
@@ -77,16 +78,87 @@ class LivePriceService {
   /// — shares, an unrecognised symbol, or a symbol neither the live fetch
   /// nor the cache has ever seen — is simply absent from the result; the
   /// caller (the Assets screen) draws those at cost, same as before this.
-  Future<Map<int, CachedPrice>> priceHoldings(List<Asset> holdings) async {
+  ///
+  /// CACHE FIRST. A row still inside its lifetime is returned without the
+  /// network being touched at all — see `price_ttl.dart`, which ports the
+  /// desktop's own dynamic TTL. This used to fetch unconditionally, and the
+  /// Assets screen is torn down and rebuilt on every tab switch, every
+  /// recorded transaction and every period chip, so tapping through the five
+  /// period chips cost five CoinGecko round trips for figures no period
+  /// affects. The providers are somebody else's servers and are rate limited;
+  /// this app already refuses to fetch a logo per holding for decoration, and
+  /// the same restraint belongs here.
+  ///
+  /// [force] is the pull-to-refresh path: the one gesture that means "I want
+  /// a new number now" ignores the lifetime.
+  Future<Map<int, CachedPrice>> priceHoldings(
+    List<Asset> holdings, {
+    bool force = false,
+  }) async {
     final requests = {
       for (final holding in holdings)
         holding.id: priceRequestForHolding(holding.assetCode, holding.assetType),
     };
 
+    // The key is read under exactly the condition it was before — a portfolio
+    // of crypto and gold must not touch the secure store — but it is read up
+    // here now, because it decides which holdings are allowed a cached price
+    // as well as which can be fetched. Moving it must not widen that: a share
+    // with no key behaves exactly as it did, at cost.
+    final allShareCodes = <String>{
+      for (final request in requests.values)
+        if (request is SharesPriceRequest) request.code,
+    };
+    final apiKey = allShareCodes.isEmpty ? null : await _sharesApiKey.read();
+
+    // Whether this app would ever put a price against a request — from the
+    // cache or from the wire. Unknown codes never can; a share can only once
+    // the user has supplied a key. The normalized type it reads is fed back
+    // through `normalizeAssetType` inside the TTL, which is idempotent and
+    // pinned by the vectors: 'CRYPTO', 'STOCK' and 'FX_GOLD' are inputs there
+    // as well as outputs.
+    bool priceable(PriceRequest request) => switch (request) {
+      UnknownPriceRequest() => false,
+      SharesPriceRequest() => apiKey != null,
+      _ => true,
+    };
+
+    final now = _now();
+    final cached = await _readCache({
+      for (final request in requests.values)
+        if (priceable(request)) request.code,
+    });
+
+    // Split into what the cache still answers for and what has to be asked.
+    final result = <int, CachedPrice>{};
+    final pending = <int, PriceRequest>{};
+    for (final entry in requests.entries) {
+      final request = entry.value;
+      if (!priceable(request)) continue;
+      final row = cached[request.code];
+      final fresh =
+          !force &&
+          row != null &&
+          priceStillFresh(
+            assetType: request.normalizedAssetType,
+            updatedAt: row.asOf,
+            now: now,
+          );
+      if (fresh) {
+        result[entry.key] = row;
+      } else {
+        pending[entry.key] = request;
+      }
+    }
+
+    // The whole point: a portfolio whose prices are all inside their lifetime
+    // opens the Assets tab with no request leaving the phone.
+    if (pending.isEmpty) return result;
+
     // Every CoinGecko id this batch needs: one per resolvable crypto code,
     // plus PAXG the moment any gold holding is present at all.
     final cryptoIds = <String>{};
-    for (final request in requests.values) {
+    for (final request in pending.values) {
       switch (request) {
         case CryptoPriceRequest(:final code):
           final id = coinGeckoIdFor(code);
@@ -101,7 +173,7 @@ class LivePriceService {
     }
 
     final currencyCodes = <String>{
-      for (final request in requests.values)
+      for (final request in pending.values)
         if (request is CurrencyPriceRequest) request.code,
       // Crypto and gold both convert their USD leg through USDTRY, so the
       // rate is fetched the moment either is present — even for a portfolio
@@ -109,15 +181,12 @@ class LivePriceService {
       if (cryptoIds.isNotEmpty) 'USD',
     };
 
+    // Only the shares actually being refetched. `apiKey` was read above, once,
+    // under the same "is there a share at all" condition it always had.
     final shareCodes = <String>{
-      for (final request in requests.values)
+      for (final request in pending.values)
         if (request is SharesPriceRequest) request.code,
     };
-    // Read ONLY when there is a share to price. A portfolio of crypto and
-    // gold must not touch the secure store at all, and a key the user has
-    // not given is not an error — it is the documented default, and it means
-    // shares stay at cost exactly as they did before this existed.
-    final apiKey = shareCodes.isEmpty ? null : await _sharesApiKey.read();
 
     final usdPrices = await fetchCoinGeckoUsdPrices(cryptoIds, get: _httpGet);
     final tryRates = await fetchFrankfurterTryRates(currencyCodes, get: _httpGet);
@@ -131,11 +200,10 @@ class LivePriceService {
     final usdtry = tryRates['USD'];
     final fetchedAt = _now();
 
-    final result = <int, CachedPrice>{};
     final toCache = <String, (Decimal price, String assetType, String source)>{};
     final unresolvedCodes = <String>{};
 
-    for (final entry in requests.entries) {
+    for (final entry in pending.entries) {
       final holdingId = entry.key;
       final request = entry.value;
       final live = _liveResult(
@@ -156,23 +224,22 @@ class LivePriceService {
           request.normalizedAssetType,
           live.source,
         );
-      } else if (request is CurrencyPriceRequest ||
-          request is CryptoPriceRequest ||
-          request is GoldPriceRequest ||
-          (request is SharesPriceRequest && apiKey != null)) {
+      } else {
         // Priceable IN PRINCIPLE, just not by this fetch — a provider gap.
-        // A share counts only when a key exists: without one, nothing has
-        // ever priced it, so there is no cache row to find and no reason to
-        // look. WITH one, a share falls back like anything else, which is
-        // what keeps a portfolio readable when a monthly credit runs out.
+        // Everything in `pending` passed `priceable` already, so the
+        // eligibility test that used to live here has moved upstream where
+        // it also governs the cache read.
         unresolvedCodes.add(request.code);
       }
     }
 
     if (toCache.isNotEmpty) await _writeCache(toCache);
     if (unresolvedCodes.isNotEmpty) {
-      final cached = await _readCache(unresolvedCodes);
-      for (final entry in requests.entries) {
+      // A STALE row is better than no figure at all, and it carries its own
+      // `asOf` so the screen says how old it is. These rows were already read
+      // at the top of this method; querying again would only re-read what a
+      // failed fetch did not change.
+      for (final entry in pending.entries) {
         if (result.containsKey(entry.key)) continue;
         final row = cached[entry.value.code];
         if (row != null) result[entry.key] = row;

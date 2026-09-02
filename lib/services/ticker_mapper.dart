@@ -127,7 +127,7 @@ PriceRequest priceRequestForHolding(String? assetCode, String? assetType) {
   // Stored values are protocol data. Do not use localizedUpperCase here:
   // Python's str.upper(), like Dart's toUpperCase(), is locale-independent.
   final code = (assetCode ?? '').trim().toUpperCase();
-  final kind = _normalizeAssetType(assetType);
+  final kind = normalizeAssetType(assetType);
 
   if (code.isEmpty) {
     return UnknownPriceRequest(normalizedAssetType: kind, code: code);
@@ -151,7 +151,10 @@ PriceRequest priceRequestForHolding(String? assetCode, String? assetType) {
   return UnknownPriceRequest(normalizedAssetType: kind, code: code);
 }
 
-String _normalizeAssetType(String? assetType) {
+/// The desktop's `normalize_asset_type`, and public for the same reason it is
+/// there: the cache lifetime in `price_ttl.dart` is decided by asset KIND, and
+/// a second spelling table for it would be a second place to drift.
+String normalizeAssetType(String? assetType) {
   // `toUpperCase` is deliberately locale-independent; these are database
   // literals, and using the Turkish display helper would change the protocol.
   final value = (assetType ?? '').trim().toUpperCase();
