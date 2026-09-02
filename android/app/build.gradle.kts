@@ -102,35 +102,57 @@ android {
 // either unsigned, or carrying the SDK's debug key. Both are discovered at the
 // moment someone tries to ship an update, which is the worst moment to find
 // out. `assembleDebug` is untouched: development does not need any of this.
-tasks.matching { it.name.matches(Regex("^(assemble|bundle).*Release$")) }
-    .configureEach {
-        doFirst {
-            if (!keystorePropertiesFile.exists()) {
-                throw GradleException(
-                    "A release build needs android/key.properties, which is " +
-                        "not in the repository. See " +
-                        "android/key.properties.example — it lists the four " +
-                        "keys and the keytool command that makes the keystore."
-                )
-            }
-            val missing = listOf(
-                "storeFile", "storePassword", "keyAlias", "keyPassword"
-            ).filter { keystoreProperties.getProperty(it).isNullOrBlank() }
-            if (missing.isNotEmpty()) {
-                throw GradleException(
-                    "android/key.properties is missing: " +
-                        missing.joinToString(", ")
-                )
-            }
-            val store = file(keystoreProperties.getProperty("storeFile"))
-            if (!store.exists()) {
-                throw GradleException(
-                    "storeFile in android/key.properties points at " +
-                        "${store.absolutePath}, which does not exist."
-                )
-            }
-        }
+fun verifyReleaseSigning() {
+    if (!keystorePropertiesFile.exists()) {
+        throw GradleException(
+            "A release build needs android/key.properties, which is " +
+                "not in the repository. See " +
+                "android/key.properties.example — it lists the four " +
+                "keys and the keytool command that makes the keystore."
+        )
     }
+    val missing = listOf(
+        "storeFile", "storePassword", "keyAlias", "keyPassword"
+    ).filter { keystoreProperties.getProperty(it).isNullOrBlank() }
+    if (missing.isNotEmpty()) {
+        throw GradleException(
+            "android/key.properties is missing: " + missing.joinToString(", ")
+        )
+    }
+    val store = file(keystoreProperties.getProperty("storeFile"))
+    if (!store.exists()) {
+        throw GradleException(
+            "storeFile in android/key.properties points at " +
+                "${store.absolutePath}, which does not exist."
+        )
+    }
+}
+
+// WHERE this runs is the whole point, and it was wrong for several sessions.
+//
+// It used to be a `doFirst` on `^(assemble|bundle).*Release$`. Those are
+// LIFECYCLE tasks: `packageReleaseBundle` has already written
+// `app-release.aab` by the time `bundleRelease` itself starts. So the guard
+// failed the build correctly — with the message above, unchanged — and still
+// left a structurally valid, completely UNSIGNED bundle sitting at
+// exactly the path the signed one belongs at. Measured rather than reasoned:
+// 66 780 333 bytes with no `META-INF` signature entries, which `jarsigner`
+// calls "no manifest" and `bundletool validate` accepts as a valid bundle.
+//
+// The sharp edge is not the stray file, it is that a FAILED build overwrites
+// a GOOD one. Build a signed bundle, run the build again after moving
+// `key.properties` aside, and the bundle you had is gone and an unsigned file
+// is wearing its name.
+//
+// `taskGraph.whenReady` fires after configuration and before ANY task
+// executes, so a release with no keystore now writes nothing at all.
+val releaseTask = Regex("^(assemble|bundle).*Release\$")
+val thisProject = project.path
+gradle.taskGraph.whenReady {
+    if (allTasks.any { it.project.path == thisProject && it.name.matches(releaseTask) }) {
+        verifyReleaseSigning()
+    }
+}
 
 kotlin {
     compilerOptions {

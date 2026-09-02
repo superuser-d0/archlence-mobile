@@ -58,13 +58,15 @@ holdings, plans a budget, opens and funds savings goals, pays down a card and
 manages subscriptions. No control in the app is inert.
 
 The release build exists: `flutter build appbundle --release` produces a
-signed App Bundle, which Play serves to a device as about 11MB. Nothing that
-remains is a coding task: a developer account, a privacy policy at a public
-URL, Play's Data Safety form, and an hour with a screen reader. The account
-is the one that sets the date and the one to open first — a new personal
-account can face a closed-testing period before it may publish to production,
-which moves a launch by weeks rather than days. See
-[docs/ROADMAP.md](docs/ROADMAP.md).
+signed App Bundle, which Play serves to a device as about 11MB. The privacy
+policy is live at a public URL and linked from Settings, Play's Data safety
+form is answered from recorded traffic, the store assets and listing copy are
+prepared, and the screen-reader hour is done. **Nothing that remains is a
+coding task, and nothing that remains is in this repository** — it is a
+developer account and three things only the Play Console can answer. The
+account sets the date and is the one to open first: a new personal account can
+face a closed-testing period before it may publish to production, which moves
+a launch by weeks rather than days. See [docs/ROADMAP.md](docs/ROADMAP.md).
 
 Building your own release needs your own signing keystore, which belongs to
 whoever publishes; it is not in this repository and cannot be.
@@ -89,7 +91,7 @@ stops being true.
 
 | | |
 | --- | --- |
-| Unit tests | 1117 |
+| Unit tests | 1118 |
 | Device tests | 14, on a real emulator or handset |
 | `flutter analyze` | clean |
 | Languages | Turkish and English, both complete |
@@ -135,8 +137,15 @@ flutter test integration_test/ -d <device>
 ```
 
 A release build needs `android/key.properties` and the keystore it names.
-Without them the build is refused rather than quietly signed with the SDK's
-debug key; see [`android/key.properties.example`](android/key.properties.example).
+Without them the build is refused before anything is written, rather than
+quietly signed with the SDK's debug key; see
+[`android/key.properties.example`](android/key.properties.example). Check the
+bundle it produced before uploading it — this reads the certificate out of the
+artifact and needs no password:
+
+```bash
+python3 tool/verify_release_bundle.py build/app/outputs/bundle/release/app-release.aab
+```
 
 Toolchain versions, SDK paths, the emulator AVD, which `flutter doctor`
 complaints are safe to ignore, and what a device round leaves running

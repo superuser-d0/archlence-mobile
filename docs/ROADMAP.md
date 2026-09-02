@@ -2641,6 +2641,38 @@ performs, and only if the app entry is still there with Play App Signing on
 it. The bundle that now exists is a bundle this project can build, not yet a
 bundle this project can upload.
 
+**And then it was recovered, on the fifth machine.** The laptop still had it.
+`archlence-release.jks` was carried across, and — the part that matters —
+copied to Google Drive as well, so for the first time in this project's life
+the signing key exists in two places at once. It lives at
+`~/archlence-release.jks`, mode `600`; it arrived in `~/Downloads`, which is
+not where a signing credential should sit.
+
+**Two things were verified before its password was ever typed**, because a
+PKCS12 leaves them outside the encrypted bags: the `friendlyName` attribute
+decodes to `archlence`, which is the alias `key.properties` needs, and the
+`localKeyId` reads `Time 1788193560696` — 2026-08-31 19:26, the evening the
+replacement was made. A wrong file would have been caught there rather than
+at the first build.
+
+**And the certificate in the bundle is the one written down above**, which is
+the check this section exists to make possible:
+
+    Owner:  CN=Superuser-d0, OU=Unknown, O=Archlence, L=Unknown, ST=Unknown, C=TR
+    SHA256: DF:1C:75:A4:0F:C6:51:92:32:E7:91:E0:37:0E:EE:C3:BD:1C:DB:62:17:E3:B3:6D:2E:74:EE:68:9F:78:6E:6B
+    Valid:  2026-08-31 to 2054-01-16
+
+Read out of `META-INF/ARCHLENC.RSA` inside the signed `app-release.aab`, so
+it needs no password and proves the build used the key rather than falling
+back. `jarsigner -verify` answers `jar verified`. A phone downloads
+10.61-11.25MB depending on ABI.
+
+**So the engineering side of the keystore is closed and Play's side is not.**
+The certificate Play knows is still the lost `v1.0.0` one. This key can only
+replace it through an upload key reset that Google performs — the fingerprint
+above is exactly what that request asks for — and only if the app entry is
+still there with Play App Signing on it.
+
 **Two Windows traps on the way, both silent.**
 
 * `%USERPROFILE%` is cmd.exe syntax. In PowerShell it passes through
@@ -4200,6 +4232,74 @@ surfaced only that way:
 - The floating action button duplicated the "+ ADD" header button and,
   floating, covered the Freeze Card switch. Dropped.
 
+### The release guard fired too late, and overwrote what it was protecting
+
+Found by watching a build rather than by reading one, which is this file's
+oldest habit. The signed bundle had just been produced with the recovered
+key; the output directory was listed to check its size, and it held an
+`app-release.aab` that was **40 707 bytes smaller** than the one the build
+had just reported. Two files, one name, and a size difference the shape of a
+signature block.
+
+**What was happening.** The guard was a `doFirst` on
+`^(assemble|bundle).*Release$`. Those are LIFECYCLE tasks. By the time
+`bundleRelease` starts, its dependency `packageReleaseBundle` has already
+written `app-release.aab` to the output directory. So the guard threw at the
+right moment for the BUILD — `FAILURE`, with the intended message about
+`key.properties` — and at entirely the wrong moment for the ARTIFACT, which
+was on disk before the check ran.
+
+**Measured rather than reasoned**, by moving `key.properties` aside and
+running the refused build:
+
+| | Signed | What the refused build left |
+| --- | --- | --- |
+| Size | 66 821 040 | 66 780 333 |
+| `META-INF` signature entries | `ARCHLENC.RSA`, `.SF` | none |
+| `jarsigner -verify` | `jar verified` | `no manifest` |
+| `bundletool validate` | valid bundle | **valid bundle** |
+
+That last row is the uncomfortable one. The file a failed build leaves behind
+is a structurally valid, completely unsigned App Bundle sitting at exactly the
+path the signed one belongs at.
+
+**The stray file is not the defect. The overwrite is.** Build a good bundle,
+then run the release build again with the keystore unavailable — a laptop not
+plugged in, a `key.properties` moved while testing something else — and the
+signed bundle you had is gone, replaced by an unsigned file wearing its name,
+by a command that printed `FAILURE`. The guard's whole stated purpose is to
+stop "an artifact that is quietly worthless" from existing; it was producing
+one, and destroying the good one to do it.
+
+**The fix is where the check runs, not what it checks.** It is the same four
+assertions, moved into `gradle.taskGraph.whenReady`, which fires after
+configuration and before any task executes. A release with no keystore now
+writes nothing at all. Verified on all three branches — no `key.properties`,
+blank passwords, a `storeFile` that does not exist — with a good bundle
+sitting in the output directory each time: the message is unchanged, and the
+bundle's SHA-256 is byte-identical afterwards.
+
+**The lesson is the one R8 already taught this file, from the other side.**
+There, a line that was absent from `build.gradle.kts` was read as evidence
+that R8 was off, when Flutter's plugin had been enabling it all along. Here, a
+guard that was PRESENT in `build.gradle.kts` was read as evidence that nothing
+could be written, when the task it hung on was not the task that writes.
+Neither the presence nor the absence of a line in a build file tells you what
+the build does. Only running it does.
+
+**Which is the argument for checking the ARTIFACT**, and
+`tool/verify_release_bundle.py` now does. The guard can only refuse to build;
+it cannot say what it built. The script opens the finished `.aab`, reads the
+certificate out of its signature block — no password, a certificate is public
+— and fails if it is missing, if it is `CN=Android Debug`, or if its SHA-256
+is not the `DF:1C:75:…` recorded above. That last one is the gap the fixed
+guard still leaves: a `key.properties` naming the WRONG keystore builds
+perfectly, and the first thing to notice would otherwise be Play. Tested by
+being broken, on a bundle with its signature entries stripped and against a
+fingerprint that does not match; both refuse. **Run it on every bundle before
+it is uploaded** — it is one command and it reads what the build did rather
+than what the config said it would.
+
 ### The store assets Play would have refused
 
 The fifth toolchain went up without incident — see "Environment" — and the
@@ -4264,37 +4364,43 @@ language. All three refuse.
 
 ### 1. Getting it into the Play Store
 
-**Every engineering item in this section is done, and one of them came
-undone — twice.** No code work stands between this app and a submission. What
-does stand between them is a keystore, lost with one machine, replaced on a
-second, and not carried to the third. It is a credential problem rather than
-an engineering one, it is the first thing to pick up, and it is the only
-thing on this list that a session cannot do: a release key belongs to whoever
-ships the app, and its password has no business being typed into a tool that
-logs its commands.
+**Everything in this section is done, and what is left is not this
+repository's to do.** There is a signed, R8-shrunk App Bundle carrying the
+certificate written down in "The key that was on the other machine", built on
+the current machine from a keystore that now exists in two places. The store
+assets conform to Play's rules — checked against the rules rather than against
+memory, and two of the three were not conforming. The listing copy is drafted
+in both languages with the console's other answers gathered beside it.
 
-**Everything else here is now closed.** The store assets conform to Play's
-rules and were checked against them rather than against memory, the listing
-copy is drafted in both languages, and the whole toolchain — build, sign,
-shrink, measure — is proven on the current machine. See "Environment".
+**What stands between this and a submission is Play, not code.** Three things,
+in order, and none of them can be answered from here:
 
-- **The keystore, and this is the second time.** The one that signed `v1.0.0`
-  was lost with the CachyOS machine. Its replacement was made on the Windows
-  laptop, and this file recorded in the same breath that it was in no backup
-  yet. **The project is now on a fifth machine and that replacement is not on
-  it either** — so the warning was written down, in bold, and the loss
-  happened anyway. Nothing about the app blocks a submission; this does.
+1. **Open the developer account** if it is not open. This sets the schedule —
+   a new personal account may face a closed-testing period before production
+   access, which moves a launch by weeks.
+2. **Answer the two console questions** about the existing app entry: is Play
+   App Signing on, and does the entry still exist. See "The key that was on
+   the other machine".
+3. **Request the upload key reset**, with the `DF:1C:75:…` fingerprint. The
+   key Play knows is the lost `v1.0.0` one; the key in hand can only replace
+   it by a reset Google performs.
 
-  What is needed, in order: **make a keystore, and copy it somewhere that is
-  not this machine before doing anything else with it.** Then Play's side —
-  the two console questions in "The key that was on the other machine" decide
-  whether a certificate can be adopted at all, and neither can be answered
-  from this repository.
+The keystore's own history is worth keeping in view while doing this: it was
+lost once, replaced, nearly lost a second time, and is now backed up off the
+machine. **Do not let that lapse.**
 
-  The build machinery around it is proven on this machine and is not the
-  problem: the guard refuses an unsigned release with its own message, and a
-  throwaway key produced a verified, R8-shrunk bundle in one run. See
-  "Environment".
+- ~~**The keystore.**~~ Recovered. The laptop still had the replacement made
+  on it; it is now at `~/archlence-release.jks` on this machine **and in
+  Google Drive**, which is the first time this project has held its signing
+  key in two places. `flutter build appbundle --release` produces a bundle
+  whose certificate is the `DF:1C:75:…` one recorded in "The key that was on
+  the other machine", read out of the signed artifact rather than assumed.
+
+  **What remains is Play's, and only Play's.** The certificate Play knows is
+  the lost `v1.0.0` key, so this one becomes the upload key through a reset
+  that Google performs — the recorded fingerprint is what the request asks
+  for. The two console questions still gate it: is Play App Signing on, and
+  does the app entry still exist. Neither can be answered from here.
 - ~~**A version code Play will accept.**~~ Done: `pubspec.yaml` is `1.0.0+2`.
   Version code 1 is spent, and deleting the release did not give it back. See
   "The version code, spent".
@@ -4797,6 +4903,10 @@ Then the release path, which is the one this setup existed to prove:
   rather than `CN=Android Debug`, which is the check that proves the signing
   config reads `key.properties` instead of falling back. R8 ran: the bundle
   carries an 8.7MB `proguard.map` and an `r8.json` under `BUNDLE-METADATA`.
+* **And then with the real key**, once it came back off the laptop: the same
+  66.8MB bundle, `jar verified`, carrying the `CN=Superuser-d0` certificate
+  and its `DF:1C:75:…` fingerprint. This is a bundle that can be uploaded the
+  moment Play's side allows it.
 * `bundletool` 1.18.3 puts what a phone downloads at **10.61-11.25MB**:
   `armeabi-v7a` 10.61-10.64, `arm64-v8a` 11.14-11.17, `x86_64` 11.22-11.25.
   A little heavier per ABI than the laptop's bundle (10.36 / 10.68 / 10.92)
