@@ -157,7 +157,7 @@ afterwards are all in the roadmap's Environment section.
 | `lib/security/` | The resume lock |
 | `lib/ui/` | Money formatting, error wording, the language choice, the loading/error/empty contract |
 | `lib/theme/` | Obsidian Prime design tokens |
-| `tool/` | Generators that produce the parity fixtures, run against the desktop |
+| `tool/` | Generators: the parity fixtures run against the desktop, and the store listing's assets and copy |
 
 ## How this is tested, and why it is worth reading
 

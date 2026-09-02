@@ -71,7 +71,14 @@ drawing.width = 512
 drawing.height = 512
 drawing.scale(scale, scale)
 renderPM.drawToFile(drawing, icon_path, fmt="PNG", dpi=72, bg=MARK_GROUND)
-print(f"{icon_path}  512x512")
+
+# Play asks for the icon as a 32-bit PNG *with* alpha, where it asks for the
+# feature graphic and the screenshots as 24-bit PNG *without* one. `renderPM`
+# writes 24-bit, so the icon came out in the screenshots' format rather than
+# its own. The mark is fully opaque and stays that way -- this adds an
+# all-255 alpha channel to satisfy the format, and changes no pixel's colour.
+Image.open(icon_path).convert("RGBA").save(icon_path)
+print(f"{icon_path}  512x512, RGBA")
 
 WIDTH, HEIGHT = 1024, 500
 banner = Image.new("RGB", (WIDTH, HEIGHT), DARK)
