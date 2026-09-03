@@ -8,6 +8,11 @@ There is no account to create and no server to talk to. The Flutter client for
 [Archlence](https://github.com/superuser-d0/archlence), whose desktop app is
 Python/KivyMD and whose database file this one can read and write.
 
+**[Download 1.0.0](https://github.com/superuser-d0/archlence-mobile/releases/latest)**
+— an APK per ABI, or one universal file. Not on Google Play, by decision; for
+updates point [Obtainium](https://github.com/ImranR98/Obtainium) at this
+repository and it behaves like a store without being one.
+
 <p align="center">
   <img src="docs/screenshots/home.png" width="205" alt="Home: the balance ring, and a reminder that nobody else holds a copy of this data">
   <img src="docs/screenshots/assets.png" width="205" alt="Assets: a Bitcoin holding priced live, against what it cost">
@@ -52,28 +57,31 @@ ago you last backed up, and asks again after a month.
 
 ## Status
 
-**Shipping-ready.** A fresh install walks through onboarding, opens its first
-account, and from there records transactions, buys and sells holdings, plans a
-budget, opens and funds savings goals, pays down a card and manages
-subscriptions. No control in the app is inert.
+**Shipped.** [1.0.0](https://github.com/superuser-d0/archlence-mobile/releases/tag/v1.0.0)
+is out: four signed APKs — three per-ABI at 20-24MB and a universal one at
+64MB — with a `SHA256SUMS.txt` beside them. Every one was verified against the
+release certificate and installed and driven by hand before it went up, with
+R8 on, from onboarding through to a holding priced live off the network.
 
-`flutter build apk --release --split-per-abi` produces three signed APKs, one
-per ABI, 20-24MB each. The release build has been installed and driven by hand
-with R8 on, from onboarding to a holding priced live off the network. The
-privacy policy is live at a public URL and linked from Settings, the store
-assets and listing copy are prepared, and the screen-reader hour is done.
+A fresh install walks through onboarding, opens its first account, and from
+there records transactions, buys and sells holdings, plans a budget, opens and
+funds savings goals, pays down a card and manages subscriptions. No control in
+the app is inert.
 
 **Not on Google Play, by decision** — the developer account's one-time fee is
-not being paid. Distribution is direct: GitHub Releases, installable and
-updatable with [Obtainium](https://github.com/ImranR98/Obtainium), which
-tracks this repository the way a store would. An F-Droid-compatible listing is
-the next step. See [docs/ROADMAP.md](docs/ROADMAP.md) for what that changed
-and what it cost.
+not being paid. Distribution is direct, and an F-Droid-compatible listing is
+the next step. [docs/ROADMAP.md](docs/ROADMAP.md) records what leaving Play
+changed and what it cost: roughly double the download, since `--split-per-abi`
+splits by ABI where Play also split by density and language.
 
 Building your own release needs your own signing keystore, which belongs to
 whoever publishes; it is not in this repository and cannot be. **Off Play that
-key is the app signing key itself**: lose it and no future build can ever
-update an install made from an earlier one.
+key is the app signing key itself** — there is no upload-key reset behind it —
+so losing it means no future build can ever update an install made from an
+earlier one. `tool/verify_release_artifact.py` reads the certificate out of a
+finished APK or bundle and refuses anything not signed by the expected key;
+it earned its place by catching a draft release whose APKs turned out to
+carry a key that no longer existed.
 
 The privacy policy is written from what the code does rather than from a
 template — it names the three hosts, what each request carries, and how to

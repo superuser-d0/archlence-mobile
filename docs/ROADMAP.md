@@ -4685,12 +4685,22 @@ signer, and the `DF:1C:75:…` certificate.
 **Where it goes.** Two channels, and they are complements rather than
 alternatives:
 
-- **GitHub Releases** — no cost, no gatekeeper, no review queue, live the
-  moment the tag is pushed. Users install with
-  [Obtainium](https://github.com/ImranR98/Obtainium), which tracks a GitHub
-  repository and offers updates like a store does. This is the channel that
-  matches the app: the audience for "no account, no server, your data stays on
-  your phone" is the audience already using it.
+- **GitHub Releases** — no cost, no gatekeeper, no review queue. Users install
+  with [Obtainium](https://github.com/ImranR98/Obtainium), which tracks a
+  GitHub repository and offers updates like a store does. This is the channel
+  that matches the app: the audience for "no account, no server, your data
+  stays on your phone" is the audience already using it.
+
+  **Done. `v1.0.0` is published**, tagged at `0373feb`, with four APKs and a
+  `SHA256SUMS.txt`. What went up was checked rather than trusted: every asset
+  downloaded back from GitHub and put through
+  `tool/verify_release_artifact.py` — four correct certificates, four matching
+  checksums — and then the x86_64 APK, the literal published file rather than
+  something built like it, installed on a clean emulator and driven through
+  onboarding to a dashboard reading 12.500,00 ₺ out of an encrypted database,
+  with nothing in `logcat`. That last check existed because everything driven
+  before it had been a bundletool split set or a debug build; these exact
+  files had never been run.
 - **IzzyOnDroid** — an F-Droid-compatible repository that accepts APKs the
   developer built, with a far lower barrier than F-Droid's main repository. It
   is where discoverability comes from.
