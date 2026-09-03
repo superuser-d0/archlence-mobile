@@ -1,7 +1,9 @@
-"""Checks the Play listing copy in `docs/store/listing.md` against Play's limits.
+"""Checks the listing copy in `docs/store/listing.md` against the channels' limits.
 
-The console truncates or refuses silently enough that a description one
-character over is a thing you discover by pasting it. This reads the fenced
+A store form truncates or refuses silently enough that a description one
+character over is a thing you discover by pasting it. The limits are the
+TIGHTEST any channel imposes -- see the file's own header -- so copy that
+passes here passes everywhere. This reads the fenced
 blocks out of the listing file and fails if any is over.
 
 Counted in CHARACTERS, not bytes, which is the whole reason this is a script
@@ -22,7 +24,7 @@ import os
 import re
 import sys
 
-# Play's published limits, per language.
+# The tightest published limits across the channels, per language.
 LIMITS = {"Title": 30, "Short description": 80, "Full description": 4000}
 
 path = os.path.abspath(sys.argv[1] if len(sys.argv) == 2 else "docs/store/listing.md")
@@ -68,7 +70,7 @@ for language, fields in sorted(languages.items()):
         value, declared = fields[match]
         if declared != limit:
             failures.append(
-                f"{language}/{match}: heading says {declared} max, Play's limit is {limit}"
+                f"{language}/{match}: heading says {declared} max, the limit is {limit}"
             )
         count = len(value)
         state = "ok"
@@ -83,7 +85,9 @@ for language, fields in sorted(languages.items()):
         )
 
 if len(languages) < 2:
-    failures.append(f"only {len(languages)} language section; Play needs one per listing locale")
+    failures.append(
+        f"only {len(languages)} language section; a listing needs one per locale"
+    )
 
 if failures:
     print()
@@ -91,4 +95,4 @@ if failures:
         print(f"FAIL  {line}")
     raise SystemExit(1)
 
-print(f"\n{len(languages)} languages, every field within Play's limits.")
+print(f"\n{len(languages)} languages, every field within the limits.")

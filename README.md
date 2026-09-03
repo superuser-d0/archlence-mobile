@@ -52,26 +52,28 @@ ago you last backed up, and asks again after a month.
 
 ## Status
 
-**Shipping-ready but not shipped.** A fresh install walks through onboarding,
-opens its first account, and from there records transactions, buys and sells
-holdings, plans a budget, opens and funds savings goals, pays down a card and
-manages subscriptions. No control in the app is inert.
+**Shipping-ready.** A fresh install walks through onboarding, opens its first
+account, and from there records transactions, buys and sells holdings, plans a
+budget, opens and funds savings goals, pays down a card and manages
+subscriptions. No control in the app is inert.
 
-The release build exists: `flutter build appbundle --release` produces a
-signed App Bundle, which Play serves to a device as about 11MB — installed as
-the split set Play actually delivers and driven by hand, with R8 on, from
-onboarding to a holding priced live off the network. The privacy
-policy is live at a public URL and linked from Settings, Play's Data safety
-form is answered from recorded traffic, the store assets and listing copy are
-prepared, and the screen-reader hour is done. **Nothing that remains is a
-coding task, and nothing that remains is in this repository** — it is a
-developer account and three things only the Play Console can answer. The
-account sets the date and is the one to open first: a new personal account can
-face a closed-testing period before it may publish to production, which moves
-a launch by weeks rather than days. See [docs/ROADMAP.md](docs/ROADMAP.md).
+`flutter build apk --release --split-per-abi` produces three signed APKs, one
+per ABI, 20-24MB each. The release build has been installed and driven by hand
+with R8 on, from onboarding to a holding priced live off the network. The
+privacy policy is live at a public URL and linked from Settings, the store
+assets and listing copy are prepared, and the screen-reader hour is done.
+
+**Not on Google Play, by decision** — the developer account's one-time fee is
+not being paid. Distribution is direct: GitHub Releases, installable and
+updatable with [Obtainium](https://github.com/ImranR98/Obtainium), which
+tracks this repository the way a store would. An F-Droid-compatible listing is
+the next step. See [docs/ROADMAP.md](docs/ROADMAP.md) for what that changed
+and what it cost.
 
 Building your own release needs your own signing keystore, which belongs to
-whoever publishes; it is not in this repository and cannot be.
+whoever publishes; it is not in this repository and cannot be. **Off Play that
+key is the app signing key itself**: lose it and no future build can ever
+update an install made from an earlier one.
 
 The privacy policy is written from what the code does rather than from a
 template — it names the three hosts, what each request carries, and how to
@@ -82,10 +84,11 @@ renders it under Settings, [`docs/privacy.html`](docs/privacy.html) and
 fails if the published pages drift from the source or if the app ever gains a
 fourth host the policy does not name.
 
-Play's Data safety declaration is answered the same way — from what the app
-actually puts on the wire, recorded rather than reasoned about, and written
-up with its evidence in
-[`docs/data-safety.md`](docs/data-safety.md). The short version: a profile
+What the app puts on the wire is measured the same way — recorded rather than
+reasoned about, and written up with its evidence in
+[`docs/data-safety.md`](docs/data-safety.md). It was compiled to answer Play's
+Data safety form and outlived that purpose: the measurements are what any
+privacy claim on this page rests on. The short version: a profile
 with no holdings makes **no request at all**, the two keyless price calls
 carry **no headers whatsoever**, and two different people holding bitcoin send
 **byte-identical requests**. `test/wire_shape_test.dart` fails if any of that
@@ -141,12 +144,19 @@ flutter test integration_test/ -d <device>
 A release build needs `android/key.properties` and the keystore it names.
 Without them the build is refused before anything is written, rather than
 quietly signed with the SDK's debug key; see
-[`android/key.properties.example`](android/key.properties.example). Check the
-bundle it produced before uploading it — this reads the certificate out of the
-artifact and needs no password:
+[`android/key.properties.example`](android/key.properties.example).
 
 ```bash
-python3 tool/verify_release_bundle.py build/app/outputs/bundle/release/app-release.aab
+flutter build apk --release --split-per-abi
+```
+
+Check what it produced before publishing it. This reads the certificate out of
+the artifact itself and needs no password — an APK at `minSdk 24` carries no
+`META-INF` certificate at all, so it goes through `apksigner` rather than
+`keytool`:
+
+```bash
+python3 tool/verify_release_artifact.py build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
 ```
 
 Toolchain versions, SDK paths, the emulator AVD, which `flutter doctor`

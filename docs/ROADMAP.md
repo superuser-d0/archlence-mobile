@@ -4489,7 +4489,9 @@ Neither the presence nor the absence of a line in a build file tells you what
 the build does. Only running it does.
 
 **Which is the argument for checking the ARTIFACT**, and
-`tool/verify_release_bundle.py` now does. The guard can only refuse to build;
+`tool/verify_release_artifact.py` now does (named
+`verify_release_bundle.py` when it was written, before APKs became the thing
+this project actually ships). The guard can only refuse to build;
 it cannot say what it built. The script opens the finished `.aab`, reads the
 certificate out of its signature block — no password, a certificate is public
 — and fails if it is missing, if it is `CN=Android Debug`, or if its SHA-256
@@ -4563,188 +4565,152 @@ language. All three refuse.
 
 ## Open work
 
-### 1. Getting it into the Play Store
+### A draft release, one click from stranding everyone
 
-**Everything in this section is done, and what is left is not this
-repository's to do.** There is a signed, R8-shrunk App Bundle carrying the
-certificate written down in "The key that was on the other machine", built on
-the current machine from a keystore that now exists in two places — **and it
-has been installed as Play's own split set and driven by hand**, through
-onboarding, a Turkish switch, a holding priced live, and a restart that
-reopened the encrypted database. See "The release build, driven as a phone
-would receive it". The store
-assets conform to Play's rules — checked against the rules rather than against
-memory, and two of the three were not conforming. The listing copy is drafted
-in both languages with the console's other answers gathered beside it.
+Found while preparing the GitHub Releases channel, and it is the single most
+expensive thing this project has nearly done.
 
-**What stands between this and a submission is Play, not code.** Three things,
-in order, and none of them can be answered from here:
+**There was already a draft release on GitHub**, created 2026-08-31 07:48 UTC,
+titled "Archlence 1.0.0", with a written body and five assets attached: three
+per-ABI APKs, a universal APK, and a `SHA256SUMS.txt`. It had never been
+published — the URL still carried GitHub's `untagged-` placeholder, and
+`git ls-remote --tags` shows no `v1.0.0` anywhere.
 
-1. **Open the developer account** if it is not open. This sets the schedule —
-   a new personal account may face a closed-testing period before production
-   access, which moves a launch by weeks.
-2. **Answer the two console questions** about the existing app entry: is Play
-   App Signing on, and does the entry still exist. See "The key that was on
-   the other machine".
-3. **Request the upload key reset**, with the `DF:1C:75:…` fingerprint. The
-   key Play knows is the lost `v1.0.0` one; the key in hand can only replace
-   it by a reset Google performs.
+**The timestamps are what made it worth checking.** The draft is from 07:48
+that morning. The replacement keystore was made at 19:26 the same evening —
+see "The key that was on the other machine". Anything attached to that draft
+was therefore built BEFORE the replacement key existed, which leaves only one
+key it could have been signed with.
 
-The keystore's own history is worth keeping in view while doing this: it was
-lost once, replaced, nearly lost a second time, and is now backed up off the
-machine. **Do not let that lapse.**
+Downloaded and measured rather than assumed:
 
-- ~~**The keystore.**~~ Recovered. The laptop still had the replacement made
-  on it; it is now at `~/archlence-release.jks` on this machine **and in
-  Google Drive**, which is the first time this project has held its signing
-  key in two places. `flutter build appbundle --release` produces a bundle
-  whose certificate is the `DF:1C:75:…` one recorded in "The key that was on
-  the other machine", read out of the signed artifact rather than assumed.
+| | Draft's APK | What this project can build today |
+| --- | --- | --- |
+| Owner | `CN=Archlence, O=Archlence, C=TR` | `CN=Superuser-d0, O=Archlence, C=TR` |
+| SHA-256 | `5924b01a…16be1661` | `df1c75a4…9f786e6b` |
 
-  **What remains is Play's, and only Play's.** The certificate Play knows is
-  the lost `v1.0.0` key, so this one becomes the upload key through a reset
-  that Google performs — the recorded fingerprint is what the request asks
-  for. The two console questions still gate it: is Play App Signing on, and
-  does the app entry still exist. Neither can be answered from here.
-- ~~**A version code Play will accept.**~~ Done: `pubspec.yaml` is `1.0.0+2`.
-  Version code 1 is spent, and deleting the release did not give it back. See
-  "The version code, spent".
-- ~~**An App Bundle, not an APK.**~~ Done. `flutter build appbundle --release`
-  built first try, 66.7MB, signed by the release key — verified with
-  `jarsigner` rather than assumed. And it answered the 65MB question by
-  measurement: `bundletool get-size` puts what a device actually downloads at
-  10.6–11.2MB depending on ABI. See "The first App Bundle".
-- ~~**The keystore itself.**~~ Was done, by hand, outside the repository —
-  and outside any backup. See the item above.
-- ~~**Install that release build and confirm a price arrives.**~~ Done. The
-  release APK was installed on a clean emulator and driven by hand through
-  onboarding, an account, an income and a Bitcoin purchase; the holding read
-  `Current` 188.480,46 ₺ against a cost of 50.000,00 ₺, priced through
-  CoinGecko and Frankfurter with R8 on and the release manifest under it.
-  `dumpsys package` confirms the INSTALLED package carries
-  `android.permission.INTERNET`, which until now had only been read out of the
-  manifest merger. See "The first App Bundle".
-- ~~**An hour with TalkBack on.**~~ Done, with TalkBack genuinely running on
-  a device. It found the two things no guideline reads: the header was
-  announced AFTER the whole screen on every tab, and the notifications bell
-  was a button with no name. Both fixed and pinned. What is still open out of
-  that hour is label QUALITY — whether the announcements are good to listen
-  to — which needs ears, and Turkish ears for the Turkish half. See "The
-  TalkBack hour, and what the tooling gets wrong".
-- ~~**Label quality.**~~ Done too. The Assets tab was a single sixty-word
-  announcement; it is nine now, in visual order. The balance ring said its
-  caption after its figure. "1 holdings", a card number read as sixteen
-  bullets, and the app's name announced twice on one screen are all fixed.
-  See "Label quality, which is the half a guideline cannot reach". What is
-  left of it needs ears rather than eyes: whether the Turkish is PRONOUNCED
-  correctly by the phone's TTS, which no dump can answer.
+**Those APKs are signed with the key that was lost.** Publishing that draft
+would have put out installs that NOTHING can ever update — not a later
+release, not a rebuild, not anybody. Android compares signatures on update and
+the key that produced these no longer exists on any machine. The only remedy
+would have been a new package name and asking every user to uninstall.
 
-Not engineering. **The privacy policy is done**, in both languages, generated
-from the app's own copy of the text and reachable from inside the app as Play
-requires — see "The privacy policy, generated rather than written twice".
+Off Play there is no upload-key reset to soften it, which is exactly the point
+the previous entry makes. The difference between that and a normal Tuesday was
+one click on a button labelled "Publish release".
 
-**Play's Data safety form is answered** — "no data collected, no data shared",
-decided by recording what the app actually puts on the wire rather than by
-reading the definitions. `docs/data-safety.md` holds the answers, the evidence
-and the check to run at each release; `test/wire_shape_test.dart` fails if any
-of the evidence stops being true. The judgement belongs to whoever signs it;
-see "The Data safety declaration, decided by listening to the wire".
+**`tool/verify_release_artifact.py` is what caught it**, on the first artifact
+it was ever pointed at that it had not itself just built. That is the argument
+for checking the ARTIFACT rather than the build: nothing about the draft looked
+wrong. The filenames were right, the checksums file was there, the body was
+well written, and the assets were the correct sizes for what they claimed to
+be.
 
-**What the listing still needs, checked against the repository rather than
-remembered.** Everything here is store-side; none of it is code.
+**And it recovered something that was otherwise gone.** This file recorded the
+original key's distinguished name — "The first App Bundle" quotes
+`CN=Archlence, …` out of `jarsigner` — but never its fingerprint. The draft's
+APK is the only surviving artifact signed by it, so its SHA-256 is written
+here now, because it is the only way to prove that an APK someone still has
+installed came from this project at all:
 
-- ~~**A 512×512 PNG app icon and a 1024×500 feature graphic.**~~ Both are in
-  `docs/store/`, and both are GENERATED — `tool/emit_store_graphics.py` — for
-  the same reason every other fixture here is. The icon is
-  `assets/icon/archlence_icon.svg` rendered square, which is a conversion
-  rather than a decision: it is the mark the launcher and the desktop app
-  already carry. The feature graphic is the app's own `#131313`, that mark,
-  the name in Plus Jakarta Sans, and one line of slogan in the app's own green
-  — `tertiary`, #4EDEA3, which `lib/theme/` calls "positive money" and the
-  balance ring is drawn in. The slogan lives in the script rather than in the
-  ARB files: it began as `onboardingTagline` and read as a list on a banner,
-  because a store slogan and a first-run explanation are different jobs. The
-  mark keeps its #5444E5 deliberately — that ground is the identity shared
-  with the desktop client, not a theme token. The script refuses to write the
-  banner if any text reaches the outer eighth of the frame, which Play is free
-  to crop; it has now caught two drafts, one at 930px of an allowed 896 and one
-  that passed with six pixels to spare, which is a rule waiting to break.
+    Lost key (v1.0.0 era)
+    Owner:  CN=Archlence, OU=Unknown, O=Archlence, L=Unknown, ST=Unknown, C=TR
+    SHA256: 5924b01ab0a5b44a64fe757158ec0a29c2a78c096465aa68f4b9d87816be1661
 
-  **One defect found later, in the icon rather than the banner.** Play wants
-  the icon as a 32-bit PNG WITH alpha, and `renderPM` writes 24-bit, so it was
-  being emitted in the screenshots' format instead of its own. The generator
-  now converts it; the mark is fully opaque and every RGB value is unchanged,
-  verified against the previous file. The banner is 24-bit with no alpha,
-  which was right all along. Regenerating on Linux also moved 6548 pixels of
-  the banner's text — same glyphs, same positions, a different FreeType's
-  anti-aliasing — which is a re-render rather than a change, and was checked
-  by looking at the two side by side rather than by trusting the diff.
-- ~~**Screenshots.**~~ Done, and the open question is answered: **the 2:1 rule
-  is still enforced.** Play's current asset requirements say it in those words
-  — *"the maximum dimension of your screenshot can't be more than twice as
-  long as the minimum dimension"* — so the four captures at 1080×2400, which
-  are 2.222:1, would have been refused.
+Not a secret, and no longer usable by anyone including its owner. A record.
 
-  **The fix this file proposed was the wrong one.** "Padding to 1080×1920"
-  cannot pad anything: 1920 is shorter than the 2400 already in hand, so it
-  crops 480px off each screen. Widening is what costs nothing — 2400/2 is
-  1200, so `docs/store/screenshots/` holds four 1200×2400 images at exactly
-  2.000:1 with every original pixel still in them, verified byte-for-byte
-  against the captures.
+### 1. Getting it into people's hands
 
-  `tool/emit_store_screenshots.py` does it, and the captures in
-  `docs/screenshots/` are left alone as evidence of what the app drew. Two
-  things it found on the way. **The pad cannot be a flat colour**: `#131313`
-  is what both edges hold for 2398 of 2400 rows, and rows 2159-2160 are the
-  `#262626` hairline above the navigation bar, full-bleed — a flat pad stops
-  that rule 60px short of the new edge on three of the four. It replicates
-  the edge column instead. And **Play's format rules differ per asset**: 24-bit
-  PNG with no alpha for screenshots and the feature graphic, 32-bit PNG WITH
-  alpha for the icon. The captures were 32-bit with a dead all-255 alpha and
-  are now 24-bit; the icon was 24-bit and is now 32-bit — see the icon item
-  above. The script refuses to write anything it would have to smear, which it
-  proved by refusing a test capture with content at the edge.
+**Play is off the table, by decision.** The developer account costs a one-time
+25 USD and the owner has decided not to pay it. There is no free tier and no
+waiver, so this is not a scheduling question — Play is simply not a channel
+this app will use.
 
-- ~~**The store listing copy.**~~ Drafted in `docs/store/listing.md`, in both
-  languages, with the console's other answers gathered beside it from where
-  they already live. `tool/check_listing.py` fails if any field is over Play's
-  limit, counting CHARACTERS rather than bytes — which is not pedantry: the
-  Turkish short description is 73 characters and **83 bytes**, so a byte count
-  rejects copy the console takes. **The words still need a human signature**,
-  like the Data safety form.
+**And the console said something that made the decision easier.**
+`play.google.com/console` for the signed-in account redirects to
+`/console/signup`: *"To get started, choose an account type."* There is no
+developer account behind that address, so there was no app entry, no App
+signing page, and none of the two questions this section used to turn on.
 
-  Writing it caught a claim this file was making in two contradictory places.
-  "The wired tabs" says seven Tools cards are dimmed with a `NOT YET` chip;
-  "The four calculators" says seven of nine are live. The second is right, the
-  two that are not built are "What if" and "Reset data", and
-  `showUnbuiltFeatures` is `false` so they are not drawn at all. Counted from
-  `lib/screens/tools_screen.dart`. A stale comment is one thing; the same
-  sentence in a store description is a policy problem.
-- **The console forms**, which may already be answered from the first
-  publish: content rating (IARC), target audience, app access — *all
-  functionality available with no restrictions*, since there is no account —
-  ads (none), Data safety (the answers are in `docs/data-safety.md`), a short
-  description of 80 characters and a full one of 4000. **All of these are now
-  gathered in one table in `docs/store/listing.md`**, each with a note saying
-  where its answer comes from, so the console session does not re-derive them.
-  The descriptions are drafted there too, in both languages and within the
-  limits.
-- **The financial features declaration.** Play has a section for it and this
-  is a finance app. Archlence TRACKS crypto holdings and prices them; it is
-  not a wallet, an exchange, or a lender, so the answer is most likely none of
-  the listed features — but it is a declaration somebody has to sign rather
-  than a question this file can close.
+**Which leaves a contradiction this file should stop asserting.** "The Turkish
+was in the wrong register" says `v1.0.0` was published and pulled. Publishing
+requires a developer account. Both cannot be true. Either it went out under a
+different Google account, or that account is gone, or the publication never
+happened as recorded. Nothing now depends on the answer, and nothing here
+should be written as though it were known.
 
-Already answered, and verified rather than assumed: the **privacy policy is
-live** at `https://superuser-d0.github.io/archlence-mobile/privacy.html` and
-its Turkish twin at `/gizlilik.html` — both return 200 — and the app links to
-the first from Settings, which is the other half of what Play asks. `targetSdk`
-is 36 and `minSdk` 24, so the target API level requirement is met.
+**The keystore's stakes just went up, and this is the item to read twice.**
+Under Play App Signing, Google held the app signing key and the thing in
+`~/archlence-release.jks` was only an UPLOAD key — losing it cost a support
+ticket. Off Play there is no such layer:
 
-Worth doing first rather than last: open the developer account. A new personal
-account may face a closed-testing period before production access, which moves
-a launch date by weeks rather than days — so it is the item that sets the
-schedule, and it can run while everything else is finished.
+> **That file is now the app signing key itself. If it is lost, every install
+> made from these APKs is stranded permanently.** No reset, no support ticket,
+> no recovery of any kind. The only remedy is a new package name and asking
+> every user to uninstall and start again, losing nothing but their patience
+> and their trust.
+
+It exists in two places today — this machine and Google Drive. That is the
+minimum, not the target, and it is now load bearing in a way it was not when
+this file last described it.
+
+**The artifact changed with the channel.** An `.aab` is Play's format and
+nothing else accepts one. Every other channel wants APKs, so releases are
+built with `flutter build apk --release --split-per-abi`:
+
+| ABI | APK | What Play would have delivered |
+| --- | --- | --- |
+| `armeabi-v7a` | 20.1MB | 10.6MB |
+| `arm64-v8a` | 22.2MB | 11.1MB |
+| `x86_64` | 23.7MB | 11.2MB |
+
+**Roughly twice the download, and that is the honest price of leaving Play.**
+`--split-per-abi` splits by ABI and nothing else; Play additionally splits by
+screen density and by language, and serves the native libraries compressed
+where the APK stores them aligned and uncompressed. No build flag closes that
+gap. `--split-debug-info` was measured rather than assumed: it saves 1.1MB of
+22.2MB, about 5%, and costs a symbol file that must be kept forever or no
+stack trace anyone sends is readable. Not taken.
+
+**`tool/verify_release_artifact.py` reads both formats now**, and the reason
+is a defect it would otherwise have had. A bundle is a JAR and its certificate
+is a `META-INF/*.RSA` entry that `keytool` prints. An APK built at `minSdk 24`
+has **no such entry at all** — AGP skips v1 signing once the minimum SDK
+understands v2, and the signature moves into the APK Signing Block. Verified:
+`unzip -Z1` finds no `META-INF/*.RSA` in any of the three APKs. The script as
+it stood would have called all three UNSIGNED. APKs go through `apksigner`,
+which knows v1 through v4; the three release APKs report scheme v2, one
+signer, and the `DF:1C:75:…` certificate.
+
+**Where it goes.** Two channels, and they are complements rather than
+alternatives:
+
+- **GitHub Releases** — no cost, no gatekeeper, no review queue, live the
+  moment the tag is pushed. Users install with
+  [Obtainium](https://github.com/ImranR98/Obtainium), which tracks a GitHub
+  repository and offers updates like a store does. This is the channel that
+  matches the app: the audience for "no account, no server, your data stays on
+  your phone" is the audience already using it.
+- **IzzyOnDroid** — an F-Droid-compatible repository that accepts APKs the
+  developer built, with a far lower barrier than F-Droid's main repository. It
+  is where discoverability comes from.
+
+**F-Droid's main repository is possible and deliberately deferred.** It builds
+from source on its own machines, which means pinning the Flutter version and
+stripping C++ build IDs, and the review queue is long. Flutter is supported —
+the SDK has a standing exception to F-Droid's prebuilt-binary rule — and every
+dependency here is a normal pub.dev package. The likely outcome is inclusion
+with a **NonFreeNet** anti-feature label, because prices come from CoinGecko,
+Frankfurter and NosyAPI. That is a label rather than a refusal, and it is
+defensible: the app works with no network at all, holdings simply stay at
+cost.
+
+**What carried over from the Play preparation, and what did not.** The icon,
+the feature graphic, the screenshots, the privacy policy and the listing copy
+all still apply — see `docs/store/listing.md`, which is written channel-neutral
+now. Play's Data safety form does not; `docs/data-safety.md` is kept because
+the measurements in it are what any channel's privacy claim rests on, and
+because it is the evidence behind the README's promises.
 
 ### 2. Judgement rather than engineering
 

@@ -1,18 +1,24 @@
-# Play listing copy
+# Store listing copy
 
 Draft. **The text is a product decision and needs a human signature** — the
-same rule the Data safety form is under. What this file guarantees is the
+same rule the wire measurements are under. What this file guarantees is the
 mechanical half: the lengths fit, both languages exist, and nothing here
 promises a feature the app does not currently ship.
 
-Lengths are checked by `tool/check_listing.py`, which reads THIS file and
-fails if any field is over Play's limit. Run it before pasting anything into
-the console.
+**Written for Play and now channel-neutral.** Play is not a channel this app
+uses — see the roadmap's "Getting it into people's hands" — so the limits
+below are kept as the TIGHTEST constraint any channel imposes rather than as
+Play's rules. Nothing else is stricter: F-Droid's summary is 80 characters and
+its full description has no hard ceiling; a GitHub release description has no
+limit at all. Copy that fits here fits anywhere.
 
-Play's limits: short description **80 characters**, full description **4000**.
+Lengths are checked by `tool/check_listing.py`, which reads THIS file and
+fails if any field is over. Run it before pasting anything anywhere.
+
+Limits: short description **80 characters**, full description **4000**.
 Both are counted in characters, not bytes — which matters here, because
 Turkish `ı`, `ş`, `ğ` and `ç` are two bytes each and a byte count would
-reject copy the console accepts.
+reject copy every one of these channels accepts.
 
 ## What is deliberately NOT claimed
 
@@ -149,22 +155,25 @@ Archlence neyiniz olduğunu ve neye borçlu olduğunuzu takip eder. Cüzdan, bor
 
 ---
 
-## The console forms, in one place
+## The questions a channel asks, in one place
 
-Answers gathered from where they already live, so the console session does not
-have to re-derive them. Each says where it comes from.
+Gathered from where the answers already live, so a submission does not have to
+re-derive them. Each says where it comes from.
 
-| Form | Answer | Where it comes from |
+| Question | Answer | Where it comes from |
 | --- | --- | --- |
-| Data safety | No data collected, no data shared | `docs/data-safety.md`, evidence pinned by `test/wire_shape_test.dart` |
+| Does it collect or share user data? | **No** | `docs/data-safety.md`, evidence pinned by `test/wire_shape_test.dart` |
 | Privacy policy URL | `https://superuser-d0.github.io/archlence-mobile/privacy.html` | `docs/privacy.html`, live and returning 200 |
-| App access | All functionality available with no restrictions | There is no account and nothing to sign in to |
-| Ads | No ads | Nothing in the app serves any |
-| Content rating (IARC) | Questionnaire — no violence, no user content, no gambling | The app has no social surface at all |
-| Target audience | 18+ | A personal finance app; there is no child-directed content |
-| Financial features | Most likely **none of the listed features** | Archlence tracks and prices holdings. It is not a wallet, an exchange, a broker or a lender: it holds no money and moves none. **A declaration somebody signs, not a question this file closes.** |
+| Account required? | None. All functionality available with no restrictions | There is nothing to sign in to |
+| Ads | None | Nothing in the app serves any |
 | Category | Finance | |
-| Contact email | The developer account's own | |
+| Licence | See `LICENSE` and `NOTICE` | In the repository |
+| Source code | `https://github.com/superuser-d0/archlence-mobile` | |
+
+**F-Droid specifically** will likely apply a **NonFreeNet** anti-feature label,
+because prices come from CoinGecko, Frankfurter and NosyAPI. That is a label
+rather than a refusal, and the honest answer to it is in this file's own copy:
+the app works with no network at all, and holdings simply stay at cost.
 
 ## Assets, and where they are
 
@@ -175,6 +184,8 @@ have to re-derive them. Each says where it comes from.
 | Screenshots ×4 | `docs/store/screenshots/*.png` | 1200×2400, exactly 2.000:1, 24-bit PNG no alpha |
 
 The screenshots in `docs/store/screenshots/` are the ones to upload, NOT the
-captures in `docs/screenshots/`. The captures are 1080×2400 — 2.222:1 — and
-Play refuses anything whose long side is more than twice its short side. See
-`tool/emit_store_screenshots.py`.
+captures in `docs/screenshots/`. The captures are 1080×2400 — 2.222:1 — which
+Play refused outright and which no channel has a reason to prefer; the
+conformed pair is exactly 2.000:1 with every original pixel intact. See
+`tool/emit_store_screenshots.py`. The README embeds the CAPTURES, deliberately:
+there the 9:20 shape is what a phone actually looks like.
