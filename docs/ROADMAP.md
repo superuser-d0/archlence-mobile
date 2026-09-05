@@ -184,15 +184,31 @@ behind that address, so there is no app entry, no App signing page and neither
 question. Play is off the table by decision. Distribution is GitHub Releases,
 which is done, plus IzzyOnDroid, which is not.
 
-**The keystore is the one blocking item and it is blocking again.** It is not
-on this machine either — `android/key.properties` does not exist here and
-neither does the `.jks` — which makes this the third machine in a row to start
-without it. Off Play that file IS the app signing key, so until it is restored
-from the Google Drive copy and verified against
-`DF:1C:75:A4:…:9F:78:6E:6B`, no release can be built that could update an
-install made from `v1.0.0`. Note the fingerprint: TWO keys exist in this
-project's history and only one of them still works. See "The key that was on
-the other machine" and "A draft release, one click from stranding everyone".
+**The keystore is here and it is the right one.** That took a correction:
+this section first said the `.jks` was not on this machine, which was a
+search that had only looked in two places. It is at
+`C:\Users\ckrgz\keys\archlence-release.jks`, and it was checked before
+anything was built with it, because TWO keys exist in this project's history
+and both would carry that filename:
+
+    Owner:  CN=Superuser-d0, OU=Unknown, O=Archlence, L=Unknown, ST=Unknown, C=TR
+    SHA256: DF:1C:75:A4:0F:C6:51:92:32:E7:91:E0:37:0E:EE:C3:BD:1C:DB:62:17:E3:B3:6D:2E:74:EE:68:9F:78:6E:6B
+    SHA1:   53:E0:23:56:77:82:94:82:80:BE:E5:83:49:25:29:5F:BF:43:31:69
+    Valid:  2026-08-31 19:26 TRT to 2054-01-16, 2048-bit RSA, SHA256withRSA
+
+Every field matches what this file already recorded, including the minute:
+"The key store, moved to version 11" reads the same certificate out of a
+signed bundle and dates the replacement to 19:26 that evening. So this is the
+live key, not the `5924b01a…` one the draft release was signed with. The SHA-1
+is new here and is written down because some channels ask for that one.
+
+**What is still open on it is smaller and still nobody's code.**
+`android/key.properties` does not exist, so the release guard will refuse a
+release build until it is written — it holds a password, which is why no
+session writes it. And the off-machine copy is the part that has never once
+survived a machine: this key existed only in `~/Downloads` on arrival, for the
+second time, and Google Drive is currently the only copy that is not on this
+desktop.
 
 Everything else that used to be open here is closed: the privacy policy, the
 Data safety answers, the TalkBack hour, label quality, and the Turkish that
@@ -295,14 +311,16 @@ Data safety, and opening the developer account — are done, and the two Play
 Console questions that replaced them are gone with Play itself. What is left
 is somebody's judgement rather than a session's work.
 
-1. **Getting the keystore onto this machine, and verifying WHICH key it is.**
-   Not making one: a replacement already exists and `v1.0.0` is signed by it.
-   The job is restoring it from the Google Drive copy, checking the
-   certificate reads `CN=Superuser-d0` with SHA-256 `DF:1C:75:A4:…` rather
-   than the dead `CN=Archlence` / `5924b01a…`, and then putting it somewhere
-   that is not this machine. It is a credential; no session should type its
-   password. Two machines have now lost it, the second after being warned in
-   writing.
+1. **Writing `android/key.properties`, and getting a copy off this machine.**
+   The keystore itself is done: restored, verified as `DF:1C:75:A4:…`, and
+   sitting under the user profile — see "Pick up here" for the certificate and
+   "Where the key sleeps" for why the path moved twice before it settled.
+   `key.properties` holds the password, so it is written by whoever owns the
+   key and not by a session; the four fields and the backslash trap are in
+   `android/key.properties.example` and in "The key store, moved to version
+   11". The copy off this machine is the item with a track record: two
+   machines have lost this key, the second after being warned in writing, and
+   Google Drive is currently the only copy that is not on this desktop.
 2. **Submitting to IzzyOnDroid.** The only distribution work left, and where
    discoverability was always going to come from. GitHub Releases is done and
    is the channel that matches the app; IzzyOnDroid is the one that finds it
@@ -2774,6 +2792,43 @@ still there with Play App Signing on it.
   slashes, which Java accepts on Windows, and the file says why in a comment
   so the next person does not tidy them back.
 
+### Where the key sleeps
+
+The sixth machine repeated the fifth's arrival exactly: the keystore came down
+from Google Drive into `~/Downloads`, which the entry above had already named
+as "not where a signing credential should sit". Twice is a pattern rather than
+an accident — it is simply where a browser puts a file — so the destination is
+written down here instead of being decided again each time.
+
+**It is verified before it is moved, and verified again after.** The
+certificate check is the one that matters and it needs the password, so it
+belongs to whoever owns the key; `keytool -list -v` against the fingerprint in
+"Pick up here" is the whole procedure. The move itself is checked by SHA-256
+of the FILE, before and after, which needs no password and catches a copy that
+truncated: `D8EC9B46A67E80AD7311D576483AA06F254BE749077F0E7403104A4ACF5D9B4D`
+for the current one, 2750 bytes.
+
+**Two candidate homes were wrong for opposite reasons, and both were tried.**
+
+* `C:\src\` — beside the toolchain. Wrong because that directory's whole
+  design principle, stated in "Environment", is that it can be replaced or
+  thrown away without touching the system. A seventh toolchain would
+  reasonably begin by deleting it, and the app signing key would go with it.
+* `C:\keys\` — a new directory at the root. Wrong for a reason that is
+  invisible unless the ACL is read: a folder created at `C:\` inherits the
+  root's permissions, which grant `BUILTIN\Users` read and
+  `Authenticated Users` **modify**. Any local account on the machine could
+  have read the signing key. `Downloads` did not have that problem.
+
+**It lives at `%USERPROFILE%\keys\` now**, where the profile's own ACL
+applies: `SYSTEM`, `Administrators` and the owning user, and nobody else.
+Confirmed by reading the ACL back rather than assumed, which is the only
+reason the `C:\keys\` mistake was caught at all.
+
+**None of that is the backup.** Every location above is on one machine, and
+this key has now been through three of them. What protects it is the copy that
+is somewhere else, and that copy is currently Google Drive and nothing more.
+
 ### The key store, moved to version 11 — and the default that flipped under it
 
 Open work item 2 was the dependency knot: `share_plus` 12 applies the Kotlin
@@ -4922,7 +4977,7 @@ crossing the fourth one was.
 variable the last setup had deliberately removed — read "What the suite costs"
 before drawing any conclusion from a timing here, because this configuration
 is exactly the one that produced the wrong diagnosis the first time. The
-measurement this setup took: `flutter test` at **5m26s-5m46s** over three
+measurement this setup took: `flutter test` at **5m26s-7m06s** over four
 runs of 1137 tests, on
 OneDrive, on a desktop. The CachyOS run off OneDrive is in that section; the
 two are close enough that the sync is not what that section once blamed.
@@ -5025,8 +5080,8 @@ running.
   what Play would have delivered, which is now a historical comparison rather
   than a channel.
 - **What was re-run on this machine, rather than carried over from the last
-  one.** `flutter analyze` clean; **1137 unit tests pass, in 5m26s-5m46s
-  over three runs**; the
+  one.** `flutter analyze` clean; **1137 unit tests pass, in 5m26s-7m06s
+  over four runs**; the
   working tree clean afterwards with `pubspec.lock` unmoved. The device tests
   were NOT re-run here — they need the emulator booted and an install, and
   "Working agreement" is explicit that `flutter test` does not cover them. The
@@ -5087,7 +5142,7 @@ CachyOS figures above came from, with the checkout back under OneDrive:
 
 | Run | CachyOS, off OneDrive | Windows 11, on OneDrive |
 | --- | --- | --- |
-| `flutter test` | 4m40s (1118 tests) | **5m26s-5m46s** (1137 tests, 3 runs) |
+| `flutter test` | 4m40s (1118 tests) | **5m26s-7m06s** (1137 tests, 4 runs) |
 | `flutter analyze` | 8.5s | **13.4s** (17.3s cold) |
 
 Same CPU, same disks, same Flutter and JDK versions. So the CPU explanation
@@ -5097,8 +5152,19 @@ because it changed all of them at once. What it does do is kill the last
 alternative: the 1.6× on `analyze` is not hardware, because the hardware is
 identical.
 
+**The spread is itself the finding, and it was nearly rounded away.** Three
+runs landed at 5m46s, 5m46s and 5m26s, which looked like a stable number and
+was written down as one; a fourth came in at 7m06s on the same tree, with
+nothing else started and no emulator up. That is a 30% spread across four runs
+on hardware that does not vary, where the CachyOS figure was quoted as a
+single number. Whatever is behind it, a synced-and-scanned checkout is exactly
+the kind of thing that produces variance rather than a constant offset, and a
+plain filesystem is not. Anyone reopening the question below should take
+several runs rather than one, in both configurations — a single measurement
+here would have supported almost any conclusion.
+
 It also does not overturn the section's main finding. The suite is still key
-derivation: 19 extra tests and a 16-24% slower total, on a run where `analyze`
+derivation: 19 extra tests and a 16-52% slower total, on a run where `analyze`
 alone is 58% slower, means the fixed cost moved far less than the variable
 overhead did. **The experiment still missing is the same one** — a Windows
 checkout outside OneDrive, on this machine, which would take one `git clone`
