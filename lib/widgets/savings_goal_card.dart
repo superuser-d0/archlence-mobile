@@ -36,12 +36,30 @@ class SavingsGoalCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final l10n = context.l10n;
-    // The service already guarantees a positive target, so this divides
-    // safely; the clamp is for a goal deliberately overfunded past it.
-    final ratio = (goal.currentAmount / goal.targetAmount).toDouble().clamp(
-      0.0,
-      1.0,
-    );
+    // A target of zero is not a goal this app can WRITE — `createGoal`
+    // refuses a non-positive one — and that used to be the whole argument
+    // here. It stops at the writer. `savings_goals.target_amount` is
+    // `REAL NOT NULL` with no positivity constraint, in `lib/data/schema.dart`
+    // and in the desktop schema it is copied from verbatim, so the row is
+    // legal in the FILE; a restored desktop backup can hand this widget one.
+    //
+    // And `Decimal / Decimal.zero` does not go to infinity the way a double
+    // division would: it throws `ArgumentError`. From inside `build()`, which
+    // is not a wrong number on one card — it is the Assets tab and the
+    // savings tool both replaced by an error box, on a profile the user
+    // cannot edit their way out of because the row is in their own database.
+    //
+    // So the fraction is computed once, only where it means something — the
+    // same guard `cards_screen_detail.dart` puts on a credit limit of zero,
+    // and for the same reason: an unusable denominator means "no bar to
+    // draw", not "none of the way there". The clamp stays for the case it was
+    // always for, a goal deliberately overfunded past its target.
+    final progress = goal.targetAmount > Decimal.zero
+        ? goal.currentAmount / goal.targetAmount
+        : null;
+    final ratio = progress == null
+        ? 0.0
+        : progress.toDouble().clamp(0.0, 1.0);
     final tone = goal.isCompleted
         ? ObsidianPalette.tertiary
         : ObsidianPalette.primary;
@@ -70,12 +88,12 @@ class SavingsGoalCard extends StatelessWidget {
               ),
               Text(
                 formatPercent(
-                  percentage(
-                    (goal.currentAmount / goal.targetAmount).toDecimal(
-                          scaleOnInfinitePrecision: 20,
-                        ) *
-                        Decimal.fromInt(100),
-                  ),
+                  progress == null
+                      ? Decimal.zero
+                      : percentage(
+                          progress.toDecimal(scaleOnInfinitePrecision: 20) *
+                              Decimal.fromInt(100),
+                        ),
                 ),
                 style: text.bodyMedium?.copyWith(
                   fontWeight: FontWeight.w700,
