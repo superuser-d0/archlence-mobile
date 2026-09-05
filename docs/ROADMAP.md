@@ -113,15 +113,16 @@ The share provider is the one piece of the price layer whose live response
 has NOT been seen by this codebase — checking it needs a key that belongs to
 whoever signs up for it. See "Shares, on the user's own key".
 
-**And it is built on Windows again, on a machine that is not the same one.**
-The third move — CachyOS back to Windows 11 — and the first that crossed
-between machines rather than between systems on one: a laptop where the last
-three setups were a desktop. The crossing cost the repository nothing, which
-is what the previous two paid for. It did cost one line of
-`android/app/build.gradle.kts`, and not because the machine changed: Google
-stopped publishing a bare `android-37` platform, so `compileSdk = 37` needed
-`compileSdkMinor = 0` beside it to name a package that exists. Two more
-renamings in the SDK's own tooling came with it. See "The move to a laptop".
+**And it is built on Windows again — the sixth toolchain, on the machine the
+fifth one ran Linux on.** The moves before it cost a line of
+`android/app/build.gradle.kts` and three SDK renamings; this one cost the
+repository nothing at all, which is the first time that has been true, and it
+is what `.gitattributes` and the earlier crossings paid for. The whole
+toolchain went to `C:\src` with nothing installed as Administrator, both
+archives were checksummed before they were unpacked, and every claim in this
+file that a session can re-run was re-run: `flutter analyze` clean and 1137
+unit tests passing. The one thing it did NOT close is the keystore, again, and
+the one thing it needs from its owner is Developer Mode. See "Environment".
 
 **And it is public, under Apache-2.0.** There had been no licence file at all,
 which means all rights reserved — nobody could legally use, fork or contribute
@@ -164,24 +165,38 @@ app, found three more: every sweep renders a screen in the state it OPENS in,
 the per-screen tests drive real states on an 800dp surface, and nothing
 covered a real state at a real width. Sixteen defects in all.
 
-1118 unit tests and 14 device tests pass, and `flutter analyze` is clean. No
+1137 unit tests and 14 device tests pass, and `flutter analyze` is clean. No
 control in the app is inert. The count grew by 214 because what it did not
-cover is now covered rather than assumed.
+cover is now covered rather than assumed, and by three more for a division
+that had no guard — see "The guarantee that stopped at the writer".
 
 ## Pick up here
 
-**The app is finished, and what stands between it and a listing is a key
-rather than any code.** The toolchain now lives on a Windows laptop and every
-claim in this file was re-run on it: `flutter analyze` clean, 1118 unit tests
-and 14 device tests passing, and a signed release APK installed on a clean
-emulator in Turkish, walked by hand, and priced live from CoinGecko —
-`Güncel 38.175,68 ₺` against a cost of 40.000,00 ₺. That build is signed by a
-NEW key, because the one that signed `v1.0.0` was on the previous machine and
-is gone — so what is left is two questions in Play Console, a 512×512 icon and
-a feature graphic, rather than anything buildable. Everything
-else that used to be open here is closed: the privacy policy, the Data
-safety answers, the TalkBack hour, label quality, and the Turkish that got
-the first release pulled.
+**`v1.0.0` is published and the app is finished. What is left is a key, a
+second channel, and four judgements.** The toolchain lives on a Windows 11
+desktop now — the project's SIXTH from-scratch build, see "Environment" —
+where `flutter analyze` is clean and 1137 unit tests pass.
+
+**This section used to say the next step was two questions in Play Console.
+It is not, and the contradiction was in this file for a while.** "Open work"
+records what the console actually answered: there is no developer account
+behind that address, so there is no app entry, no App signing page and neither
+question. Play is off the table by decision. Distribution is GitHub Releases,
+which is done, plus IzzyOnDroid, which is not.
+
+**The keystore is the one blocking item and it is blocking again.** It is not
+on this machine either — `android/key.properties` does not exist here and
+neither does the `.jks` — which makes this the third machine in a row to start
+without it. Off Play that file IS the app signing key, so until it is restored
+from the Google Drive copy and verified against
+`DF:1C:75:A4:…:9F:78:6E:6B`, no release can be built that could update an
+install made from `v1.0.0`. Note the fingerprint: TWO keys exist in this
+project's history and only one of them still works. See "The key that was on
+the other machine" and "A draft release, one click from stranding everyone".
+
+Everything else that used to be open here is closed: the privacy policy, the
+Data safety answers, the TalkBack hour, label quality, and the Turkish that
+got the first release pulled.
 
 ### Thirteen defects found and fixed, and what found them
 
@@ -214,21 +229,84 @@ an account, an income, a Bitcoin purchase — and the holding read `Current`
 188.480,46 ₺ rather than `Cost`, with R8 on and the release manifest under it.
 The last open release-only question is answered; see "The first App Bundle".
 
+### The guarantee that stopped at the writer
+
+`SavingsGoalCard` divided by `goal.targetAmount` and explained itself away in
+a comment: *"The service already guarantees a positive target, so this divides
+safely"*. The guarantee is real. It stops at the writer.
+
+`SavingsService.createGoal` does refuse a non-positive target — but
+`savings_goals.target_amount` is `REAL NOT NULL` with **no positivity
+constraint**, in `lib/data/schema.dart` and in the desktop schema it is copied
+from verbatim. So the row is legal in the FILE, and this app reads files it
+did not write: restoring a desktop backup replaces the database wholesale.
+The comment was reasoning about the app's own writes while the widget was
+being handed somebody else's.
+
+**And `Decimal / Decimal.zero` does not go to infinity the way a double
+division would.** Measured against the real package rather than assumed:
+
+    250 / 0 -> ArgumentError: zero can not be used as denominator
+
+Thrown from inside `build()`, which is what lifts this above a wrong number on
+a card. The widget is drawn in two places — `savings_screen.dart` and
+`assets_screen_holdings.dart` — so one row takes out the savings tool AND the
+Assets tab, one of the five. And there is no way back for whoever hits it: the
+row is in their own database, and the screen that would let them edit it is
+the screen that will not draw.
+
+**The fix is a guard this codebase already applies to the same shape twice**,
+`cards_screen_detail.dart` on a credit limit of zero and `home_screen.dart` on
+a net worth of zero, both arguing that an unusable denominator means there is
+no bar to draw rather than none of the way there. A goal with no usable target
+now reads as 0% behind an empty bar, and the amounts underneath still say what
+it holds.
+
+**Then the same question was asked of every other division,** because the last
+two findings in this file were each one line missing from several places.
+There are eight `Decimal` divisions in `lib/`. **Seven were already guarded**,
+each with its reasoning at the line — the distribution chart returns early on
+a zero total, `calculatePnl` checks a positive purchase price, the budget's
+`pct` returns null on a zero plan, `forecastFor` throws on a lookback of zero,
+`percentageChange` handles a zero baseline explicitly, the Frankfurter
+inversion drops a rate that is not finite and positive, and instalments reject
+a plan count below one. This was the eighth and the only one missed, so unlike
+the dropdowns there is no sibling defect to chase.
+
+**Three tests, and only ONE was red before the fix.** Worth writing down,
+because a file of three passing tests reads as three defects caught and it was
+one. The zero case failed with the `ArgumentError` above. The negative case
+already passed — `clamp` swallows a backwards ratio — and is kept because a
+guard written as `!= 0` would pass the zero case and draw a reversed bar for
+that one. The third holds the guard's own teeth: replacing the ratio with a
+hardcoded `0.0` passes the first two and fails only that.
+
+**What it says about where to look next.** This defect was not in a parser or
+a service; it was in a presentation widget, in the gap between what the app
+validates on write and what the database permits on read. The backup layer
+gets that scrutiny by design — a package is fuzzed 400 ways — and the *values*
+inside a restored database do not. `savings_goals` is unlikely to be the only
+table whose columns are looser than the service that fills them.
+
 ### The things that are not coding tasks
 
 The three that used to be here — the TalkBack hour, the privacy policy and
-Data safety, and opening the developer account — are done. What replaced them
-is smaller and all of it is somebody's judgement rather than a session's work.
+Data safety, and opening the developer account — are done, and the two Play
+Console questions that replaced them are gone with Play itself. What is left
+is somebody's judgement rather than a session's work.
 
-1. **Two questions in Play Console, and they set everything after them.**
-   Whether the app entry still exists with Play App Signing on it, in which
-   case the lost keystore is only an upload key and Google will reset it; or
-   whether the app itself was deleted, in which case the package name is spent
-   and a new one is the answer. See "The key that was on the other machine".
-2. **A new keystore, made by hand and backed up off this machine.** The
-   command is in that section and in `android/key.properties.example`. It is a
-   credential; no session should type its password. The last one was lost
-   because it existed in exactly one place.
+1. **Getting the keystore onto this machine, and verifying WHICH key it is.**
+   Not making one: a replacement already exists and `v1.0.0` is signed by it.
+   The job is restoring it from the Google Drive copy, checking the
+   certificate reads `CN=Superuser-d0` with SHA-256 `DF:1C:75:A4:…` rather
+   than the dead `CN=Archlence` / `5924b01a…`, and then putting it somewhere
+   that is not this machine. It is a credential; no session should type its
+   password. Two machines have now lost it, the second after being warned in
+   writing.
+2. **Submitting to IzzyOnDroid.** The only distribution work left, and where
+   discoverability was always going to come from. GitHub Releases is done and
+   is the channel that matches the app; IzzyOnDroid is the one that finds it
+   an audience. See "Getting it into people's hands".
 3. **Whether the phone PRONOUNCES the Turkish correctly.** The strings are
    right — 57 were rewritten out of the informal register, three more were
    caught by reading the release build, and a check now guards the class —
@@ -266,6 +344,8 @@ is smaller and all of it is somebody's judgement rather than a session's work.
 | 21 | A check that fires on the class, driven by the English rather than the Turkish | "Three the register rewrite missed" |
 | 22 | The release build walked by hand on this machine, and a live price in it | "The release build, driven by hand on Windows" |
 | 23 | Ten cases that only pass after the 7th of a month, found by the clock | "The suite that passed on 24 days out of 31" |
+| 24 | The sixth toolchain, on Windows 11, with every claim in this file re-run | "Environment" |
+| 25 | A division with no guard, throwing out of `build()` on a restored row | "The guarantee that stopped at the writer" |
 
 The machine moved from Windows 11 to CachyOS and the whole toolchain was
 rebuilt under `~/dev` without root; nothing in the repository had to change
@@ -283,6 +363,14 @@ That rebuild is where the three SDK renamings surfaced, because a toolchain
 installed today is the only thing that asks the SDK what it currently ships.
 And it is where the keystore turned out not to have come with the project: the
 one thing on the release path that no session can install.
+
+Since then the desktop was reimaged from CachyOS to Windows 11 and the
+toolchain was built a sixth time. That one cost the repository nothing — no
+line of source, no fixture, no version — and it is the first setup that can be
+said of. What it did produce is a measurement no earlier pair could make, the
+same CPU running the suite under two operating systems, and one defect, found
+by reading rather than by installing: a division with no guard, thrown out of
+`build()` by a row only a restore can deliver.
 
 ### What is deliberately NOT in 1.0
 
@@ -4820,129 +4908,139 @@ What has not been ported is not forgotten:
 
 ## Environment
 
-Set up on this machine and verified working. **The machine changed again.**
-This is the project's **fifth** from-scratch toolchain and its **third
-Linux** — a CachyOS desktop, where the last one was a Windows 11 laptop. The
-checkout is at `~/Documents/archlence-mobile`, off OneDrive and off any
-sync at all, which finally settles a question two setups argued about; see
-"What the suite costs".
+Set up on this machine and verified working. **The system changed again, and
+this time the machine did not.** This is the project's **sixth** from-scratch
+toolchain and its **third Windows** — the same Ryzen 7 9700X desktop the last
+setup ran CachyOS on, now Windows 11 Pro 26200. Confirmed from the hardware
+rather than assumed: identical CPU, 30GB of RAM, the Samsung 990 PRO beside
+the Kingston KC3000, the RTX 4070 SUPER next to the Ryzen's Radeon graphics.
+So this is a reimage, like the second setup was, and not the machine-to-machine
+crossing the fourth one was.
+
+**The checkout is back under OneDrive**, at
+`C:\Users\ckrgz\OneDrive\Documents\archlence-mobile`. That undoes the one
+variable the last setup had deliberately removed — read "What the suite costs"
+before drawing any conclusion from a timing here, because this configuration
+is exactly the one that produced the wrong diagnosis the first time. The
+measurement this setup took: `flutter test` at **5m26s-5m46s** over three
+runs of 1137 tests, on
+OneDrive, on a desktop. The CachyOS run off OneDrive is in that section; the
+two are close enough that the sync is not what that section once blamed.
 
 Nothing carried over. Flutter, the JDK, the Android SDK, the emulator image
-and `bundletool` were all fetched fresh, about 1.9GB of downloads, and the
-release keystore was NOT among them — see "The key that was on the other
-machine", and the item in "Open work" that this setup did not close.
+and `bundletool` were all fetched fresh, 2.2GB of downloads, and **the release
+keystore was NOT among them** — see "The key that was on the other machine".
+That is the third machine in a row to start without it, and the second since
+this file began warning in writing that it would happen.
 
-The machine: AMD Ryzen 7 9700X, 8 cores and 16 threads, 30GB of RAM, a Samsung
-990 PRO NVMe beside a Kingston KC3000, an NVIDIA RTX 4070 SUPER next to the
-Ryzen's own Radeon graphics, CachyOS on kernel 7.2.2. It is a desktop, and the
-suite's clock says so to within a second of the last desktop's — which is the
-measurement that closes the OneDrive argument below.
+**Nothing was installed as Administrator.** The whole toolchain lives under
+`C:\src`, no installer was run, no package manager was touched, and every
+archive was unpacked by hand. Same reasoning as the `~/dev` layout on the
+three Linux boxes: a toolchain owned by the user can be replaced or thrown
+away without touching the system. The environment is set at **user scope**
+(`[Environment]::SetEnvironmentVariable(..., 'User')`) rather than machine
+scope, for the same reason — and **a shell started before that was set does
+not have it**, which is now the same trap on the third operating system
+running.
 
-**Nothing was installed as root.** The whole toolchain lives under `~/dev`, no
-`pacman` package was touched, and the environment is a fish snippet in
-`~/.config/fish/conf.d/`. Same reasoning as the `C:\src` layout on the Windows
-machines and the `~/dev` one on the first CachyOS box: a toolchain owned by
-the user can be replaced or thrown away without touching the system. **The
-shell here is fish**, which is why the environment is a `conf.d` snippet and
-not a line in `.bashrc`; `~/dev/env.sh` is the POSIX twin, for anything that
-needs to `source` it.
-
-- JDK 17.0.20.1 LTS — Microsoft Build of OpenJDK, the Linux `tar.gz`,
-  unpacked to `~/dev/jdk-17`, SHA-256 checked against Microsoft's own
+- JDK 17.0.20.1 LTS — Microsoft Build of OpenJDK, the **Windows x64 zip**,
+  unpacked to `C:\src\jdk-17`, SHA-256 checked against Microsoft's own
   `.sha256sum.txt` and verified —
-  `d00e5b04e9726b63d915706c7049e5297c9f40239ce8a12fcc68b7267fa91ad2`. (That
-  is the Linux archive's hash; the Windows zip's, recorded by the last setup,
-  is a different number for the same version.) The same version the last two
+  `3d9006956fc8af5601cd24ffc4f468bef48279c7ebd8171b9bdf90d0aabfbf1f`. A
+  different number from the `d00e5b04…` the last setup recorded, and the same
+  JDK: that one is the Linux `tar.gz`'s hash. The same version the last three
   setups ran, and **not** a newer JDK, for the reason those give: AGP and
   Kotlin in `android/` were proven against 17.
-- Flutter 3.47.2 stable at `~/dev/flutter`, Dart 3.13.2, which satisfies
-  `pubspec.yaml`'s `sdk: ^3.13.1`. It had to be fetched here — 1.5GB, the
-  largest single download of the setup — where the laptop already had it.
-  SHA-256 checked against the release manifest's own entry. It is the same
-  version and channel the last three setups ran, and `pubspec.lock` did not
-  move on `pub get`: `git status` was clean afterwards.
-- Android SDK at `~/dev/android-sdk`, installed with `cmdline-tools`' own
+- Flutter 3.47.2 stable at `C:\src\flutter`, Dart 3.13.2, which satisfies
+  `pubspec.yaml`'s `sdk: ^3.13.1`. SHA-256
+  `37934f2128a55d77a38baba12fd611157ed23a47bf7d2b7d17e9e84da118409d`, checked
+  against the release manifest's own entry for the Windows archive. Still the
+  current stable, and `pubspec.lock` did not move on `pub get`: `git status`
+  was clean afterwards.
+- Android SDK at `C:\src\android-sdk`, installed with `cmdline-tools`' own
   `sdkmanager`: platform-tools 37.0.1, platforms 35, 36 and **37.0**,
-  build-tools 36.0.0, emulator 37.1.11, `system-images;android-35;google_apis;x86_64`,
-  `ndk;28.2.13676358` and `cmake;3.22.1`. The last three were installed
-  DELIBERATELY here rather than left for Gradle to fetch on the first two
-  builds, which is what happened on the laptop.
+  build-tools 36.0.0, emulator 37.1.11,
+  `system-images;android-35;google_apis;x86_64`, `ndk;28.2.13676358` and
+  `cmake;3.22.1`. Nine packages, 7.5GB, all installed in one `sdkmanager`
+  call and confirmed afterwards with `--list_installed` rather than from the
+  install's own output.
 - **The command-line tools are still deliberately one release behind**, and
-  the laptop's finding held exactly. `cmdline-tools` 22.0 (build 15859902) is
-  what `cmdline-tools/latest` holds, because 23.0.0 retires `sdkmanager` and
-  forwards to an `android` CLI that does not understand `;`-separated package
-  names, which is the syntax AGP asks for the NDK by. Verified on arrival
-  rather than assumed: `source.properties` reads `Pkg.Revision=22.0` and
-  `sdkmanager --version` answers `22.0` — after printing a deprecation notice
-  saying to use the `android` binary instead, which is precisely the advice
-  that broke the last machine.
-- **`platforms;android-37` does not exist, and the SDK repository says so.**
-  `sdkmanager --list` offers `android-37.0`, `37.1`, `37.2` and three betas,
-  and no bare `37`. That is the whole reason for `compileSdkMinor = 0` in
-  `android/app/build.gradle.kts`, and it is now confirmed from the package
-  list rather than inferred from a build failure.
-- **Licences needed nothing.** `sdkmanager` accepted at install time and every
-  package installed clean. `flutter doctor` still reports "Some Android
-  licenses not accepted" while every build downloads and accepts what it
-  needs — noise, not a state, exactly as the laptop found.
-- Environment, set once in `~/.config/fish/conf.d/archlence-toolchain.fish`:
-  `JAVA_HOME=~/dev/jdk-17`, `ANDROID_HOME` and `ANDROID_SDK_ROOT` both
-  `~/dev/android-sdk`, and five `PATH` entries — Flutter's `bin`, the JDK's
-  `bin`, and the SDK's `platform-tools`, `cmdline-tools/latest/bin` and
-  `emulator`. **A shell started before that file existed does not have them**,
-  which is the same trap on the third operating system running. Belt and
-  braces, `flutter config --android-sdk ~/dev/android-sdk` writes the path
-  into `~/.flutter_settings`, where it does not depend on any shell.
+  the finding now holds on its third machine. `cmdline-tools` 22.0 (build
+  15859902) is what `cmdline-tools\latest` holds, because 23.0.0 retires
+  `sdkmanager` and forwards to an `android` CLI that does not understand
+  `;`-separated package names — the syntax AGP asks for the NDK by. Verified
+  on arrival rather than assumed: `source.properties` reads `Pkg.Revision=22.0`,
+  and `sdkmanager --version` answers `22.0` after printing the deprecation
+  notice telling you to use the `android` binary instead, which is precisely
+  the advice that broke the fourth machine.
+- **`platforms;android-37` still does not exist.** The installed platform is
+  `android-37.0`, which is why `compileSdkMinor = 0` in
+  `android/app/build.gradle.kts` is load bearing on this machine too.
+- **Licences needed nothing, and `--licenses` is still gone.** Every package
+  installed clean. `flutter doctor` reports "Some Android licenses not
+  accepted" on a machine where every package was accepted at install time —
+  noise, not a state, as the last two setups found.
+- Environment, set once at user scope: `JAVA_HOME=C:\src\jdk-17`,
+  `ANDROID_HOME` and `ANDROID_SDK_ROOT` both `C:\src\android-sdk`, and five
+  `PATH` entries — Flutter's `bin`, the JDK's `bin`, and the SDK's
+  `platform-tools`, `cmdline-tools\latest\bin` and `emulator`. Belt and
+  braces, `flutter config --android-sdk C:\src\android-sdk --jdk-dir
+  C:\src\jdk-17` writes both into `~/.flutter_settings`, where they do not
+  depend on any shell.
+- **Developer Mode is OFF, and that is the one thing this setup did not
+  close.** `flutter pub get` fetches every package and then exits **1** with
+  *"Building with plugins requires symlink support. Please enable Developer
+  Mode"*. `flutter analyze` and `flutter test` do not care and both pass;
+  `flutter run` and `flutter build apk` will not work until it is turned on.
+  It is a Windows system setting — `start ms-settings:developers` — and
+  deliberately left to whoever owns the machine rather than flipped by a
+  session. This is a Windows-only concern that the two Linux setups recorded
+  as absent; it is back.
 - Emulator AVD `archlence_pixel` (Pixel 7, Android 15, `google_apis/x86_64`),
-  created with `avdmanager` and then edited, the same three ways as before:
-  `hw.ramSize=4096` against the profile's 2G, `hw.keyboard=yes`, and
-  `hw.gpu.enabled=yes` — the `pixel_7` profile still ships that last one as
-  `no`, which would put the whole emulator on software rendering.
-  `disk.dataPartition.size` left at the profile's 10G. Start:
+  created with `avdmanager` and then edited, the same three ways as every
+  setup before it: `hw.ramSize=4096` against the profile's 2G,
+  `hw.keyboard=yes`, and `hw.gpu.enabled=yes` — the `pixel_7` profile still
+  ships that last one as `no`, which would put the whole emulator on software
+  rendering. `disk.dataPartition.size` left at the profile's 10G. Start:
 
-  ```bash
-  ~/dev/android-sdk/emulator/emulator -avd archlence_pixel -no-snapshot -no-boot-anim
+  ```
+  C:\src\android-sdk\emulator\emulator.exe -avd archlence_pixel -no-snapshot -no-boot-anim
   ```
 
-  `avdmanager` prints `Could not load devices from .../devices.xml` while
-  creating it. **That is noise**: it is looking for a device list inside the
-  system image, the profile comes from the SDK's own list instead, and the AVD
-  it produced is a correct `pixel_7`. Nothing needs fixing.
+  `avdmanager` prints `Could not load devices from ...\devices.xml` while
+  creating it. **That is noise**, the same as on CachyOS: it looks for a
+  device list inside the system image, the profile comes from the SDK's own
+  list instead, and the AVD it produced is a correct `pixel_7`.
 
-  No `-gpu` override, and the fifth answer this project has given that
-  question is the same as the fourth. `emulator -accel-check` reports **KVM
-  (version 12) installed and usable** — back to KVM, where the laptop had
-  WHPX. `/dev/kvm` is `crw-rw-rw-`, so no group change was needed either.
-- `flutter doctor` reports Chrome and the Linux desktop toolchain (`ninja`)
-  missing. Both are **irrelevant** — they are the web and Linux-desktop
-  targets and this is an Android client. It also reports the Android licence
-  noise above. Three categories of complaint, none of them about building
-  this app.
-- **`flutter pub get` needed nothing special.** No symlink or Developer Mode
-  question, which was a Windows-only concern, and no version drift.
-- **The two Android settings that depart from the Flutter template, plus the
-  third, are unchanged and all three are still load bearing.** `compileSdk = 37`
-  rather than `flutter.compileSdkVersion`; `android.builtInKotlin=true` in
-  `android/gradle.properties`; and `compileSdkMinor = 0`. Nothing here needed
-  touching for Linux.
-- **A first Gradle build prints an SDK XML warning.** *"This version only
-  understands SDK XML versions up to 3 but an SDK XML file of version 4 was
-  encountered."* It is AGP's SDK parser meeting a newer repository format, it
-  appears on every build, and the builds succeed. Noise.
-- **Building a release still needs `android/key.properties` and the keystore
-  it names, and this machine has neither.** The replacement made on the
-  laptop was never copied off it — which is the second time this project has
-  lost a keystore to a machine, and the first time it was WARNED in writing
-  and lost it anyway. See "Open work".
-- `bundletool` 1.18.3, the jar from its GitHub releases, at `~/dev/bin`. Not
+  No `-gpu` override. `emulator -accel-check` reports **WHPX (10.0.26200)
+  installed and usable** — back to WHPX, where the last setup had KVM. Sixth
+  toolchain, sixth time this question has answered itself.
+- `flutter doctor` reports Chrome and Visual Studio missing, plus the Android
+  licence noise above. Both are **irrelevant** — they are the web and
+  Windows-desktop targets and this is an Android client. Three categories of
+  complaint, none of them about building this app. Windows Version reports
+  11 Pro 25H2 and Flutter is happy with it.
+- `bundletool` 1.18.3, the jar from its GitHub releases, at `C:\src\bin`. Not
   part of the SDK install and not needed for a build; it is here to measure
-  what Play would actually deliver.
+  what Play would have delivered, which is now a historical comparison rather
+  than a channel.
+- **What was re-run on this machine, rather than carried over from the last
+  one.** `flutter analyze` clean; **1137 unit tests pass, in 5m26s-5m46s
+  over three runs**; the
+  working tree clean afterwards with `pubspec.lock` unmoved. The device tests
+  were NOT re-run here — they need the emulator booted and an install, and
+  "Working agreement" is explicit that `flutter test` does not cover them. The
+  14 device tests are therefore claimed from the previous machine and not from
+  this one.
 
-Disk, for planning a rebuild: `~/dev/android-sdk` 7.3GB, `~/dev/flutter`
-2.3GB, `~/dev/jdk-17` 318MB, and `~/.gradle` 5.3GB after a debug build, a
-release bundle and a device-test round. The downloads kept at `~/dev/dl` are
-1.9GB — Flutter 1501MB, the JDK 183MB, the command-line tools 173MB and
-`bundletool` 31MB — and can be deleted once everything is unpacked.
+Disk, for planning a rebuild: `C:\src\android-sdk` 7.5GB, `C:\src\flutter`
+3.1GB, `C:\src\jdk-17` 302MB and `C:\src\bin` 31MB — 10.9GB unpacked, before
+`~/.gradle`, which the last setup measured at 5.3GB after a debug build, a
+release bundle and a device-test round. The downloads were 2.2GB — Flutter
+1841MB, the JDK 178MB, the command-line tools 148MB and `bundletool` 31MB —
+and were deleted once everything was unpacked and both checksums verified.
+The Flutter archive is larger here than the 1501MB the Linux setup recorded;
+it is the Windows zip, which carries the Windows toolchain with it.
 
 
 ### What the suite costs, and what it is spent on
@@ -4956,10 +5054,10 @@ predicting the suite "will be slower on a laptop, and no amount of disk or
 filesystem tuning will move it".
 
 That laptop was the experiment the two claims disagree about, with the
-checkout back under OneDrive. **This machine is the control**: a desktop
-again, on Linux again, and off OneDrive entirely.
+checkout back under OneDrive. **The CachyOS desktop was the control**: a
+desktop again, on Linux again, and off OneDrive entirely.
 
-| Run | Tests | This desktop (9700X) | The laptop (260) | The old desktop |
+| Run | Tests | CachyOS desktop (9700X) | The laptop (260) | The old desktop |
 | --- | --- | --- | --- | --- |
 | `flutter test` | 1118 | **4m40s** | 7m28s | 4m41s |
 | `test/backup_service_test.dart` alone | 23 | — | 7m18s | 4m35s |
@@ -4982,6 +5080,29 @@ alone and the suspicion was reasonable. What it does not do is separate
 OneDrive from Windows, because this run changed both. It is one CPU-bound
 number against another; whoever reopens it should run `flutter analyze` on a
 Windows checkout that is NOT synced, which no machine here has been.
+
+**And the sixth setup narrowed it further, because it is the first pair that
+holds the HARDWARE exactly constant.** Windows 11 on the same 9700X the
+CachyOS figures above came from, with the checkout back under OneDrive:
+
+| Run | CachyOS, off OneDrive | Windows 11, on OneDrive |
+| --- | --- | --- |
+| `flutter test` | 4m40s (1118 tests) | **5m26s-5m46s** (1137 tests, 3 runs) |
+| `flutter analyze` | 8.5s | **13.4s** (17.3s cold) |
+
+Same CPU, same disks, same Flutter and JDK versions. So the CPU explanation
+that carried the earlier comparisons is spent — whatever is left is Windows,
+OneDrive, or Defender, and **this run still cannot separate those three**
+because it changed all of them at once. What it does do is kill the last
+alternative: the 1.6× on `analyze` is not hardware, because the hardware is
+identical.
+
+It also does not overturn the section's main finding. The suite is still key
+derivation: 19 extra tests and a 16-24% slower total, on a run where `analyze`
+alone is 58% slower, means the fixed cost moved far less than the variable
+overhead did. **The experiment still missing is the same one** — a Windows
+checkout outside OneDrive, on this machine, which would take one `git clone`
+to somewhere like `C:\src\archlence-mobile` and one `flutter analyze`.
 
 **One thing was measured here by accident and is worth keeping.** The
 emulator was booted while `flutter test` was still running, against this
@@ -5080,7 +5201,10 @@ takes the Kotlin daemons with it.
 
 Disk figures for the Windows laptop, kept for comparison: `C:\src\android-sdk`
 7.46GB, `C:\src\flutter` 1.35GB, `C:\src\jdk-17` 0.29GB, `~\.gradle` 5.11GB.
-This machine's are in the Environment bullets above and are close to them.
+The CachyOS desktop's were close to them, and the Windows 11 desktop's are in
+the Environment bullets above — where `C:\src\flutter` is 3.1GB rather than
+the laptop's 1.35GB, because that figure was taken before the tool had built
+itself and its caches.
 
 **Verified on the CachyOS desktop, in this order.** `flutter pub get` clean
 with `pubspec.lock` unmoved; `flutter analyze` clean in 8.5s; **1118 unit
